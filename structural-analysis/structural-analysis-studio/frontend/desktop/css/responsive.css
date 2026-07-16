@@ -1,0 +1,108 @@
+/**
+ * responsive.css
+ * ------------------------------------------------------------------
+ * One HTML/CSS/JS codebase serving Desktop, Tablet and Mobile.
+ * Only the #app-shell grid changes shape; every component's own CSS
+ * (main.css) stays exactly the same at every breakpoint.
+ * ------------------------------------------------------------------
+ */
+
+/* ---------------- Tablet: narrower side panels ------------------- */
+@media (max-width: 1024px) {
+  #app-shell {
+    grid-template-columns: 200px 1fr 240px;
+    grid-template-rows: 52px 1fr 190px;
+  }
+
+  .toolbar-group {
+    padding-right: 10px;
+    gap: 4px;
+  }
+
+  .btn {
+    padding: 6px 9px;
+    font-size: 12px;
+  }
+}
+
+/* ---------------- Mobile: stacked single column ------------------- */
+@media (max-width: 760px) {
+  #app-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(280px, 42vh) auto auto auto;
+    grid-template-areas:
+      "toolbar"
+      "canvas"
+      "sidebar"
+      "properties"
+      "bottom";
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+
+  html, body {
+    height: auto;
+  }
+
+  .panel-sidebar,
+  .panel-properties,
+  .panel-bottom {
+    max-height: 260px;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid var(--color-borderColor);
+  }
+
+  .panel-bottom {
+    max-height: 320px;
+  }
+
+  .canvas-hint {
+    font-size: 10px;
+    left: 8px;
+    bottom: 8px;
+  }
+
+  .toolbar {
+    gap: 10px;
+    padding: 0 8px;
+  }
+
+  .toolbar-group {
+    padding-right: 8px;
+  }
+
+  .dialog-panel {
+    width: calc(100vw - 32px);
+  }
+}
+
+/* ---------------- Very small phones: tighten toolbar text --------- */
+@media (max-width: 420px) {
+  .btn-tool {
+    font-size: 11px;
+    padding: 5px 7px;
+  }
+
+  .checkbox-pill {
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+}
+
+/* ---------------- Accessibility: respect reduced motion ----------- */
+@media (prefers-reduced-motion: reduce) {
+  .dialog-overlay,
+  .dialog-overlay.closing {
+    animation: none;
+  }
+}
+
+/* ---------------- Keyboard focus visibility ------------------------ */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}

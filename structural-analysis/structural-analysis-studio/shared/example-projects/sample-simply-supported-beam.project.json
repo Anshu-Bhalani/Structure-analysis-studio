@@ -1,0 +1,58 @@
+{
+  "formatVersion": 1,
+  "appName": "Structural Analysis Studio",
+  "savedAt": "2026-01-15T09:00:00.000Z",
+  "meta": {
+    "description": "Simply supported beam (pin + roller) with a midspan point load."
+  },
+  "model": {
+    "nodes": [
+      { "id": "node_1", "x": 0, "y": 0, "label": "A" },
+      { "id": "node_2", "x": 2, "y": 0, "label": "C" },
+      { "id": "node_3", "x": 4, "y": 0, "label": "B" }
+    ],
+    "elements": [
+      {
+        "id": "element_1",
+        "type": "Beam",
+        "nodeI": "node_1",
+        "nodeJ": "node_2",
+        "properties": { "materialId": "material_1", "sectionId": "section_1" },
+        "label": ""
+      },
+      {
+        "id": "element_2",
+        "type": "Beam",
+        "nodeI": "node_2",
+        "nodeJ": "node_3",
+        "properties": { "materialId": "material_1", "sectionId": "section_1" },
+        "label": ""
+      }
+    ],
+    "supports": [
+      {
+        "id": "support_1",
+        "nodeId": "node_1",
+        "restraints": { "ux": true, "uy": true, "rz": false },
+        "type": "pin"
+      },
+      {
+        "id": "support_2",
+        "nodeId": "node_3",
+        "restraints": { "ux": false, "uy": true, "rz": false },
+        "type": "roller"
+      }
+    ],
+    "loads": [
+      { "id": "load_1", "nodeId": "node_2", "Fx": 0, "Fy": -5000, "Mz": 0 }
+    ],
+    "materials": [
+      { "id": "material_1", "name": "Steel (default)", "E": 200000000000 }
+    ],
+    "sections": [
+      { "id": "section_1", "name": "Generic (default)", "A": 0.01, "I": 0.00000833 }
+    ],
+    "defaultMaterialId": "material_1",
+    "defaultSectionId": "section_1"
+  }
+}

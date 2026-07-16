@@ -1,0 +1,7 @@
+[
+  { "name": "Structural Steel (ASTM A36)", "E": 200000000000, "yieldStrength": 250000000, "unit": "SI" },
+  { "name": "Structural Steel (A992)", "E": 200000000000, "yieldStrength": 345000000, "unit": "SI" },
+  { "name": "Aluminum 6061-T6", "E": 68900000000, "yieldStrength": 276000000, "unit": "SI" },
+  { "name": "Reinforced Concrete (f'c=30MPa)", "E": 27000000000, "yieldStrength": null, "unit": "SI" },
+  { "name": "Douglas Fir Timber", "E": 13100000000, "yieldStrength": null, "unit": "SI" }
+]

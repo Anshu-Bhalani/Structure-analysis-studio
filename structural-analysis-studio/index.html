@@ -247,8 +247,12 @@
 
     </div>
 
-    <!-- Scripts -->
-    <script src="frontend/desktop/layout.js"></script>
-    <script src="frontend/mobile/layout.js"></script>
+        <!-- Use type="module" and defer so scripts do not block the UI from loading -->
+    <script type="module" defer src="frontend/desktop/layout.js"></script>
+    <script type="module" defer src="frontend/mobile/layout.js"></script>
+    
+    <!-- When you eventually link your core logic files, use the same format: -->
+    <!-- <script type="module" defer src="core/app/app.js"></script> -->
+
 </body>
 </html>

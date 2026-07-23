@@ -1,56 +1,170 @@
-/**
- * css/main.css (Mobile UI)
- * ------------------------------------------------------------------
- * SCAFFOLD — placeholder styling only. Real mobile layout (bottom
- * sheets, touch-sized hit targets, gesture-driven canvas, etc.) will
- * replace this. Note it already reuses the shared --color-* and
- * --font-* tokens from frontend/shared-ui/theme/themes.css instead
- * of hardcoding new ones.
- * ------------------------------------------------------------------
- */
-
-html, body {
-  margin: 0;
-  height: 100%;
-  background: var(--color-canvasBackground);
-  color: var(--color-text);
-  font-family: var(--font-ui);
+/* Mobile App Wrapper */
+.mobile-app {
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--bg-workspace);
+    color: var(--text-main);
+    font-family: var(--font-ui);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
 }
 
-#mobile-root {
-  min-height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  box-sizing: border-box;
+/* Screens */
+.mob-screen {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    overflow-y: auto;
+    padding-bottom: 70px; /* Space for bottom nav */
+}
+.mob-screen.active {
+    display: flex;
 }
 
-.mobile-placeholder {
-  max-width: 480px;
-  text-align: center;
+/* Typography & Utilities */
+.padding-large { padding: 24px; }
+.mt-auto { margin-top: auto; }
+.full-width { width: 100%; }
+.mob-title { font-size: 28px; font-weight: 700; margin: 0 0 8px 0; line-height: 1.2; }
+.mob-subtitle { font-size: 14px; color: var(--text-muted); margin-bottom: 32px; }
+.mob-text-muted { color: var(--text-muted); font-size: 13px; margin-bottom: 24px; }
+
+/* Header */
+.mob-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px; background-color: var(--bg-header); border-bottom: 1px solid var(--border-color);
+}
+.mob-header.transparent { background: transparent; border: none; }
+.mob-header h2 { font-size: 16px; margin: 0; font-weight: 600; }
+.mob-header-actions { display: flex; gap: 8px; }
+.mob-icon-btn { background: none; border: none; color: white; font-size: 20px; padding: 4px; cursor: pointer; }
+
+/* Buttons */
+.mob-btn-primary {
+    background-color: var(--accent-blue); color: white; border: none; border-radius: 12px;
+    padding: 14px; font-size: 16px; font-weight: 600; text-align: center; cursor: pointer;
+}
+.mob-btn-primary.huge { padding: 32px; font-size: 18px; line-height: 1.5; margin-bottom: 24px; width: 100%; box-shadow: 0 4px 15px var(--accent-blue-transparent); }
+.mob-btn-outline {
+    background-color: transparent; color: white; border: 1px solid var(--border-light);
+    border-radius: 12px; padding: 14px; font-size: 16px; font-weight: 600; cursor: pointer;
 }
 
-.mobile-placeholder h1 {
-  font-size: 22px;
-  margin-bottom: 4px;
+/* Grids & Cards */
+.mob-grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 32px; }
+.mob-card-btn {
+    background-color: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 12px;
+    padding: 20px 12px; color: white; font-size: 14px; font-weight: 500; display: flex; gap: 8px; align-items: center; justify-content: center;
 }
+.mob-card-btn span { color: var(--accent-blue); font-size: 18px; }
 
-.mobile-placeholder__tag {
-  color: var(--color-accent);
-  font-weight: 600;
-  margin-top: 0;
+/* Lists */
+.mob-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.mob-section-header h3 { font-size: 16px; margin: 0; }
+.mob-section-header a { color: var(--accent-blue); text-decoration: none; font-size: 13px; }
+.mob-list-item {
+    background-color: var(--bg-panel); padding: 16px; border-radius: 12px; margin-bottom: 12px;
+    display: flex; gap: 16px; align-items: center; border: 1px solid var(--border-color);
 }
+.mob-list-item div { flex: 1; }
+.mob-list-item small { color: var(--text-muted); }
 
-.mobile-placeholder__body {
-  color: var(--color-textMuted);
-  line-height: 1.5;
-  font-size: 14px;
+/* Modeling Canvas Area */
+.mob-canvas-area { flex: 1; position: relative; background: var(--bg-canvas); display: flex; flex-direction: column; }
+.mob-vert-toolbar {
+    position: absolute; left: 16px; top: 16px; background: var(--bg-panel); border: 1px solid var(--border-color);
+    border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; z-index: 10;
 }
+.mob-vert-toolbar button {
+    background: none; border: none; color: var(--text-muted); padding: 12px 8px; font-size: 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px; border-bottom: 1px solid var(--border-color);
+}
+.mob-vert-toolbar button span { font-size: 16px; }
+.mob-vert-toolbar button.active { color: var(--accent-blue); background: var(--accent-blue-transparent); }
 
-.mobile-placeholder code {
-  font-family: var(--font-mono);
-  background: var(--color-panelBackgroundAlt);
-  padding: 2px 5px;
-  border-radius: var(--radius-sm);
+.mob-canvas-placeholder { flex: 1; display: flex; align-items: center; justify-content: center; }
+
+.mob-floating-info {
+    margin: 16px; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 16px;
+    padding: 16px; position: relative; z-index: 10;
 }
+.mob-floating-info h4 { margin: 0 0 16px 0; font-size: 14px; }
+.mob-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; font-size: 11px; color: var(--text-muted); margin-bottom: 16px; }
+.mob-stats-grid b { display: block; font-size: 16px; color: white; margin-top: 4px; }
+.mob-info-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* Solve Steps */
+.mob-steps-list { list-style: none; padding: 0; margin: 0 0 32px 0; }
+.mob-steps-list li {
+    display: flex; align-items: center; gap: 16px; padding: 16px; background: var(--bg-panel);
+    border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border-color); font-size: 14px;
+}
+.mob-steps-list li .icon { background: var(--bg-input); padding: 8px; border-radius: 8px; }
+.mob-steps-list li .check { margin-left: auto; color: var(--support-green); }
+.mob-steps-list li.active { border-color: var(--accent-blue); background: var(--accent-blue-transparent); }
+
+/* Learning Mode Math Matrix */
+.mob-math-matrix-container { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 32px 0; font-family: 'Times New Roman', serif; font-size: 18px; }
+.mob-math-var { font-style: italic; }
+.mob-matrix-brackets {
+    border-left: 2px solid white; border-right: 2px solid white; padding: 0 8px; border-radius: 8px;
+}
+.mob-matrix-brackets::before, .mob-matrix-brackets::after { content: ''; position: absolute; }
+.mob-matrix-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px 24px; text-align: center;
+}
+.mob-math-legend { font-family: monospace; color: var(--text-muted); font-size: 13px; line-height: 1.6; margin-bottom: 32px; }
+.mob-pagination-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+.mob-dots { display: flex; justify-content: center; gap: 8px; }
+.mob-dots span { width: 8px; height: 8px; background: var(--border-light); border-radius: 50%; }
+.mob-dots span.active { background: var(--accent-blue); }
+
+/* Bottom Nav */
+.mob-bottom-nav {
+    position: absolute; bottom: 0; width: 100%; background: var(--bg-header); border-top: 1px solid var(--border-color);
+    display: flex; justify-content: space-around; padding: 12px 0 24px 0; z-index: 100;
+}
+.mob-bottom-nav button {
+    background: none; border: none; color: var(--text-muted); font-size: 11px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;
+}
+.mob-bottom-nav button span { font-size: 20px; padding: 4px 16px; border-radius: 16px; }
+.mob-bottom-nav button.active { color: var(--accent-blue); }
+.mob-bottom-nav button.active span { background: var(--accent-blue-transparent); }
+
+/* Bottom Sheet Modal */
+.mob-bottom-sheet {
+    position: absolute; bottom: -100%; left: 0; width: 100%; background: var(--bg-panel);
+    border-radius: 24px 24px 0 0; z-index: 200; box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+    transition: bottom 0.3s ease-in-out; max-height: 85vh; display: flex; flex-direction: column;
+}
+.mob-bottom-sheet.open { bottom: 0; }
+.mob-sheet-header { display: flex; justify-content: space-between; align-items: center; padding: 24px; border-bottom: 1px solid var(--border-color); }
+.mob-sheet-header h3 { margin: 0; font-size: 18px; }
+.mob-sheet-content { padding: 24px; overflow-y: auto; }
+.mob-form-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 14px; }
+.mob-form-row label { color: var(--text-muted); width: 40%; }
+.mob-form-row select, .mob-form-row span { width: 55%; background: var(--bg-input); border: 1px solid var(--border-color); color: white; padding: 12px; border-radius: 8px; text-align: right; }
+.mob-form-row.actions { margin-top: 32px; gap: 12px; }
+.mob-form-row.actions button { flex: 1; }
+
+/* Sidebar / Drawer */
+.mob-sidebar {
+    position: absolute; top: 0; left: -300px; width: 280px; height: 100%; background: var(--bg-panel);
+    z-index: 300; transition: left 0.3s ease; border-right: 1px solid var(--border-color);
+}
+.mob-sidebar.open { left: 0; }
+.mob-sidebar-header { padding: 32px 24px; background: var(--bg-header); display: flex; align-items: center; gap: 16px; border-bottom: 1px solid var(--border-color); }
+.mob-avatar { width: 48px; height: 48px; background: var(--accent-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; }
+.mob-menu-list { list-style: none; padding: 16px; margin: 0; }
+.mob-menu-list li { padding: 16px; font-size: 16px; display: flex; align-items: center; gap: 16px; color: var(--text-main); }
+.mob-menu-list li span { color: var(--text-muted); font-size: 20px; width: 24px; text-align: center; }
+.mob-menu-list hr { border: none; border-top: 1px solid var(--border-color); margin: 16px 0; }
+
+.mob-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6);
+    z-index: 250; display: none;
+}
+.mob-overlay.show { display: block; }

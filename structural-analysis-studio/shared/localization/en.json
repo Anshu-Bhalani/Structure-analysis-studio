@@ -1,0 +1,30 @@
+{
+  "locale": "en",
+  "toolbar": {
+    "new": "New",
+    "open": "Open",
+    "save": "Save",
+    "import": "Import",
+    "export": "Export",
+    "runAnalysis": "Run Analysis",
+    "fitView": "Fit View",
+    "toggleTheme": "Toggle Theme"
+  },
+  "tools": {
+    "select": "Select",
+    "addNode": "Add Node",
+    "addSpring": "Add Spring",
+    "addBar": "Add Bar",
+    "addBeam": "Add Beam",
+    "addSupport": "Add Support",
+    "addLoad": "Add Load"
+  },
+  "dialogs": {
+    "newProjectTitle": "New Project",
+    "newProjectBody": "This will clear the current model. Unsaved changes will be lost. Continue?",
+    "openFailedTitle": "Open Failed",
+    "importFailedTitle": "Import Failed",
+    "cannotRunAnalysisTitle": "Cannot Run Analysis",
+    "unexpectedErrorTitle": "Unexpected Error"
+  }
+}

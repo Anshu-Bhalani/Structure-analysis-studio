@@ -1,0 +1,56 @@
+/**
+ * css/main.css (Mobile UI)
+ * ------------------------------------------------------------------
+ * SCAFFOLD — placeholder styling only. Real mobile layout (bottom
+ * sheets, touch-sized hit targets, gesture-driven canvas, etc.) will
+ * replace this. Note it already reuses the shared --color-* and
+ * --font-* tokens from frontend/shared-ui/theme/themes.css instead
+ * of hardcoding new ones.
+ * ------------------------------------------------------------------
+ */
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--color-canvasBackground);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+}
+
+#mobile-root {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.mobile-placeholder {
+  max-width: 480px;
+  text-align: center;
+}
+
+.mobile-placeholder h1 {
+  font-size: 22px;
+  margin-bottom: 4px;
+}
+
+.mobile-placeholder__tag {
+  color: var(--color-accent);
+  font-weight: 600;
+  margin-top: 0;
+}
+
+.mobile-placeholder__body {
+  color: var(--color-textMuted);
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.mobile-placeholder code {
+  font-family: var(--font-mono);
+  background: var(--color-panelBackgroundAlt);
+  padding: 2px 5px;
+  border-radius: var(--radius-sm);
+}

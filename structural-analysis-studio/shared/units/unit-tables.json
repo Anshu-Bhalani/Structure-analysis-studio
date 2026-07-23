@@ -1,0 +1,15 @@
+{
+  "baseSystem": "SI",
+  "length": {
+    "base": "m",
+    "factors": { "m": 1, "cm": 0.01, "mm": 0.001, "ft": 0.3048, "in": 0.0254 }
+  },
+  "force": {
+    "base": "N",
+    "factors": { "N": 1, "kN": 1000, "lbf": 4.4482216153, "kip": 4448.2216153 }
+  },
+  "moment": {
+    "base": "N*m",
+    "factors": { "N*m": 1, "kN*m": 1000, "lbf*ft": 1.3558179483 }
+  }
+}

@@ -1,42 +1,39 @@
-/**
- * themes.css
- * ------------------------------------------------------------------
- * Default color tokens (dark theme) so the app renders correctly
- * before JavaScript's ThemeManager runs, and so every component can
- * simply reference var(--color-*) without knowing about themes.
- * ------------------------------------------------------------------
- */
-
 :root {
-  --color-canvasBackground: #14171c;
-  --color-panelBackground: #1b1f26;
-  --color-panelBackgroundAlt: #20252d;
-  --color-borderColor: #2c323c;
-  --color-gridLine: #242932;
-  --color-axis: #3a4250;
-  --color-text: #e6e9ee;
-  --color-textMuted: #8b93a3;
-  --color-accent: #4d8dff;
-  --color-danger: #e5584f;
-  --color-node: #cfd6e0;
-  --color-support: #9aa4b2;
-  --color-load: #ff7a45;
-  --color-deflected: #ef5da8;
-  --color-reaction: #ffcf5c;
-  --color-sfd: #4fd1c5;
-  --color-bmd: #f56565;
-
-  --font-ui: -apple-system, "Segoe UI", "Inter", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "SF Mono", "Cascadia Code", "Consolas", "Roboto Mono", monospace;
-
-  --radius-sm: 3px;
-  --radius-md: 5px;
+    /* Exact color matching to the provided dark theme image */
+    --bg-header: #12141a;
+    --bg-ribbon: #171921;
+    --bg-workspace: #1a1c23;
+    --bg-panel: #1e2129;
+    --bg-canvas: #15181e;
+    --bg-input: #111319;
+    
+    --border-color: #2b2f3a;
+    --border-light: #3a3f4c;
+    
+    --text-main: #e2e8f0;
+    --text-muted: #94a3b8;
+    --text-active: #ffffff;
+    
+    --accent-blue: #2f81f7;
+    --accent-blue-hover: #1e66db;
+    --accent-blue-transparent: rgba(47, 129, 247, 0.2);
+    
+    --element-yellow: #eab308;
+    --support-green: #22c55e;
+    --load-red: #ef4444;
+    
+    --font-ui: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
-[data-theme="light"] {
-  color-scheme: light;
-}
-
-[data-theme="dark"] {
-  color-scheme: dark;
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-workspace);
+    color: var(--text-main);
+    font-family: var(--font-ui);
+    font-size: 13px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }

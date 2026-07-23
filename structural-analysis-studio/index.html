@@ -4,12 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Structural Analysis Studio</title>
-    <!-- Core Themes -->
+       <!-- 1. Preload the files in parallel -->
+    <link rel="preload" href="frontend/shared/theme/themes.css" as="style">
+    <link rel="preload" href="frontend/desktop/css/main.css" as="style">
+    <link rel="preload" href="frontend/mobile/css/main.css" as="style">
+    
+    <!-- 2. Apply them normally -->
     <link rel="stylesheet" href="frontend/shared/theme/themes.css">
-    <!-- Desktop Styles -->
     <link rel="stylesheet" href="frontend/desktop/css/main.css">
-    <!-- Mobile Styles -->
     <link rel="stylesheet" href="frontend/mobile/css/main.css">
+
     
     <style>
         /* Responsive View Switcher */

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Structural Analysis Studio</title>
+    <!-- Link to exact folder structure -->
+    <link rel="stylesheet" href="frontend/shared/theme/themes.css">
+    <link rel="stylesheet" href="frontend/desktop/css/main.css">
+</head>
+<body>
+    <!-- TOP NAVIGATION -->
+    <header class="top-nav">
+        <div class="logo-section">
+            <div class="logo-icon">SAS</div>
+            <div class="title-group">
+                <h1>Structural Analysis Studio <span>v1.0.0</span></h1>
+                <div class="sub-links">Build • Analyze • Learn</div>
+            </div>
+        </div>
+        <nav class="main-menu">
+            <a href="#">FILE</a>
+            <a href="#">HOME</a>
+            <a href="#" class="active">MODEL</a>
+            <a href="#">LOADS</a>
+            <a href="#">ANALYZE</a>
+            <a href="#">RESULTS</a>
+            <a href="#">LEARN</a>
+            <a href="#">VIEW</a>
+            <a href="#">TOOLS</a>
+            <a href="#">HELP</a>
+        </nav>
+        <div class="top-actions">
+            <button class="btn-icon">💾 Save</button>
+            <button class="btn-icon">↩ Undo</button>
+            <button class="btn-icon">↪ Redo</button>
+            <select class="theme-select"><option>🌙 Dark</option></select>
+            <button class="btn-icon">⚙</button>
+            <button class="btn-icon">?</button>
+        </div>
+    </header>
+
+    <!-- TOOLBAR / RIBBON -->
+    <div class="ribbon">
+        <div class="ribbon-group">
+            <div class="ribbon-items">
+                <button class="ribbon-btn active"><span>↖</span>Select</button>
+                <button class="ribbon-btn"><span>✥</span>Move</button>
+                <button class="ribbon-btn"><span>↻</span>Rotate</button>
+                <button class="ribbon-btn"><span>🗑</span>Delete</button>
+            </div>
+            <div class="group-label">Edit</div>
+        </div>
+        <div class="ribbon-group">
+            <div class="ribbon-items">
+                <button class="ribbon-btn"><span>•</span>Node</button>
+                <button class="ribbon-btn"><span>―</span>Beam</button>
+                <button class="ribbon-btn"><span>-</span>Bar</button>
+                <button class="ribbon-btn"><span>〰</span>Spring</button>
+                <button class="ribbon-btn"><span>▵</span>Support</button>
+            </div>
+            <div class="group-label">Elements</div>
+        </div>
+        <div class="ribbon-group">
+            <div class="ribbon-items">
+                <button class="ribbon-btn"><span>↓</span>Load</button>
+                <button class="ribbon-btn"><span>↺</span>Moment</button>
+                <button class="ribbon-btn"><span>↓↓↓</span>UDL</button>
+                <button class="ribbon-btn"><span>↓</span>Point Load</button>
+                <button class="ribbon-btn"><span>◿</span>Trapezoidal</button>
+                <button class="ribbon-btn"><span>📄</span>Load Case</button>
+            </div>
+            <div class="group-label">Loads</div>
+        </div>
+        <div class="ribbon-group">
+            <div class="ribbon-items">
+                <button class="ribbon-btn"><span>◨</span>Split</button>
+                <button class="ribbon-btn"><span>⌗</span>Snap</button>
+                <button class="ribbon-btn"><span>T</span>Labels</button>
+                <button class="ribbon-btn"><span>⟷</span>Dimensions</button>
+            </div>
+            <div class="group-label">View</div>
+        </div>
+    </div>
+
+    <!-- MAIN IDE LAYOUT -->
+    <div class="ide-layout">
+        
+        <!-- LEFT SIDEBAR -->
+        <aside class="sidebar-left">
+            <div class="panel explorer-panel">
+                <div class="panel-header">
+                    <span>Model Explorer</span>
+                    <button>×</button>
+                </div>
+                <div class="search-box">
+                    <input type="text" placeholder="Search...">
+                </div>
+                <div class="tree-view">
+                    <details open>
+                        <summary>📁 Project: Example_Beam</summary>
+                        <details open>
+                            <summary>Nodes (5)</summary>
+                            <ul>
+                                <li><span class="dot blue"></span> N1 (0.000, 0.000)</li>
+                                <li><span class="dot blue"></span> N2 (3.000, 0.000)</li>
+                                <li><span class="dot blue"></span> N3 (6.000, 0.000)</li>
+                                <li><span class="dot blue"></span> N4 (9.000, 0.000)</li>
+                                <li><span class="dot blue"></span> N5 (12.000, 0.000)</li>
+                            </ul>
+                        </details>
+                        <details open>
+                            <summary>Elements (4)</summary>
+                            <ul>
+                                <li><span class="line yellow"></span> E1 (N1 - N2)</li>
+                                <li><span class="line yellow"></span> E2 (N2 - N3)</li>
+                                <li><span class="line yellow"></span> E3 (N3 - N4)</li>
+                                <li><span class="line yellow"></span> E4 (N4 - N5)</li>
+                            </ul>
+                        </details>
+                        <details open>
+                            <summary>Supports (2)</summary>
+                            <ul>
+                                <li><span class="triangle green"></span> S1 : Fixed (N1)</li>
+                                <li><span class="triangle green"></span> S2 : Roller (N5)</li>
+                            </ul>
+                        </details>
+                        <details open>
+                            <summary>Loads (3)</summary>
+                            <ul>
+                                <li><span class="arrow red">↓</span> L1 : 10 kN at N2</li>
+                                <li><span class="arrow red">↓</span> L2 : 20 kN at N3</li>
+                                <li><span class="arrow red">↓</span> L3 : 10 kN at N4</li>
+                            </ul>
+                        </details>
+                        <details open>
+                            <summary>Load Cases (1)</summary>
+                            <ul>
+                                <li>📄 LC1 : Default</li>
+                            </ul>
+                        </details>
+                    </details>
+                </div>
+                <div class="explorer-actions">
+                    <button>+</button> <button>📁</button> <button>📋</button> <button>🗑</button>
+                </div>
+            </div>
+
+            <div class="panel solution-steps">
+                <div class="panel-header">
+                    <span>Solution Steps</span>
+                    <button>×</button>
+                </div>
+                <ul class="steps-list">
+                    <li class="active"><span class="step-num">1</span> DOF Numbering <span class="check">✔</span></li>
+                    <li><span class="step-num">2</span> Element Matrices <span class="check">✔</span></li>
+                    <li><span class="step-num">3</span> Assembly <span class="check">✔</span></li>
+                    <li><span class="step-num">4</span> Boundary Conditions <span class="check">✔</span></li>
+                    <li><span class="step-num">5</span> Solve Displacements <span class="check">✔</span></li>
+                    <li><span class="step-num">6</span> Reactions <span class="check">✔</span></li>
+                    <li><span class="step-num">7</span> Member Forces <span class="check">✔</span></li>
+                    <li><span class="step-num">8</span> Results <span class="check">✔</span></li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- CENTER WORKSPACE -->
+        <main class="workspace">
+            <div class="workspace-tabs">
+                <div class="tab active">Model View <button>×</button></div>
+                <div class="tab">3D View</div>
+                <button class="add-tab">+</button>
+            </div>
+            <div class="canvas-container">
+                <div class="canvas-toolbar">
+                    <button class="active">↖</button>
+                    <button>✋</button>
+                    <button>⊕</button>
+                    <button>⊖</button>
+                    <button>⚲</button>
+                    <button>⤢</button>
+                    <button>◧</button>
+                </div>
+                <select class="view-plane"><option>XY</option></select>
+                
+                <!-- SVG Recreation of the Structural Beam Model -->
+                <svg class="model-svg" viewBox="0 0 1000 400" width="100%" height="100%">
+                    <!-- Coordinate System -->
+                    <g transform="translate(40, 360)">
+                        <line x1="0" y1="0" x2="40" y2="0" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow-red)"/>
+                        <line x1="0" y1="0" x2="0" y2="-40" stroke="#22c55e" stroke-width="2" marker-end="url(#arrow-green)"/>
+                        <text x="45" y="5" fill="#ef4444" font-size="14">X</text>
+                        <text x="-5" y="-45" fill="#22c55e" font-size="14">Y</text>
+                    </g>
+                    <!-- Dimensions -->
+                    <g stroke="#555" stroke-width="1" class="dimensions">
+                        <line x1="150" y1="180" x2="150" y2="240"/>
+                        <line x1="325" y1="180" x2="325" y2="240"/>
+                        <line x1="500" y1="180" x2="500" y2="240"/>
+                        <line x1="675" y1="180" x2="675" y2="240"/>
+                        <line x1="850" y1="180" x2="850" y2="240"/>
+                        <!-- Horizontal Dimension Lines -->
+                        <line x1="150" y1="200" x2="850" y2="200" marker-start="url(#arrow-dim)" marker-end="url(#arrow-dim)"/>
+                        <line x1="150" y1="230" x2="850" y2="230" marker-start="url(#arrow-dim)" marker-end="url(#arrow-dim)"/>
+                        <!-- Dim Text -->
+                        <text x="237" y="195" fill="#aaa" font-size="12" text-anchor="middle">3.000 m</text>
+                        <text x="412" y="195" fill="#aaa" font-size="12" text-anchor="middle">3.000 m</text>
+                        <text x="587" y="195" fill="#aaa" font-size="12" text-anchor="middle">3.000 m</text>
+                        <text x="762" y="195" fill="#aaa" font-size="12" text-anchor="middle">3.000 m</text>
+                        <text x="500" y="225" fill="#aaa" font-size="12" text-anchor="middle">12.000 m</text>
+                    </g>
+                    <!-- Elements -->
+                    <line x1="150" y1="150" x2="850" y2="150" stroke="#eab308" stroke-width="3"/>
+                    <text x="237" y="170" fill="#3b82f6" font-size="14" text-anchor="middle">E1</text>
+                    <text x="412" y="170" fill="#3b82f6" font-size="14" text-anchor="middle">E2</text>
+                    <text x="587" y="170" fill="#3b82f6" font-size="14" text-anchor="middle">E3</text>
+                    <text x="762" y="170" fill="#3b82f6" font-size="14" text-anchor="middle">E4</text>
+                    <!-- Supports -->
+                    <g transform="translate(150, 150)" stroke="#22c55e" fill="none" stroke-width="2">
+                        <polygon points="0,0 -15,20 15,20"/>
+                        <line x1="-20" y1="20" x2="20" y2="20"/>
+                        <line x1="-15" y1="20" x2="-20" y2="25"/><line x1="-5" y1="20" x2="-10" y2="25"/><line x1="5" y1="20" x2="0" y2="25"/><line x1="15" y1="20" x2="10" y2="25"/>
+                    </g>
+                    <g transform="translate(850, 150)" stroke="#22c55e" fill="none" stroke-width="2">
+                        <polygon points="0,0 -15,15 15,15"/>
+                        <circle cx="-8" cy="18" r="3"/><circle cx="8" cy="18" r="3"/>
+                        <line x1="-20" y1="21" x2="20" y2="21"/>
+                        <line x1="-15" y1="21" x2="-20" y2="26"/><line x1="-5" y1="21" x2="-10" y2="26"/><line x1="5" y1="21" x2="0" y2="26"/><line x1="15" y1="21" x2="10" y2="26"/>
+                    </g>
+                    <!-- Loads -->
+                    <g stroke="#ef4444" fill="#ef4444">
+                        <line x1="325" y1="60" x2="325" y2="135" stroke-width="2"/>
+                        <polygon points="325,145 320,135 330,135"/>
+                        <text x="325" y="50" font-size="14" text-anchor="middle">10 kN</text>
+                        
+                        <line x1="500" y1="60" x2="500" y2="135" stroke-width="2"/>
+                        <polygon points="500,145 495,135 505,135"/>
+                        <text x="500" y="50" font-size="14" text-anchor="middle">20 kN</text>
+                        
+                        <line x1="675" y1="60" x2="675" y2="135" stroke-width="2"/>
+                        <polygon points="675,145 670,135 680,135"/>
+                        <text x="675" y="50" font-size="14" text-anchor="middle">10 kN</text>
+                    </g>
+                    <!-- Nodes -->
+                    <g fill="#fff">
+                        <circle cx="150" cy="150" r="5"/><text x="140" y="135" font-size="14">N1</text>
+                        <circle cx="325" cy="150" r="5" fill="#3b82f6"/><text x="335" y="135" font-size="14">N2</text><text x="325" y="170" font-size="14" fill="#aaa">2</text>
+                        <circle cx="500" cy="150" r="5" fill="#3b82f6"/><text x="510" y="135" font-size="14">N3</text><text x="500" y="170" font-size="14" fill="#aaa">3</text>
+                        <circle cx="675" cy="150" r="5" fill="#3b82f6"/><text x="685" y="135" font-size="14">N4</text><text x="675" y="170" font-size="14" fill="#aaa">4</text>
+                        <circle cx="850" cy="150" r="5"/><text x="840" y="135" font-size="14">N5</text>
+                    </g>
+                </svg>
+            </div>
+
+            <!-- BOTTOM PANEL: MATRICES AND RESULTS -->
+            <div class="bottom-panel">
+                <div class="bp-tabs">
+                    <div class="bp-tab active">Matrices</div>
+                    <div class="bp-tab">Displacements</div>
+                    <div class="bp-tab">Reactions</div>
+                    <div class="bp-tab">Member Forces</div>
+                    <div class="bp-tab">SFD</div>
+                    <div class="bp-tab">BMD</div>
+                    <div class="bp-tab">Reports</div>
+                </div>
+                <div class="bp-content">
+                    <div class="bp-split">
+                        <!-- Matrix Table -->
+                        <div class="matrix-view">
+                            <h4>Global Stiffness Matrix [K] <span class="muted">(10x10)</span></h4>
+                            <table class="data-table">
+                                <thead>
+                                    <tr><th></th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>1</td><td>2.80</td><td>0</td><td>0</td><td>-2.80</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+                                    <tr><td>2</td><td>0</td><td>3.73</td><td>0</td><td>0</td><td>-3.73</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+                                    <tr><td>3</td><td>0</td><td>0</td><td>2.80</td><td>0</td><td>0</td><td>-2.80</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+                                    <tr><td>4</td><td>-2.80</td><td>0</td><td>0</td><td>5.60</td><td>0</td><td>0</td><td>-2.80</td><td>0</td><td>0</td><td>0</td></tr>
+                                    <tr><td>5</td><td>0</td><td>-3.73</td><td>0</td><td>0</td><td>7.47</td><td>0</td><td>0</td><td>-3.73</td><td>0</td><td>0</td></tr>
+                                    <!-- Truncated rows for exact UI look -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Bending Moment Diagram -->
+                        <div class="bmd-view">
+                            <div class="bmd-header">
+                                <select><option>Bending Moment Diagram (kN-m)</option></select>
+                                <div class="bmd-tools">
+                                    <button>⛶</button> <button>⚙</button> <button>⭳</button>
+                                </div>
+                            </div>
+                            <div class="bmd-canvas">
+                                <svg viewBox="0 0 500 200" width="100%" height="100%">
+                                    <!-- Axis -->
+                                    <line x1="50" y1="100" x2="450" y2="100" stroke="#fff" stroke-width="1" stroke-dasharray="4,4"/>
+                                    <!-- Graph -->
+                                    <path d="M 50,100 Q 100,160 150,140 Q 250,10 350,140 Q 400,160 450,100" fill="rgba(59, 130, 246, 0.2)" stroke="#3b82f6" stroke-width="2"/>
+                                    <!-- Points & Values -->
+                                    <text x="50" y="90" fill="#fff" font-size="10" text-anchor="middle">0.00</text>
+                                    <circle cx="150" cy="140" r="3" fill="#fff"/><text x="150" y="155" fill="#fff" font-size="10" text-anchor="middle">-16.88</text>
+                                    <circle cx="250" cy="38" r="3" fill="#fff"/><text x="250" y="30" fill="#fff" font-size="10" text-anchor="middle">22.50</text>
+                                    <circle cx="350" cy="140" r="3" fill="#fff"/><text x="350" y="155" fill="#fff" font-size="10" text-anchor="middle">-16.88</text>
+                                    <text x="450" y="90" fill="#fff" font-size="10" text-anchor="middle">0.00</text>
+                                    <!-- Bottom Ticks -->
+                                    <line x1="50" y1="180" x2="450" y2="180" stroke="#555"/>
+                                    <text x="50" y="195" fill="#aaa" font-size="10" text-anchor="middle">0</text>
+                                    <text x="150" y="195" fill="#aaa" font-size="10" text-anchor="middle">3.000 m</text>
+                                    <text x="250" y="195" fill="#aaa" font-size="10" text-anchor="middle">6.000 m</text>
+                                    <text x="350" y="195" fill="#aaa" font-size="10" text-anchor="middle">9.000 m</text>
+                                    <text x="450" y="195" fill="#aaa" font-size="10" text-anchor="middle">12.000 m</text>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- RIGHT SIDEBAR: PROPERTIES -->
+        <aside class="sidebar-right">
+            <div class="panel">
+                <div class="panel-header">
+                    <span>Properties</span>
+                    <div><button>📌</button><button>×</button></div>
+                </div>
+                <div class="prop-group">
+                    <div class="prop-title">Element Properties</div>
+                    <div class="prop-row"><label>Element Type</label><select><option>Beam</option></select></div>
+                    <div class="prop-row"><label>Element ID</label><input type="text" value="E2" readonly></div>
+                    <div class="prop-row"><label>Node I</label><input type="text" value="N2" readonly></div>
+                    <div class="prop-row"><label>Node J</label><input type="text" value="N3" readonly></div>
+                    <div class="prop-row"><label>Section</label><select><option>IPE 300</option></select></div>
+                    <div class="prop-row"><label>Material</label><select><option>Steel</option></select></div>
+                    <div class="prop-row"><label>Length (m)</label><input type="text" value="3.000" readonly></div>
+                    <div class="prop-row"><label>Angle (deg)</label><input type="text" value="0.00" readonly></div>
+                </div>
+                <div class="prop-group">
+                    <div class="prop-title">Section Properties <button class="collapse-btn">⌃</button></div>
+                    <div class="prop-row"><label>A (m²)</label><input type="text" value="7.60e-03" readonly></div>
+                    <div class="prop-row"><label>I_y (m⁴)</label><input type="text" value="8.10e-06" readonly></div>
+                    <div class="prop-row"><label>I_z (m⁴)</label><input type="text" value="2.70e-06" readonly></div>
+                    <div class="prop-row"><label>J (m⁴)</label><input type="text" value="1.36e-05" readonly></div>
+                </div>
+                <div class="prop-group">
+                    <div class="prop-title">Material Properties <button class="collapse-btn">⌃</button></div>
+                    <div class="prop-row"><label>E (Pa)</label><input type="text" value="2.00e+11" readonly></div>
+                    <div class="prop-row"><label>v</label><input type="text" value="0.30" readonly></div>
+                    <div class="prop-row"><label>ρ (kg/m³)</label><input type="text" value="7850" readonly></div>
+                </div>
+                <button class="action-btn">View Section Database</button>
+            </div>
+            <div class="panel">
+                <div class="panel-header">
+                    <span>Results Summary</span>
+                    <button>×</button>
+                </div>
+                <div class="prop-group">
+                    <div class="prop-row"><label>Total Nodes</label><span>5</span></div>
+                    <div class="prop-row"><label>Total Elements</label><span>4</span></div>
+                    <div class="prop-row"><label>Total DOF</label><span>10</span></div>
+                    <div class="prop-row"><label>Total Reactions</label><span>3</span></div>
+                    <div class="prop-row"><label>Total Loads</label><span>40.00 kN</span></div>
+                    <div class="prop-row"><label>Analysis Type</label><span>Static</span></div>
+                    <div class="prop-row"><label>Max Displacement</label><span>5.062 mm</span></div>
+                    <div class="prop-row"><label>Max Moment</label><span>22.50 kN-m</span></div>
+                    <div class="prop-row"><label>Max Shear</label><span>16.88 kN</span></div>
+                </div>
+                <button class="action-btn">View Detailed Results</button>
+            </div>
+        </aside>
+    </div>
+
+    <!-- STATUS BAR -->
+    <footer class="status-bar">
+        <div class="status-left">Ready</div>
+        <div class="status-right">
+            <span>Units: kN, m, Pa</span>
+            <span>Load Case: LC1 (Default)</span>
+            <span>Snap: ON</span>
+            <span>Grid: ON</span>
+            <span>X: 7.250 m &nbsp; Y: 1.630 m</span>
+        </div>
+    </footer>
+
+    <script src="frontend/desktop/layout.js"></script>
+</body>
+</html>

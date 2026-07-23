@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Math Foundation Test</title>
+    <style>
+        body { 
+            font-family: monospace; 
+            padding: 15px; 
+            background: #1e1e1e; 
+            color: #d4d4d4; 
+            font-size: 14px; 
+            margin: 0;
+        }
+        h2 { 
+            color: #3b82f6; 
+            font-family: sans-serif; 
+            margin-top: 5px;
+        }
+        #output { 
+            background: #000; 
+            padding: 15px; 
+            border-radius: 8px; 
+            overflow-x: auto; 
+            white-space: pre-wrap; 
+            line-height: 1.5;
+        }
+        .pass { color: #22c55e; font-weight: bold; }
+        .fail { color: #ef4444; font-weight: bold; }
+        .info { color: #eab308; font-weight: bold; margin-top: 10px; display: inline-block; }
+    </style>
+</head>
+<body>
+    <h2>Math Test (Mobile View)</h2>
+    <div id="output">Running tests... Please wait.<br><br></div>
+
+    <script type="module">
+        import { Matrix } from './core/math/Matrix.js';
+        import { Vector } from './core/math/Vector.js';
+        import { GaussianElimination } from './core/math/GaussianElimination.js';
+        import { MathUtils } from './core/math/MathUtils.js';
+
+        // Helper function to print directly to the mobile screen
+        const out = document.getElementById('output');
+        out.innerHTML = ''; // Clear loading text
+
+        function printScreen(msg, cssClass = '') {
+            const span = document.createElement('span');
+            if (cssClass) span.className = cssClass;
+            span.innerText = msg + '\n';
+            out.appendChild(span);
+        }
+
+        try {
+            printScreen("--- 1. TESTING MATH UTILS ---", "info");
+            
+            const dist = MathUtils.distance(0, 0, 3, 4);
+            const distPass = dist === 5;
+            printScreen(`Distance (0,0) to (3,4) == 5: ${distPass ? "✅ PASS" : "❌ FAIL"}`, distPass ? "pass" : "fail");
+            
+            const zeroPass = MathUtils.isZero(1e-11);
+            printScreen(`Is 1e-11 zero?: ${zeroPass ? "✅ PASS" : "❌ FAIL"}`, zeroPass ? "pass" : "fail");
+
+            printScreen("\n--- 2. TESTING MATRIX & VECTOR ---", "info");
+            
+            // Create a 2x2 Stiffness Matrix [K]
+            const K = Matrix.fromArray([
+                [4, -2],
+                [-2, 4]
+            ]);
+            printScreen("Stiffness Matrix [K]:\n" + JSON.stringify(K.toArray(), null, 2));
+
+            // Create a Load Vector [F]
+            const F = Vector.fromArray([10, -5]);
+            printScreen("\nLoad Vector [F]:\n" + JSON.stringify(F.toArray(), null, 2));
+
+            printScreen("\n--- 3. TESTING GAUSSIAN ELIMINATION ---", "info");
+            
+            // Solve for Displacements [x]
+            const result = GaussianElimination.solve(K, F);
+
+            if (result.status === 'success') {
+                printScreen("✅ SOLVER SUCCESS! Displacement Vector [x]:", "pass");
+                printScreen(JSON.stringify(result.solution.toArray(), null, 2));
+                
+                // Expected answer is x1 = 2.5, x2 = 0
+                if (result.solution.get(0) === 2.5 && result.solution.get(1) === 0) {
+                    printScreen("\n✅ Math engine is 100% accurate!", "pass");
+                } else {
+                    printScreen("\n❌ Math ran, but the answer is incorrect.", "fail");
+                }
+            } else {
+                printScreen("\n❌ SOLVER FAILED: " + result.error, "fail");
+            }
+        } catch (error) {
+            printScreen("\n❌ CRITICAL ERROR: " + error.message, "fail");
+        }
+    </script>
+</body>
+</html>

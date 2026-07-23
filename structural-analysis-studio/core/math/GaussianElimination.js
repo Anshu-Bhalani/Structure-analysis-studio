@@ -1,72 +1,106 @@
 /**
- * Mathematics / GaussianElimination.js
- * ------------------------------------------------------------------
- * Solves the linear system  A x = b  using Gaussian elimination with
- * partial pivoting. Pure numerical routine — knows nothing about
- * stiffness, structures, or DOFs. The Solver module is the only
- * caller that gives physical meaning to A, x and b.
- * ------------------------------------------------------------------
+ * GaussianElimination.js
+ * Core linear equation solver for Structural Analysis Studio.
  */
 
-import { Matrix } from "./Matrix.js";
+import { Vector } from './Vector.js';
 
 export class GaussianElimination {
-  /**
-   * @param {Matrix} A  square coefficient matrix (n x n)
-   * @param {number[]} b right-hand side vector (length n)
-   * @returns {number[]} solution vector x (length n)
-   */
-  static solve(A, b) {
-    const n = A.rows;
-    if (A.cols !== n) throw new Error("GaussianElimination: A must be square");
-    if (b.length !== n) throw new Error("GaussianElimination: dimension mismatch between A and b");
-
-    // Build augmented matrix [A | b] as plain arrays for speed.
-    const aug = A.toArray().map((row, i) => [...row, b[i]]);
-
-    for (let col = 0; col < n; col++) {
-      // Partial pivot: find the row with the largest absolute value in this column.
-      let pivotRow = col;
-      let maxAbs = Math.abs(aug[col][col]);
-      for (let r = col + 1; r < n; r++) {
-        if (Math.abs(aug[r][col]) > maxAbs) {
-          maxAbs = Math.abs(aug[r][col]);
-          pivotRow = r;
+    /**
+     * Solves the system K * x = F for the unknown vector x.
+     * 
+     * @param {Matrix} K - The global stiffness matrix.
+     * @param {Vector} F - The load vector.
+     * @param {number} tolerance - Threshold to detect zero (prevents divide-by-zero).
+     * @returns {Object} Object containing { solution, status, error }.
+     */
+    static solve(K, F, tolerance = 1e-10) {
+        // --- Error Detection: Invalid size ---
+        if (!K.isSquare()) {
+            return { 
+                solution: null, 
+                status: 'error', 
+                error: `Invalid size: Stiffness matrix K must be square (is ${K.rows}x${K.cols}).` 
+            };
         }
-      }
-
-      if (maxAbs < 1e-12) {
-        throw new Error(
-          "GaussianElimination: matrix is singular or near-singular. " +
-            "The structure may be an unstable mechanism (insufficient supports)."
-        );
-      }
-
-      if (pivotRow !== col) {
-        const tmp = aug[col];
-        aug[col] = aug[pivotRow];
-        aug[pivotRow] = tmp;
-      }
-
-      // Eliminate below the pivot.
-      for (let r = col + 1; r < n; r++) {
-        const factor = aug[r][col] / aug[col][col];
-        if (factor === 0) continue;
-        for (let c = col; c <= n; c++) {
-          aug[r][c] -= factor * aug[col][c];
+        if (K.rows !== F.length) {
+            return { 
+                solution: null, 
+                status: 'error', 
+                error: `Invalid size: Matrix K (${K.rows} rows) and Vector F (${F.length} elements) mismatch.` 
+            };
         }
-      }
-    }
 
-    // Back substitution.
-    const x = new Array(n).fill(0);
-    for (let r = n - 1; r >= 0; r--) {
-      let sum = aug[r][n];
-      for (let c = r + 1; c < n; c++) {
-        sum -= aug[r][c] * x[c];
-      }
-      x[r] = sum / aug[r][r];
+        const n = K.rows;
+        
+        // Clone internal arrays to prevent mutating the original K and F objects
+        const a = K.toArray();
+        const b = F.toArray();
+
+        // --- Forward Elimination with Partial Pivoting ---
+        for (let i = 0; i < n; i++) {
+            
+            // 1. Partial Pivoting: Find the row with the largest absolute value in the current column
+            let maxRow = i;
+            let maxVal = Math.abs(a[i][i]);
+
+            for (let k = i + 1; k < n; k++) {
+                if (Math.abs(a[k][i]) > maxVal) {
+                    maxVal = Math.abs(a[k][i]);
+                    maxRow = k;
+                }
+            }
+
+            // --- Error Detection: Singular matrix / Divide by zero ---
+            // If the maximum pivot is near zero, the matrix is unstable/singular.
+            // In structural analysis, this usually means a structure is a mechanism (not properly supported).
+            if (maxVal < tolerance) {
+                return { 
+                    solution: null, 
+                    status: 'error', 
+                    error: `Singular matrix or unstable structure detected at DOF ${i + 1}. Check boundary conditions.` 
+                };
+            }
+
+            // 2. Swap the current row with the max pivot row
+            if (maxRow !== i) {
+                const tempRowA = a[i];
+                a[i] = a[maxRow];
+                a[maxRow] = tempRowA;
+
+                const tempValB = b[i];
+                b[i] = b[maxRow];
+                b[maxRow] = tempValB;
+            }
+
+            // 3. Forward Elimination: Create zeros below the pivot
+            for (let j = i + 1; j < n; j++) {
+                const factor = a[j][i] / a[i][i];
+                
+                // Only iterate from column 'i' onwards, as previous columns are already zero
+                for (let k = i; k < n; k++) {
+                    a[j][k] -= factor * a[i][k];
+                }
+                b[j] -= factor * b[i];
+            }
+        }
+
+        // --- Back Substitution ---
+        const x = new Array(n).fill(0);
+        
+        for (let i = n - 1; i >= 0; i--) {
+            let sum = b[i];
+            for (let j = i + 1; j < n; j++) {
+                sum -= a[i][j] * x[j];
+            }
+            x[i] = sum / a[i][i];
+        }
+
+        // --- Return Result ---
+        return {
+            solution: Vector.fromArray(x),
+            status: 'success',
+            error: null
+        };
     }
-    return x;
-  }
 }

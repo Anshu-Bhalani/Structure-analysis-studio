@@ -1,37 +1,34 @@
-/**
- * main.js
- * ------------------------------------------------------------------
- * Application entry point. Loaded as a native ES module from
- * index.html. Its only job is to locate the DOM mount points and
- * hand them to App — no logic lives here.
- * ------------------------------------------------------------------
- */
+// A simple UI Manager mapping for layout interactions
+document.addEventListener("DOMContentLoaded", () => {
+    
+    // Bottom Panel Tab Switching logic
+    const bpTabs = document.querySelectorAll('.bp-tab');
+    bpTabs.forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            bpTabs.forEach(t => t.classList.remove('active'));
+            e.target.classList.add('active');
+            // Normally this would trigger BottomPanel.js state updates
+        });
+    });
 
-import { App } from "./app/App.js";
+    // Workspace Tab Switching logic
+    const wsTabs = document.querySelectorAll('.workspace-tabs .tab');
+    wsTabs.forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            wsTabs.forEach(t => t.classList.remove('active'));
+            e.target.classList.add('active');
+            // Normally this would trigger UIManager.js canvas swap
+        });
+    });
 
-function boot() {
-  const mounts = {
-    canvas: document.getElementById("structure-canvas"),
-    toolbar: document.getElementById("toolbar"),
-    sidebar: document.getElementById("sidebar"),
-    properties: document.getElementById("properties-panel"),
-    bottom: document.getElementById("bottom-panel"),
-    dialogRoot: document.getElementById("dialog-root"),
-    importInput: document.getElementById("import-file-input"),
-  };
-
-  const missing = Object.entries(mounts).filter(([, el]) => !el);
-  if (missing.length) {
-    // eslint-disable-next-line no-console
-    console.error("Structural Analysis Studio: missing DOM mount points", missing.map(([k]) => k));
-    return;
-  }
-
-  window.__structuralAnalysisStudio = new App(mounts);
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", boot);
-} else {
-  boot();
-}
+    // Ribbon tool active state logic
+    const ribbonBtns = document.querySelectorAll('.ribbon-btn');
+    ribbonBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            // Remove active from peers in the same group
+            const group = e.target.closest('.ribbon-group');
+            group.querySelectorAll('.ribbon-btn').forEach(b => b.classList.remove('active'));
+            e.target.closest('.ribbon-btn').classList.add('active');
+        });
+    });
+});

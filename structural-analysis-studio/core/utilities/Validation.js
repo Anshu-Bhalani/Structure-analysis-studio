@@ -1,66 +1,103 @@
     // ==========================================
-    // SUPPORT VALIDATION (Level 4)
+    // LOAD VALIDATION (Phase 3.4)
     // ==========================================
-    static validateSupports(model) {
+    static validateLoads(model) {
         const result = new ValidationResult();
         
-        if (!model.supports || model.supports.size === 0) {
-            result.addWarning("No supports defined. The structure is currently unstable (Rigid Body Motion).");
+        if (!model.loads || model.loads.size === 0) {
+            result.addInfo("No external loads applied to the model.");
             return result;
         }
 
-        const supportedNodes = new Set(); // Tracks nodes that already have a support
+        const validDirections = ['FX', 'FY', 'FZ', 'MX', 'MY', 'MZ', 'Local-X', 'Local-Y', 'Global-X', 'Global-Y'];
+        const validTypes = ['Point Load', 'Moment', 'Uniform Load', 'Triangular Load', 'Trapezoidal Load', 'Temperature Load'];
 
-        for (const [id, support] of model.supports.entries()) {
-            
-            // 1. Valid Node Check (Missing or Dangling Reference)
-            const nodeId = support.node?.id || support.node;
-            
-            if (!nodeId) {
-                result.addError(`Missing Node: Support [${id}] is not attached to any node.`);
-                continue;
+        for (const [id, load] of model.loads.entries()) {
+            // Check 7: Missing required values
+            if (!load.targetType) { result.addError(`Missing Target Type: Load [${id}] must specify 'node' or 'element'.`); continue; }
+            if (!load.target) { result.addError(`Missing Target: Load [${id}] has no target assigned.`); continue; }
+            if (!load.loadType) { result.addError(`Missing Type: Load [${id}] has no loadType assigned.`); continue; }
+            if (!load.direction) { result.addError(`Missing Direction: Load [${id}] has no direction assigned.`); continue; }
+
+            // Check 4: Load type
+            if (!validTypes.includes(load.loadType)) {
+                result.addError(`Invalid Load Type: Load [${id}] type '${load.loadType}' is unsupported.`);
             }
 
-            const nodeExists = typeof model.findNodeById === 'function' ? model.findNodeById(nodeId) : model.nodes.has(nodeId);
-            if (!nodeExists) {
-                result.addError(`Dangling Reference: Support [${id}] points to missing Node [${nodeId}].`);
-                continue; // Skip further checks to avoid crashes
+            // Check 3: Direction
+            if (!validDirections.includes(load.direction)) {
+                result.addError(`Invalid Direction: Load [${id}] direction '${load.direction}' is unsupported.`);
             }
 
-            // 2. Duplicate Support Check
-            if (supportedNodes.has(nodeId)) {
-                result.addError(`Duplicate Support: Node [${nodeId}] has multiple supports assigned. A node can only have one support.`);
-            }
-            supportedNodes.add(nodeId);
-
-            // 3. Restraint Definition Check
-            if (!support.restrainedDOFs || typeof support.restrainedDOFs !== 'object') {
-                result.addError(`Invalid Restraints: Support [${id}] is missing the 'restrainedDOFs' definition object.`);
-            } else {
-                const { dx, dy, mz } = support.restrainedDOFs;
-                
-                // Ensure they are strictly defined as booleans
-                if (typeof dx !== 'boolean' || typeof dy !== 'boolean' || typeof mz !== 'boolean') {
-                    result.addError(`Malformed Restraints: Support [${id}] restrainedDOFs values (dx, dy, mz) must be strictly true/false booleans.`);
+            // Check 2: Magnitude
+            const validateMagnitude = (mag, name) => {
+                if (mag === undefined || mag === null) {
+                    result.addError(`Missing Magnitude: Load [${id}] is missing ${name}.`);
+                    return false;
                 }
-
-                // Warn if the support doesn't actually hold anything back (all false) and isn't a spring
-                if (dx === false && dy === false && mz === false && support.type !== 'Spring') {
-                    result.addWarning(`Useless Support: Support [${id}] on Node [${nodeId}] has all restraints set to false (Free).`);
+                if (typeof mag !== 'number' || Number.isNaN(mag)) {
+                    result.addError(`Invalid Magnitude (NaN): Load [${id}] ${name} must be a valid number.`);
+                    return false;
                 }
+                if (!Number.isFinite(mag)) {
+                    result.addError(`Infinity Error: Load [${id}] ${name} is infinite.`);
+                    return false;
+                }
+                return true;
+            };
+
+            if (['Point Load', 'Moment', 'Temperature Load', 'Uniform Load'].includes(load.loadType)) {
+                validateMagnitude(load.magnitude, 'magnitude');
+            } else if (['Triangular Load', 'Trapezoidal Load'].includes(load.loadType)) {
+                validateMagnitude(load.startMagnitude, 'startMagnitude');
+                validateMagnitude(load.endMagnitude, 'endMagnitude');
             }
 
-            // 4. Spring Validation (if type is Spring)
-            if (support.type === 'Spring') {
-                const k = support.springStiffness;
-                if (!k || (k.kx === 0 && k.ky === 0 && k.kmz === 0)) {
-                    result.addError(`Invalid Spring Support: Support [${id}] is set to 'Spring' but has zero stiffness in all directions.`);
+            // Check 1: Target exists + Checks 5 & 6 (Positions)
+            const targetId = load.target?.id || load.target;
+            
+            if (load.targetType === 'node') {
+                const nodeExists = typeof model.findNodeById === 'function' ? model.findNodeById(targetId) : model.nodes.has(targetId);
+                if (!nodeExists) result.addError(`Dangling Reference: Load [${id}] targets missing Node [${targetId}].`);
+            
+            } else if (load.targetType === 'element') {
+                const element = typeof model.findElementById === 'function' ? model.findElementById(targetId) : model.elements.get(targetId);
+                if (!element) {
+                    result.addError(`Dangling Reference: Load [${id}] targets missing Element [${targetId}].`);
+                } else {
+                    // Extract length using Node math
+                    const sNode = typeof model.findNodeById === 'function' ? model.findNodeById(element.startNode?.id || element.startNode) : model.nodes.get(element.startNode);
+                    const eNode = typeof model.findNodeById === 'function' ? model.findNodeById(element.endNode?.id || element.endNode) : model.nodes.get(element.endNode);
+                    
+                    if (sNode && eNode) {
+                        const length = sNode.distanceTo(eNode);
+
+                        // Check 5: Element position (Point Loads)
+                        if (['Point Load', 'Moment'].includes(load.loadType) && load.position !== undefined) {
+                            if (load.position < 0 || load.position > length) {
+                                result.addError(`Position Error: Load [${id}] position (${load.position}) is outside element length (${length}).`);
+                            }
+                        }
+
+                        // Check 6: Distributed load limits
+                        if (['Uniform Load', 'Triangular Load', 'Trapezoidal Load'].includes(load.loadType)) {
+                            const p1 = load.startPosition !== undefined ? load.startPosition : 0;
+                            const p2 = load.endPosition !== undefined ? load.endPosition : length;
+
+                            if (p1 < 0 || p1 > length || p2 < 0 || p2 > length) {
+                                result.addError(`Distributed Limit Error: Load [${id}] start/end positions must lie inside element length (0 to ${length}).`);
+                            }
+                            if (p1 > p2) {
+                                result.addError(`Distributed Limit Error: Load [${id}] startPosition (${p1}) cannot be greater than endPosition (${p2}).`);
+                            }
+                            if (p1 === p2) {
+                                result.addError(`Distributed Limit Error: Load [${id}] length must be > 0 (startPosition == endPosition).`);
+                            }
+                        }
+                    }
                 }
             }
         }
 
         return result;
     }
-``` *(Note: Keep the rest of `Validation.js` exactly as it was, just replace the `validateSupports` block with this updated one).*
-
-With this, you have successfully built out the Core Data Model for Supports (Level 3), integrated it into the Model controller, and protected it with the Validation Engine (Level 4)!

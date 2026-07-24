@@ -1,15 +1,23 @@
+export const ELEMENT_TYPES = {
+    BEAM: 'beam',
+    FRAME: 'frame',
+    TRUSS: 'truss',
+    SPRING: 'spring',
+    BAR: 'bar'
+};
+
 export class Element {
-    constructor(id, startNode, endNode, type = "beam") {
+    constructor(id, startNode, endNode, type = ELEMENT_TYPES.BEAM) {
         if (!id) throw new Error("Element must have a valid ID.");
         
         this.id = id;
-        this.startNode = startNode; // Can be a string ID or Node object
-        this.endNode = endNode;     // Can be a string ID or Node object
-        this.type = type;           // 'beam', 'frame', 'truss', 'spring'
+        this.startNode = startNode; 
+        this.endNode = endNode;     
+        this.type = type;           
         
         this.material = null;
         this.section = null;
-        this.springStiffness = 0; // Only used if type === 'spring'
+        this.springStiffness = 0; 
     }
     
     toJSON() {

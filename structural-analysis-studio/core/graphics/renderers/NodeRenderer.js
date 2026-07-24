@@ -1,31 +1,31 @@
-/**
- * Graphics / renderers / NodeRenderer.js
- * ------------------------------------------------------------------
- * Draws nodes. Pure rendering — reads Modeling data, never mutates it.
- * ------------------------------------------------------------------
- */
-
 export class NodeRenderer {
-  static draw(ctx, camera, canvasWidth, canvasHeight, nodes, colors, selectedNodeId, hoveredNodeId) {
-    const radius = 5;
-    nodes.forEach((node) => {
-      const [sx, sy] = camera.worldToScreen(node.x, node.y, canvasWidth, canvasHeight);
-      const isSelected = node.id === selectedNodeId;
-      const isHovered = node.id === hoveredNodeId;
+    static draw(ctx, model, camera, state) {
+        const radius = 4;
+        const defaultColor = "#ffffff";
+        const selectedColor = "#3b82f6";
+        const hoverColor = "#60a5fa";
 
-      ctx.beginPath();
-      ctx.arc(sx, sy, isSelected || isHovered ? radius + 2 : radius, 0, Math.PI * 2);
-      ctx.fillStyle = isSelected ? colors.accent : colors.node;
-      ctx.fill();
-      ctx.lineWidth = isSelected ? 2 : 1;
-      ctx.strokeStyle = colors.nodeStroke;
-      ctx.stroke();
+        for (const node of model.getAllNodes()) {
+            const screenPos = camera.worldToScreen(node.x, node.y);
 
-      if (node.label) {
-        ctx.fillStyle = colors.textMuted;
-        ctx.font = "11px 'IBM Plex Mono', monospace";
-        ctx.fillText(node.label, sx + 9, sy - 8);
-      }
-    });
-  }
+            const isSelected = state.selection.isNodeSelected(node.id);
+            const isHovered = state.hoveredObject?.id === node.id && state.hoveredObject?.type === 'node';
+
+            ctx.beginPath();
+            ctx.arc(screenPos.x, screenPos.y, radius, 0, Math.PI * 2);
+            
+            if (isSelected) {
+                ctx.fillStyle = selectedColor;
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = "rgba(59, 130, 246, 0.5)"; // Blue glow
+                ctx.stroke();
+            } else if (isHovered) {
+                ctx.fillStyle = hoverColor;
+            } else {
+                ctx.fillStyle = defaultColor;
+            }
+
+            ctx.fill();
+        }
+    }
 }

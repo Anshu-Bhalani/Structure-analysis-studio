@@ -37,16 +37,19 @@
                 const { Load } = await import('./core/modeling/Load.js');
                 const { Validator } = await import('./core/utilities/Validation.js');
 
-                // Helper to generate a pristine model
+                                // Helper to generate a pristine model using your REAL constructors
                 function getPerfectModel() {
                     const m = new Model("Test Model");
                     m.addNode(new Node("N1", 0, 0));
                     m.addNode(new Node("N2", 10, 0));
                     
-                    // ✔️ THE FIX: We inject raw JSON objects into the Map to bypass your strict Material/Section constructors.
-                    // The Validation Engine only checks if the Map has the ID, so this works perfectly!
-                    m.materials.set("Steel", { id: "Steel", E: 200000 });
-                    m.sections.set("W8x31", { id: "W8x31", A: 5000, I: 1e7 });
+                    // Using your actual Material constructor: (id, name, category, E, G, poissonRatio, density)
+                    const steel = new Material("Steel", "A36 Steel", "Steel", 200000, 77000, 0.3, 7850);
+                    m.materials.set(steel.id, steel);
+                    
+                    // Using your actual Section constructor: (id, name, shape, area, Iy, Iz, J)
+                    const w8x31 = new Section("W8x31", "W8x31", "I-Beam", 5000, 10000000, 5000000, 10000);
+                    m.sections.set(w8x31.id, w8x31);
                     
                     const beam = new Element("E1", "N1", "N2", "beam");
                     beam.material = "Steel"; 
@@ -58,6 +61,7 @@
                     m.addSupport(support);
                     return m;
                 }
+
 
                 htmlLog = "";
 

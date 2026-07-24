@@ -30,24 +30,27 @@
 
         async function runAutomatedTests() {
             try {
+                // ✔️ THE FIX: Imported Material and Section back into the file!
                 const { Model } = await import('./core/modeling/Model.js');
                 const { Node } = await import('./core/modeling/Node.js');
                 const { Element } = await import('./core/modeling/Element.js');
+                const { Material } = await import('./core/modeling/Material.js');
+                const { Section } = await import('./core/modeling/Section.js');
                 const { Support } = await import('./core/modeling/Support.js');
                 const { Load } = await import('./core/modeling/Load.js');
                 const { Validator } = await import('./core/utilities/Validation.js');
 
-                                // Helper to generate a pristine model using your REAL constructors
+                // Helper to generate a pristine model using your REAL constructors
                 function getPerfectModel() {
                     const m = new Model("Test Model");
                     m.addNode(new Node("N1", 0, 0));
                     m.addNode(new Node("N2", 10, 0));
                     
-                    // Using your actual Material constructor: (id, name, category, E, G, poissonRatio, density)
+                    // Using your actual Material constructor
                     const steel = new Material("Steel", "A36 Steel", "Steel", 200000, 77000, 0.3, 7850);
                     m.materials.set(steel.id, steel);
                     
-                    // Using your actual Section constructor: (id, name, shape, area, Iy, Iz, J)
+                    // Using your actual Section constructor
                     const w8x31 = new Section("W8x31", "W8x31", "I-Beam", 5000, 10000000, 5000000, 10000);
                     m.sections.set(w8x31.id, w8x31);
                     
@@ -61,7 +64,6 @@
                     m.addSupport(support);
                     return m;
                 }
-
 
                 htmlLog = "";
 

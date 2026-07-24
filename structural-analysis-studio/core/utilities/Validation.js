@@ -33,7 +33,6 @@ class ValidationResult {
 /**
  * LEVEL 4: Validation Engine
  * Prevents an invalid model from ever reaching Level 5 (Formulations) or Level 6 (Solver).
- * Knows about: Utilities (L1), Math (L2), and Core Data Models (L3).
  */
 export class Validator {
     
@@ -72,11 +71,9 @@ export class Validator {
             if (!node) continue; 
             const id = node.id || mapKey;
 
-            // Duplicate IDs
             if (idSet.has(id)) result.addError(`Duplicate ID: Node ID [${id}] is used more than once.`);
             idSet.add(id);
 
-            // Duplicate coordinates (Coincident nodes)
             if (Number.isFinite(node.x) && Number.isFinite(node.y)) {
                 const coordString = `${node.x},${node.y}`;
                 if (coordinatesSet.has(coordString)) {
@@ -89,6 +86,9 @@ export class Validator {
         return result;
     }
 
+    // ==========================================
+    // ELEMENT VALIDATION (Updated for Phase 3.2)
+    // ==========================================
     static validateElements(model) {
         const result = new ValidationResult();
 
@@ -97,40 +97,58 @@ export class Validator {
             return result;
         }
 
+        const validTypes = ['beam', 'frame', 'truss', 'spring'];
+
         for (const [id, element] of model.elements.entries()) {
+            
+            // 1. Invalid Type Check
+            if (!element.type || !validTypes.includes(element.type.toLowerCase())) {
+                result.addError(`Invalid Type: Element [${id}] has an unrecognized type '${element.type}'. Allowed types are: ${validTypes.join(', ')}.`);
+                continue; // Skip further checks on this broken element to prevent crashes
+            }
+
+            // Extract IDs safely whether they are objects or strings
             const sNodeId = element.startNode?.id || element.startNode;
             const eNodeId = element.endNode?.id || element.endNode;
 
+            // 2 & 3. Missing Start Node / Missing End Node
             if (!sNodeId || !eNodeId) {
-                result.addError(`Element [${id}] is missing a start or end node.`);
+                result.addError(`Missing Node: Element [${id}] is missing a start or end node.`);
                 continue;
             }
 
-            // Zero-Length Members
+            // 4. Same Node (Topological Error)
             if (sNodeId === eNodeId) {
-                result.addError(`Zero-Length Element: Element [${id}] has the same start and end node (${sNodeId}).`);
+                result.addError(`Same Node: Element [${id}] connects Node [${sNodeId}] to itself.`);
             }
 
-            // Dangling References
-            const sNodeExists = typeof model.findNodeById === 'function' ? model.findNodeById(sNodeId) : model.nodes.has(sNodeId);
-            const eNodeExists = typeof model.findNodeById === 'function' ? model.findNodeById(eNodeId) : model.nodes.has(eNodeId);
+            // Fetch the actual node objects (Level 3 integration)
+            const sNode = typeof model.findNodeById === 'function' ? model.findNodeById(sNodeId) : model.nodes.get(sNodeId);
+            const eNode = typeof model.findNodeById === 'function' ? model.findNodeById(eNodeId) : model.nodes.get(eNodeId);
 
-            if (!sNodeExists) result.addError(`Dangling Reference: Element [${id}] points to missing Start Node [${sNodeId}].`);
-            if (!eNodeExists) result.addError(`Dangling Reference: Element [${id}] points to missing End Node [${eNodeId}].`);
+            if (!sNode) result.addError(`Dangling Reference: Element [${id}] points to missing Start Node [${sNodeId}].`);
+            if (!eNode) result.addError(`Dangling Reference: Element [${id}] points to missing End Node [${eNodeId}].`);
 
-            // Check Missing Materials & Sections (Level 4 Specific Checks)
+            // 5. Zero Length Check (Geometric Error)
+            if (sNode && eNode && sNodeId !== eNodeId) {
+                // Uses distanceTo() from Node.js (Level 3) -> MathUtils (Level 2)
+                if (sNode.distanceTo(eNode) === 0) {
+                    result.addError(`Zero Length: Element [${id}] connects distinct nodes (${sNodeId}, ${eNodeId}) that occupy the exact same physical coordinates.`);
+                }
+            }
+
+            // 6 & 7. Missing Material / Missing Section
             if (element.type === 'beam' || element.type === 'frame' || element.type === 'truss') {
                 if (!element.material) {
-                    result.addError(`Missing Material: ${element.type.toUpperCase()} [${id}] requires a Material assignment.`);
+                    result.addError(`Missing Material: ${element.type.toUpperCase()} [${id}] requires a Material assignment to be solved.`);
                 }
                 if (!element.section) {
-                    result.addError(`Missing Section: ${element.type.toUpperCase()} [${id}] requires a Section assignment.`);
+                    result.addError(`Missing Section: ${element.type.toUpperCase()} [${id}] requires a Section (cross-section) assignment to be solved.`);
                 }
             }
 
-            // Check Invalid Spring properties
+            // Spring validation (Bonus)
             if (element.type === 'spring') {
-                // Assuming springStiffness is initialized to 0 in Element.js
                 if (element.springStiffness === undefined || element.springStiffness <= 0) {
                     result.addError(`Invalid Spring: SPRING [${id}] requires a stiffness value greater than 0.`);
                 }
@@ -142,7 +160,6 @@ export class Validator {
 
     static validateSupports(model) {
         const result = new ValidationResult();
-        // Will be fully fleshed out when Support.js (Level 3) is created
         if (!model.supports || model.supports.size === 0) {
             result.addWarning("No supports defined. Structure is unstable (Rigid Body Motion).");
         }
@@ -151,7 +168,6 @@ export class Validator {
 
     static validateLoads(model) {
         const result = new ValidationResult();
-        // Will be fully fleshed out when Load.js (Level 3) is created
         if (!model.loads || model.loads.size === 0) {
             result.addInfo("No external loads applied to the model.");
         }

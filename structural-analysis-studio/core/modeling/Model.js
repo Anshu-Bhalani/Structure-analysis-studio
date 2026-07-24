@@ -1,250 +1,194 @@
 /**
- * Modeling / Model.js
- * ------------------------------------------------------------------
- * The Model is the single source of truth for structural DATA:
- * nodes, elements, supports, loads, materials, sections.
- *
- * RULE: The Modeling module stores data only. No calculations here —
- * that is the responsibility of Analysis + Solver.
- * ------------------------------------------------------------------
+ * Model.js
+ * The central container for the structural analysis project.
+ * Acts as the single source of truth. Knows nothing about solving or UI.
  */
 
-import { Node } from "./Node.js";
-import { Element } from "./Element.js";
-import { Support } from "./Support.js";
-import { Load } from "./Load.js";
-import { Material } from "./Material.js";
-import { Section } from "./Section.js";
-
 export class Model {
-  constructor() {
-    /** @type {Map<string, Node>} */
-    this.nodes = new Map();
-    /** @type {Map<string, Element>} */
-    this.elements = new Map();
-    /** @type {Map<string, Support>} */
-    this.supports = new Map();
-    /** @type {Map<string, Load>} */
-    this.loads = new Map();
-    /** @type {Map<string, Material>} */
-    this.materials = new Map();
-    /** @type {Map<string, Section>} */
-    this.sections = new Map();
+    constructor(name = "New Project") {
+        // --- Project Information ---
+        this.schemaVersion = "1.0.0"; // Freezing the v1 schema
+        this.name = name;
+        this.description = "";
+        
+        // Display units (Solver strictly uses internal units: m, N, Pa)
+        this.units = { length: "m", force: "kN", stress: "MPa" };
+        this.settings = {};
 
-    this.listeners = [];
+        // --- Collections ---
+        // We use ES6 Maps instead of Arrays. This provides O(1) instant search 
+        // by ID and inherently prevents duplicate IDs.
+        this.nodes = new Map();
+        this.elements = new Map();
+        this.materials = new Map();
+        this.sections = new Map();
+        this.supports = new Map();
+        this.loads = new Map();
 
-    // Seed with one default material and section so new elements have something to reference.
-    const defaultMaterial = Material.defaultSteel();
-    const defaultSection = Section.defaultSection();
-    this.materials.set(defaultMaterial.id, defaultMaterial);
-    this.sections.set(defaultSection.id, defaultSection);
-    this.defaultMaterialId = defaultMaterial.id;
-    this.defaultSectionId = defaultSection.id;
-  }
-
-  // ---- change notification (UI subscribes to this) ----------------
-  onChange(fn) {
-    this.listeners.push(fn);
-    return () => {
-      this.listeners = this.listeners.filter((l) => l !== fn);
-    };
-  }
-
-  _notify(eventName) {
-    this.listeners.forEach((fn) => fn(eventName, this));
-  }
-
-  // ---- Nodes --------------------------------------------------------
-  addNode(x, y) {
-    const node = new Node(x, y);
-    this.nodes.set(node.id, node);
-    this._notify("node:add");
-    return node;
-  }
-
-  getNode(id) {
-    return this.nodes.get(id) || null;
-  }
-
-  removeNode(id) {
-    // Cascade: remove dependent elements, supports, loads referencing this node.
-    for (const [eid, el] of this.elements) {
-      if (el.nodeI === id || el.nodeJ === id) this.elements.delete(eid);
+        // Temporary analysis model data, discarded when the model is modified
+        this.results = null; 
     }
-    for (const [sid, s] of this.supports) {
-      if (s.nodeId === id) this.supports.delete(sid);
+
+    // ==========================================
+    // Project Information
+    // ==========================================
+
+    renameProject(newName) {
+        this.name = newName;
     }
-    for (const [lid, l] of this.loads) {
-      if (l.nodeId === id) this.loads.delete(lid);
+
+    setDescription(description) {
+        this.description = description;
     }
-    this.nodes.delete(id);
-    this._notify("node:remove");
-  }
 
-  findNodeNear(x, y, tolerance) {
-    for (const node of this.nodes.values()) {
-      if (Math.hypot(node.x - x, node.y - y) <= tolerance) return node;
+    setUnits(units) {
+        this.units = { ...this.units, ...units };
     }
-    return null;
-  }
 
-  // ---- Elements -------------------------------------------------------
-  addElement(type, nodeIId, nodeJId, properties = {}) {
-    const props = { ...properties };
-    const element = new Element(type, nodeIId, nodeJId, props);
-    this.elements.set(element.id, element);
-    this._notify("element:add");
-    return element;
-  }
-
-  getElement(id) {
-    return this.elements.get(id) || null;
-  }
-
-  removeElement(id) {
-    this.elements.delete(id);
-    this._notify("element:remove");
-  }
-
-  // ---- Supports -------------------------------------------------------
-  addSupport(nodeId, restraints, type = "custom") {
-    const support = new Support(nodeId, restraints, type);
-    this.supports.set(support.id, support);
-    this._notify("support:add");
-    return support;
-  }
-
-  addSupportPreset(nodeId, presetName) {
-    const support = Support.preset(nodeId, presetName);
-    // Only one support per node — replace if one already exists.
-    for (const [sid, s] of this.supports) {
-      if (s.nodeId === nodeId) this.supports.delete(sid);
+    setSettings(settings) {
+        this.settings = { ...this.settings, ...settings };
+        this._invalidateResults();
     }
-    this.supports.set(support.id, support);
-    this._notify("support:add");
-    return support;
-  }
 
-  getSupportForNode(nodeId) {
-    for (const s of this.supports.values()) {
-      if (s.nodeId === nodeId) return s;
+    // ==========================================
+    // Collections (Add / Remove)
+    // ==========================================
+
+    /** Adds a Node. Throws an error if the ID already exists. */
+    addNode(node) {
+        if (!node || !node.id) throw new Error("Node must have a valid ID.");
+        if (this.nodes.has(node.id)) throw new Error(`Node with ID ${node.id} already exists.`);
+        
+        this.nodes.set(node.id, node);
+        this._invalidateResults();
     }
-    return null;
-  }
 
-  removeSupport(id) {
-    this.supports.delete(id);
-    this._notify("support:remove");
-  }
+    removeNode(id) {
+        this.nodes.delete(id);
+        this._invalidateResults();
+    }
 
-  // ---- Loads -------------------------------------------------------
-  addLoad(nodeId, values) {
-    const load = new Load(nodeId, values);
-    this.loads.set(load.id, load);
-    this._notify("load:add");
-    return load;
-  }
+    /** Adds an Element. Throws an error if the ID already exists. */
+    addElement(element) {
+        if (!element || !element.id) throw new Error("Element must have a valid ID.");
+        if (this.elements.has(element.id)) throw new Error(`Element with ID ${element.id} already exists.`);
+        
+        this.elements.set(element.id, element);
+        this._invalidateResults();
+    }
 
-  getLoadsForNode(nodeId) {
-    return [...this.loads.values()].filter((l) => l.nodeId === nodeId);
-  }
+    removeElement(id) {
+        this.elements.delete(id);
+        this._invalidateResults();
+    }
 
-  removeLoad(id) {
-    this.loads.delete(id);
-    this._notify("load:remove");
-  }
+    /** Adds a Material. Throws an error if the ID already exists. */
+    addMaterial(material) {
+        if (!material || !material.id) throw new Error("Material must have a valid ID.");
+        if (this.materials.has(material.id)) throw new Error(`Material with ID ${material.id} already exists.`);
+        
+        this.materials.set(material.id, material);
+        this._invalidateResults();
+    }
 
-  // ---- Materials / Sections ------------------------------------------
-  addMaterial(name, E) {
-    const m = new Material(name, E);
-    this.materials.set(m.id, m);
-    this._notify("material:add");
-    return m;
-  }
+    removeMaterial(id) {
+        this.materials.delete(id);
+        this._invalidateResults();
+    }
 
-  addSection(name, A, I) {
-    const s = new Section(name, A, I);
-    this.sections.set(s.id, s);
-    this._notify("section:add");
-    return s;
-  }
+    /** Adds a Section. Throws an error if the ID already exists. */
+    addSection(section) {
+        if (!section || !section.id) throw new Error("Section must have a valid ID.");
+        if (this.sections.has(section.id)) throw new Error(`Section with ID ${section.id} already exists.`);
+        
+        this.sections.set(section.id, section);
+        this._invalidateResults();
+    }
 
-  // ---- Bulk queries --------------------------------------------------
-  getAllNodes() {
-    return [...this.nodes.values()];
-  }
+    removeSection(id) {
+        this.sections.delete(id);
+        this._invalidateResults();
+    }
 
-  getAllElements() {
-    return [...this.elements.values()];
-  }
+    // Note: Supports and Loads would follow the exact same pattern.
+    
+    // ==========================================
+    // Search
+    // ==========================================
 
-  getAllSupports() {
-    return [...this.supports.values()];
-  }
+    findNodeById(id) {
+        return this.nodes.get(id) || null;
+    }
 
-  getAllLoads() {
-    return [...this.loads.values()];
-  }
+    findElementById(id) {
+        return this.elements.get(id) || null;
+    }
 
-  isEmpty() {
-    return this.nodes.size === 0;
-  }
+    findMaterialById(id) {
+        return this.materials.get(id) || null;
+    }
 
-  clear() {
-    this.nodes.clear();
-    this.elements.clear();
-    this.supports.clear();
-    this.loads.clear();
-    this._notify("model:clear");
-  }
+    findSectionById(id) {
+        return this.sections.get(id) || null;
+    }
 
-  // ---- Serialization --------------------------------------------------
-  toJSON() {
-    return {
-      nodes: this.getAllNodes().map((n) => n.toJSON()),
-      elements: this.getAllElements().map((e) => e.toJSON()),
-      supports: this.getAllSupports().map((s) => s.toJSON()),
-      loads: this.getAllLoads().map((l) => l.toJSON()),
-      materials: [...this.materials.values()].map((m) => m.toJSON()),
-      sections: [...this.sections.values()].map((s) => s.toJSON()),
-      defaultMaterialId: this.defaultMaterialId,
-      defaultSectionId: this.defaultSectionId,
-    };
-  }
+    // ==========================================
+    // Internal State Management
+    // ==========================================
 
-  static fromJSON(json) {
-    const model = new Model();
-    model.nodes.clear();
-    model.materials.clear();
-    model.sections.clear();
+    /**
+     * Clears results. Any change affecting analysis immediately marks 
+     * existing results as outdated and requires reanalysis[span_2](start_span)[span_2](end_span).
+     */
+    _invalidateResults() {
+        this.results = null;
+    }
 
-    (json.materials || []).forEach((m) => {
-      const mat = Material.fromJSON(m);
-      model.materials.set(mat.id, mat);
-    });
-    (json.sections || []).forEach((s) => {
-      const sec = Section.fromJSON(s);
-      model.sections.set(sec.id, sec);
-    });
-    (json.nodes || []).forEach((n) => {
-      const node = Node.fromJSON(n);
-      model.nodes.set(node.id, node);
-    });
-    (json.elements || []).forEach((e) => {
-      const el = Element.fromJSON(e);
-      model.elements.set(el.id, el);
-    });
-    (json.supports || []).forEach((s) => {
-      const sup = Support.fromJSON(s);
-      model.supports.set(sup.id, sup);
-    });
-    (json.loads || []).forEach((l) => {
-      const load = Load.fromJSON(l);
-      model.loads.set(load.id, load);
-    });
+    // ==========================================
+    // Serialization
+    // ==========================================
 
-    model.defaultMaterialId = json.defaultMaterialId || model.defaultMaterialId;
-    model.defaultSectionId = json.defaultSectionId || model.defaultSectionId;
-    return model;
-  }
+    /** Converts the entire project state to a JSON string[span_3](start_span)[span_3](end_span). */
+    toJSON() {
+        const data = {
+            schemaVersion: this.schemaVersion,
+            name: this.name,
+            description: this.description,
+            units: this.units,
+            settings: this.settings,
+            // Maps are not natively JSON stringifiable, so we convert their values to Arrays
+            nodes: Array.from(this.nodes.values()),
+            elements: Array.from(this.elements.values()),
+            materials: Array.from(this.materials.values()),
+            sections: Array.from(this.sections.values()),
+            supports: Array.from(this.supports.values()),
+            loads: Array.from(this.loads.values())
+        };
+        return JSON.stringify(data, null, 2);
+    }
+
+    /** 
+     * Rebuilds a Model instance from a JSON string.
+     * Note: In a full implementation, you would pass these raw objects 
+     * into Node.fromJSON(), Element.fromJSON(), etc. to restore their class methods.
+     */
+    static fromJSON(jsonString) {
+        const data = JSON.parse(jsonString);
+        const model = new Model(data.name);
+        
+        model.schemaVersion = data.schemaVersion || "1.0.0";
+        model.description = data.description || "";
+        model.units = data.units || model.units;
+        model.settings = data.settings || model.settings;
+
+        // Reconstruct the Maps
+        if (data.nodes) data.nodes.forEach(n => model.nodes.set(n.id, n));
+        if (data.elements) data.elements.forEach(e => model.elements.set(e.id, e));
+        if (data.materials) data.materials.forEach(m => model.materials.set(m.id, m));
+        if (data.sections) data.sections.forEach(s => model.sections.set(s.id, s));
+        if (data.supports) data.supports.forEach(s => model.supports.set(s.id, s));
+        if (data.loads) data.loads.forEach(l => model.loads.set(l.id, l));
+
+        return model;
+    }
 }

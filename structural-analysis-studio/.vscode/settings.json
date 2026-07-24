@@ -1,8 +1,0 @@
-{
-    "liveServer.settings.ignoreFiles": [
-        "backend/**",
-        "core/**",
-        "shared/**",
-        ".git/**"
-    ]
-}

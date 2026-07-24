@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Structure Studio - Node & Element Test</title>
+    <title>Structure Studio - Element Types Test</title>
     <style>
         body { font-family: sans-serif; margin: 0; background: #121212; color: #e0e0e0; display: flex; flex-direction: column; height: 100vh; }
         .toolbar { padding: 15px; background: #1e1e1e; border-bottom: 1px solid #333; }
         h2 { margin: 0; font-size: 16px; color: #3b82f6; }
         p { margin: 5px 0 10px 0; font-size: 12px; color: #888; }
         
-        .mode-switch { display: flex; gap: 10px; background: #000; padding: 5px; border-radius: 6px; width: max-content;}
-        .mode-btn { background: transparent; color: #888; border: none; padding: 8px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s;}
+        .mode-switch { display: flex; flex-wrap: wrap; gap: 8px; background: #000; padding: 5px; border-radius: 6px; }
+        .mode-btn { background: transparent; color: #888; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 13px;}
         .mode-btn.active { background: #3b82f6; color: #fff; }
 
-        #canvas-container { width: 100%; height: 40vh; background: #181818; position: relative; touch-action: none; border-bottom: 1px solid #333; }
+        #canvas-container { width: 100%; height: 45vh; background: #181818; position: relative; touch-action: none; border-bottom: 1px solid #333; }
         canvas { display: block; width: 100%; height: 100%; }
         
         .bottom-area { display: flex; flex-direction: column; flex: 1; overflow-y: auto; }
@@ -30,25 +30,42 @@
         .checkbox-label { display: flex; align-items: center; gap: 5px; font-size: 13px; color: #ddd; }
 
         .btn-group { display: flex; gap: 10px; }
-        button { background: #3b82f6; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; flex: 1; touch-action: manipulation; }
-        button:active { background: #2563eb; }
-        button:disabled { background: #444; color: #888; }
+        button.action-btn { background: #3b82f6; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; flex: 1; touch-action: manipulation; }
+        button.action-btn:active { background: #2563eb; }
+        button.action-btn:disabled { background: #444; color: #888; }
         #btnDelete { background: #ef4444; flex: 0.4; }
         #btnDelete:active { background: #dc2626; }
-        #btnDelete:disabled { background: #444; }
 
         .data-panel { padding: 15px; background: #000; flex: 1; overflow-y: auto;}
         pre { margin: 0; font-family: monospace; font-size: 11px; color: #22c55e; white-space: pre-wrap; }
     </style>
+    
+    <script>
+        window.addEventListener('error', function(event) {
+            const out = document.getElementById('output');
+            if(out) { out.innerText = '🔴 SYSTEM CRASH:\n\n' + event.message + '\n\nLocation: ' + event.filename + '\nLine: ' + event.lineno; out.style.color = '#ef4444'; }
+            const status = document.getElementById('statusText');
+            if(status) { status.innerText = 'System Error! Read JSON panel.'; status.style.color = '#ef4444'; }
+        });
+        window.addEventListener('unhandledrejection', function(event) {
+            const out = document.getElementById('output');
+            if(out) { out.innerText = '🔴 IMPORT FAILED:\n\n' + event.reason; out.style.color = '#ef4444'; }
+            const status = document.getElementById('statusText');
+            if(status) { status.innerText = 'File Import Failed! Read JSON panel.'; status.style.color = '#ef4444'; }
+        });
+    </script>
 </head>
 <body>
 
     <div class="toolbar">
-        <h2>Structure Studio (Phase 3)</h2>
+        <h2>Structure Studio (Phase 3.5)</h2>
         <p>Current Action: <span id="statusText" style="color:#22c55e;">Select a node or empty space.</span></p>
         <div class="mode-switch">
-            <button class="mode-btn active" id="modeSelect">🎯 Select/Edit</button>
-            <button class="mode-btn" id="modeElement">✏️ Draw Element</button>
+            <button class="mode-btn active" id="modeSelect">🎯 Select</button>
+            <button class="mode-btn" id="modeBeam" data-type="beam">📏 Beam</button>
+            <button class="mode-btn" id="modeFrame" data-type="frame">🏗️ Frame</button>
+            <button class="mode-btn" id="modeTruss" data-type="truss">📐 Truss</button>
+            <button class="mode-btn" id="modeSpring" data-type="spring">〰️ Spring</button>
         </div>
     </div>
 
@@ -79,8 +96,8 @@
             </div>
 
             <div class="btn-group">
-                <button id="btnApply" disabled>Apply Changes</button>
-                <button id="btnDelete" disabled>Delete</button>
+                <button class="action-btn" id="btnApply" disabled>Apply Changes</button>
+                <button class="action-btn" id="btnDelete" disabled>Delete</button>
             </div>
         </div>
 
@@ -92,7 +109,7 @@
 
     <script type="module">
         import { Node } from './core/modeling/Node.js';
-        import { Element } from './core/modeling/Element.js';
+        import { Element } from './core/modeling/Element.js'; 
         import { Model } from './core/modeling/Model.js';
 
         const canvas = document.getElementById('gridCanvas');
@@ -100,25 +117,23 @@
         const output = document.getElementById('output');
         const statusText = document.getElementById('statusText');
         
-        // --- State ---
-        let model = new Model("Phase 3 Test");
-        // Defensive check: ensure elements map exists
+        let model = new Model("Elements Test");
         if(!model.elements) model.elements = new Map(); 
         
         let nodeCounter = 1;
         let elementCounter = 1;
         let selectedNodeId = null;
         
-        let appMode = 'SELECT'; // 'SELECT' or 'DRAW_ELEMENT'
+        let appMode = 'SELECT'; 
+        let currentElementType = 'beam'; // Stores the type of element to draw
         let drawStartNode = null; 
         let pointerPos = { x: 0, y: 0 }; 
 
         const scale = 40; 
         let originX, originY;
 
-        // --- UI Elements ---
-        const btnSelect = document.getElementById('modeSelect');
-        const btnElement = document.getElementById('modeElement');
+        // UI Elements
+        const modeButtons = document.querySelectorAll('.mode-btn');
         const elTitle = document.getElementById('propTitle');
         const elId = document.getElementById('nodeId');
         const elX = document.getElementById('nodeX');
@@ -138,22 +153,27 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // --- Mode Switching ---
-        btnSelect.addEventListener('click', () => {
-            appMode = 'SELECT'; drawStartNode = null;
-            btnSelect.classList.add('active'); btnElement.classList.remove('active');
-            statusText.innerText = "Select a node or click empty space to create.";
-            render();
+        // Handle Mode Switching
+        modeButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                modeButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                if (btn.id === 'modeSelect') {
+                    appMode = 'SELECT';
+                    drawStartNode = null;
+                    statusText.innerText = "Select a node or click empty space to create.";
+                } else {
+                    appMode = 'DRAW_ELEMENT';
+                    currentElementType = btn.dataset.type; // Extract type from data-attribute
+                    drawStartNode = null;
+                    selectNode(null);
+                    statusText.innerText = `Drawing ${currentElementType.toUpperCase()}. Click first node.`;
+                }
+                render();
+            });
         });
 
-        btnElement.addEventListener('click', () => {
-            appMode = 'DRAW_ELEMENT'; drawStartNode = null; selectNode(null);
-            btnElement.classList.add('active'); btnSelect.classList.remove('active');
-            statusText.innerText = "Click first node (or empty space).";
-            render();
-        });
-
-        // --- Helpers ---
         function getOccupyingNodeId(x, y, excludeId = null) {
             for (const [id, node] of model.nodes.entries()) {
                 if (id !== excludeId && node.x === x && node.y === y) return id;
@@ -161,7 +181,6 @@
             return null;
         }
 
-        // Track pointer for Element Preview Line
         canvas.addEventListener('pointermove', (e) => {
             if (appMode !== 'DRAW_ELEMENT' || !drawStartNode) return;
             const rect = canvas.getBoundingClientRect();
@@ -170,7 +189,6 @@
             render();
         });
 
-        // --- Interaction Logic ---
         canvas.addEventListener('pointerdown', (e) => {
             const rect = canvas.getBoundingClientRect();
             const pixelX = e.clientX - rect.left;
@@ -179,7 +197,6 @@
             let engX = Math.round(((pixelX - originX) / scale) * 2) / 2; 
             let engY = Math.round((-(pixelY - originY) / scale) * 2) / 2; 
 
-            // Hit Detection
             let clickedNodeId = null;
             for (const [id, node] of model.nodes.entries()) {
                 const px = originX + (node.x * scale);
@@ -189,7 +206,6 @@
                 }
             }
 
-            // Create node if empty space clicked
             if (!clickedNodeId) {
                 clickedNodeId = getOccupyingNodeId(engX, engY);
                 if (!clickedNodeId) {
@@ -199,32 +215,29 @@
                 }
             }
 
-            // --- State Machine ---
             if (appMode === 'SELECT') {
                 selectNode(clickedNodeId);
             } 
             else if (appMode === 'DRAW_ELEMENT') {
                 if (!drawStartNode) {
-                    // Click 1: Start Element
                     drawStartNode = model.findNodeById(clickedNodeId);
-                    statusText.innerText = `Drawing from ${drawStartNode.id}. Click end node.`;
+                    statusText.innerText = `Drawing ${currentElementType.toUpperCase()} from ${drawStartNode.id}. Click end node.`;
                     pointerPos.x = pixelX; pointerPos.y = pixelY;
                 } else {
-                    // Click 2: Finish Element
                     const targetNode = model.findNodeById(clickedNodeId);
                     if (targetNode.id !== drawStartNode.id) {
-                        const newElement = new Element("E" + elementCounter++, drawStartNode, targetNode);
+                        // PASS THE SELECTED TYPE TO THE ELEMENT CONSTRUCTOR
+                        const newElement = new Element("E" + elementCounter++, drawStartNode, targetNode, currentElementType);
                         model.addElement(newElement);
                     }
                     drawStartNode = null; 
-                    statusText.innerText = "Click first node (or empty space).";
+                    statusText.innerText = `Drawing ${currentElementType.toUpperCase()}. Click first node.`;
                 }
             }
             render();
             updateJSON();
         });
 
-        // --- Select & Properties ---
         function selectNode(id) {
             selectedNodeId = id;
             const node = model.findNodeById(id);
@@ -245,50 +258,37 @@
             elX.disabled = elY.disabled = elVisible.disabled = e.target.checked;
         });
 
-        // --- Edit Node ---
         btnApply.addEventListener('click', () => {
             if (!selectedNodeId) return;
             const node = model.findNodeById(selectedNodeId);
             if (node) {
                 const targetX = parseFloat(elX.value) || 0;
                 const targetY = parseFloat(elY.value) || 0;
-
                 if (!node.locked && getOccupyingNodeId(targetX, targetY, node.id)) {
                     elTitle.innerText = "Error: Position Occupied!"; elTitle.style.color = "#ef4444";
                     setTimeout(() => selectNode(node.id), 1500); return;
                 }
-
                 if (!elLocked.checked) node.unlock(); 
                 node.setPosition(targetX, targetY);
                 if (!node.locked) { if (elVisible.checked) node.show(); else node.hide(); }
                 if (elLocked.checked) node.lock();
-                
                 model._invalidateResults(); render(); updateJSON();
             }
         });
 
-        // --- Delete Node (Safe Deletion) ---
         btnDelete.addEventListener('click', () => {
             if (!selectedNodeId) return;
-            
-            // Try standard delete
             const result = model.deleteNode(selectedNodeId, false);
-            
             if (!result.success) {
-                // If it fails, ask user for explicit override
-                const confirmCascade = confirm(`Cannot delete. Node belongs to ${result.connectedElements.length} element(s).\n\nDelete connected elements also?`);
-                if (confirmCascade) {
+                if (confirm(`Cannot delete. Node belongs to ${result.connectedElements.length} element(s).\n\nDelete connected elements also?`)) {
                     model.deleteNode(selectedNodeId, true);
-                    selectNode(null);
-                    render(); updateJSON();
+                    selectNode(null); render(); updateJSON();
                 }
             } else {
-                selectNode(null);
-                render(); updateJSON();
+                selectNode(null); render(); updateJSON();
             }
         });
 
-        // --- Rendering Engine ---
         function render() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -304,24 +304,48 @@
             ctx.moveTo(originX, 0); ctx.lineTo(originX, canvas.height); 
             ctx.stroke();
 
-            // Draw Elements
+            // Draw Elements based on TYPE
             model.elements.forEach(element => {
-                const px1 = originX + (element.startNode.x * scale);
-                const py1 = originY - (element.startNode.y * scale);
-                const px2 = originX + (element.endNode.x * scale);
-                const py2 = originY - (element.endNode.y * scale);
+                const sNode = typeof element.startNode === 'object' ? element.startNode : model.findNodeById(element.startNode);
+                const eNode = typeof element.endNode === 'object' ? element.endNode : model.findNodeById(element.endNode);
+                if(!sNode || !eNode) return; 
 
-                ctx.strokeStyle = '#a3e635'; // Lime green
-                ctx.lineWidth = 4;
-                ctx.beginPath(); ctx.moveTo(px1, py1); ctx.lineTo(px2, py2); ctx.stroke();
+                const px1 = originX + (sNode.x * scale);
+                const py1 = originY - (sNode.y * scale);
+                const px2 = originX + (eNode.x * scale);
+                const py2 = originY - (eNode.y * scale);
+
+                ctx.beginPath();
+                ctx.setLineDash([]); // Reset dash pattern
+                
+                // Styling by Type
+                if (element.type === 'beam') {
+                    ctx.strokeStyle = '#a3e635'; // Green
+                    ctx.lineWidth = 4;
+                } else if (element.type === 'frame') {
+                    ctx.strokeStyle = '#3b82f6'; // Blue
+                    ctx.lineWidth = 4;
+                } else if (element.type === 'truss') {
+                    ctx.strokeStyle = '#f97316'; // Orange
+                    ctx.lineWidth = 2; // Thinner
+                } else if (element.type === 'spring') {
+                    ctx.strokeStyle = '#ec4899'; // Pink
+                    ctx.lineWidth = 3;
+                    ctx.setLineDash([4, 4]); // Dashed line to look like a spring
+                } else {
+                    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; // Fallback
+                }
+
+                ctx.moveTo(px1, py1); ctx.lineTo(px2, py2); ctx.stroke();
             });
+            ctx.setLineDash([]); // Always reset after drawing elements
 
-            // Draw Preview Element
+            // Draw temp line while dragging
             if (appMode === 'DRAW_ELEMENT' && drawStartNode) {
                 const px1 = originX + (drawStartNode.x * scale);
                 const py1 = originY - (drawStartNode.y * scale);
-                ctx.strokeStyle = 'rgba(163, 230, 53, 0.5)';
-                ctx.setLineDash([5, 5]); ctx.lineWidth = 3;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.setLineDash([5, 5]); ctx.lineWidth = 2;
                 ctx.beginPath(); ctx.moveTo(px1, py1); ctx.lineTo(pointerPos.x, pointerPos.y); ctx.stroke();
                 ctx.setLineDash([]); 
             }
@@ -346,9 +370,10 @@
 
         function updateJSON() {
             const out = { nodes: [], elements: [] };
-            model.nodes.forEach(n => out.nodes.push(n.toJSON()));
-            model.elements.forEach(e => out.elements.push(e.toJSON()));
+            model.nodes.forEach(n => out.nodes.push(n.toJSON ? n.toJSON() : n));
+            model.elements.forEach(e => out.elements.push(e.toJSON ? e.toJSON() : e));
             output.innerText = JSON.stringify(out, null, 2);
+            output.style.color = '#22c55e'; 
         }
     </script>
 </body>

@@ -1,30 +1,12 @@
-/**
- * Analysis / BarElement.js
- * ------------------------------------------------------------------
- * A 2-node pin-jointed truss (axial-only) element. Stiffness is
- * derived from material (E) and section (A): k = E*A/L.
- * Only translational DOFs (ux, uy) participate; rotation is never
- * touched (a true pin joint carries no moment).
- *
- * Completely independent of Spring and Beam.
- * ------------------------------------------------------------------
- */
-
 import { IAnalysisElement } from "./IAnalysisElement.js";
-import { Matrix } from "../mathematics/Matrix.js";
+import { Matrix } from "../../math/Matrix.js";
 
 export class BarElement extends IAnalysisElement {
-  /**
-   * @param {import('../modeling/Element.js').Element} modelElement
-   * @param {import('../modeling/Node.js').Node} nodeI
-   * @param {import('../modeling/Node.js').Node} nodeJ
-   * @param {import('../modeling/Material.js').Material} material
-   * @param {import('../modeling/Section.js').Section} section
-   */
   constructor(modelElement, nodeI, nodeJ, material, section) {
     super(modelElement, nodeI, nodeJ);
     this.E = material.E;
-    this.A = section.A;
+    this.A = section.area; 
+    
     const geom = IAnalysisElement.geometry(nodeI, nodeJ);
     this.length = geom.L;
     this.cx = geom.cx;
@@ -82,7 +64,7 @@ export class BarElement extends IAnalysisElement {
       axialStiffness: this.axialStiffness,
       elongation: uLocal[1] - uLocal[0],
       strain,
-      axialForce, // positive = tension
+      axialForce, 
       stress,
     };
   }

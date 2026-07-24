@@ -1,64 +1,43 @@
-/**
- * Graphics / renderers / SupportRenderer.js
- * ------------------------------------------------------------------
- * Draws standard structural-engineering support symbols:
- * pin (triangle), roller (triangle + circles), fixed (hatched wall).
- * ------------------------------------------------------------------
- */
-
 export class SupportRenderer {
-  static draw(ctx, camera, canvasWidth, canvasHeight, supports, model, colors) {
-    supports.forEach((support) => {
-      const node = model.getNode(support.nodeId);
-      if (!node) return;
-      const [sx, sy] = camera.worldToScreen(node.x, node.y, canvasWidth, canvasHeight);
+    static draw(ctx, model, camera) {
+        const color = "#10b981"; // Emerald Green
+        const s = 12; // Base size of the support symbol
+        
+        ctx.fillStyle = color;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
 
-      ctx.save();
-      ctx.strokeStyle = colors.support;
-      ctx.fillStyle = colors.support;
-      ctx.lineWidth = 1.5;
+        for (const support of model.getAllSupports()) {
+            const node = model.getNode(support.node?.id || support.node);
+            if (!node) continue;
 
-      const { ux, uy, rz } = support.restraints;
-      const size = 16;
+            const pos = camera.worldToScreen(node.x, node.y);
 
-      if (ux && uy && rz) {
-        // Fixed support: hatched ground line
-        ctx.beginPath();
-        ctx.moveTo(sx - size, sy);
-        ctx.lineTo(sx + size, sy);
-        ctx.stroke();
-        for (let i = -size; i <= size; i += 5) {
-          ctx.beginPath();
-          ctx.moveTo(sx + i, sy);
-          ctx.lineTo(sx + i - 5, sy + 8);
-          ctx.stroke();
+            if (support.restrainedDOFs.dx && support.restrainedDOFs.dy && support.restrainedDOFs.mz) {
+                // Fixed Support (Square centered below node)
+                ctx.fillRect(pos.x - s/2, pos.y + 4, s, s);
+            } 
+            else if (support.restrainedDOFs.dx && support.restrainedDOFs.dy) {
+                // Pinned Support (Triangle pointing up to node)
+                ctx.beginPath();
+                ctx.moveTo(pos.x, pos.y);
+                ctx.lineTo(pos.x - s/2, pos.y + s);
+                ctx.lineTo(pos.x + s/2, pos.y + s);
+                ctx.closePath();
+                ctx.stroke();
+            }
+            else if (support.restrainedDOFs.dy) {
+                // Roller Support (Circle below node with a ground line)
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y + s/2 + 2, s/2, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Ground line
+                ctx.beginPath();
+                ctx.moveTo(pos.x - s, pos.y + s + 2);
+                ctx.lineTo(pos.x + s, pos.y + s + 2);
+                ctx.stroke();
+            }
         }
-      } else if (ux && uy) {
-        // Pin support: triangle
-        ctx.beginPath();
-        ctx.moveTo(sx, sy);
-        ctx.lineTo(sx - size * 0.6, sy + size);
-        ctx.lineTo(sx + size * 0.6, sy + size);
-        ctx.closePath();
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(sx - size * 0.8, sy + size);
-        ctx.lineTo(sx + size * 0.8, sy + size);
-        ctx.stroke();
-      } else {
-        // Roller support (uy only, or ux only): triangle + rollers
-        ctx.beginPath();
-        ctx.moveTo(sx, sy);
-        ctx.lineTo(sx - size * 0.6, sy + size * 0.8);
-        ctx.lineTo(sx + size * 0.6, sy + size * 0.8);
-        ctx.closePath();
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(sx - size * 0.35, sy + size * 0.95, 2.5, 0, Math.PI * 2);
-        ctx.arc(sx + size * 0.35, sy + size * 0.95, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-    });
-  }
+    }
 }

@@ -3,35 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phase 3: Validation Pipeline</title>
+    <title>Phase 3: Automated Validation Test Suite</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #fff; padding: 20px; }
-        .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
-        button { background: #3b82f6; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #2563eb; }
-        .btn-clear { background: #ef4444; } .btn-clear:hover { background: #dc2626; }
-        #output { background: #1e1e1e; padding: 20px; border-radius: 6px; border: 1px solid #333; min-height: 200px; }
-        .success { color: #22c55e; font-weight: bold; font-size: 1.2em; margin-bottom: 10px; }
-        .error { color: #ef4444; margin-bottom: 8px; border-left: 3px solid #ef4444; padding-left: 10px; }
-        .warning { color: #f59e0b; margin-bottom: 8px; border-left: 3px solid #f59e0b; padding-left: 10px; }
-        h3 { margin-top: 0; color: #60a5fa; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        body { font-family: Consolas, monospace; background: #121212; color: #d4d4d4; padding: 20px; font-size: 14px; line-height: 1.5; }
+        h2 { color: #3b82f6; border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 0; }
+        #console { background: #000; padding: 20px; border-radius: 6px; border: 1px solid #333; min-height: 400px; }
+        .pass { color: #22c55e; }
+        .fail { color: #ef4444; font-weight: bold; }
+        .info { color: #9ca3af; margin-bottom: 10px; display: block; }
+        .summary { margin-top: 20px; padding: 15px; background: #1e1e1e; border: 1px solid #333; border-radius: 4px; display: inline-block; font-size: 16px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <h2>Phase 3: Validation Engine Dashboard</h2>
-    
-    <div class="controls" id="btn-container">
-        <!-- Buttons will be injected here after JS loads -->
-    </div>
-    
-    <div id="output">Initialize the model to begin...</div>
+    <h2>⚡ Validation Engine: Automated Test Suite</h2>
+    <div id="console">Running tests...</div>
 
     <script type="module">
-        const output = document.getElementById('output');
-        const controls = document.getElementById('btn-container');
+        const out = document.getElementById('console');
+        let htmlLog = "";
+        let passedCount = 0;
+        let failedCount = 0;
 
-        async function init() {
+        function logPass(msg) { htmlLog += `<div class="pass">✔ PASS: ${msg}</div>`; passedCount++; }
+        function logFail(msg, details) { htmlLog += `<div class="fail">✖ FAIL: ${msg} <br>&nbsp;&nbsp;&nbsp;↳ [Output]: ${details}</div>`; failedCount++; }
+        function logSection(title) { htmlLog += `<br><div style="color:#60a5fa; font-weight:bold; border-bottom:1px dashed #444; margin-bottom:5px;">--- ${title} ---</div>`; }
+
+        async function runAutomatedTests() {
             try {
+                // 1. Load the architecture
                 const { Model } = await import('./core/modeling/Model.js');
                 const { Node } = await import('./core/modeling/Node.js');
                 const { Element } = await import('./core/modeling/Element.js');
@@ -41,111 +40,117 @@
                 const { Load } = await import('./core/modeling/Load.js');
                 const { Validator } = await import('./core/utilities/Validation.js');
 
-                // --- Helper: Creates a 100% perfect model as a baseline for every test ---
+                // Helper to generate a pristine model
                 function getPerfectModel() {
-                    const m = new Model("Active Model");
+                    const m = new Model("Test Model");
                     m.addNode(new Node("N1", 0, 0));
                     m.addNode(new Node("N2", 10, 0));
-                    m.materials.set("Steel01", new Material("Steel01"));
-                    m.sections.set("ISMB300", new Section("ISMB300"));
+                    m.materials.set("Steel", new Material("Steel"));
+                    m.sections.set("W8x31", new Section("W8x31"));
                     
                     const beam = new Element("E1", "N1", "N2", "beam");
-                    beam.material = "Steel01"; 
-                    beam.section = "ISMB300";
+                    beam.material = "Steel"; beam.section = "W8x31";
                     m.addElement(beam);
 
                     const support = new Support("S1", "N1", "Fixed");
                     support.restrainedDOFs = { dx: true, dy: true, mz: true };
                     m.addSupport(support);
-                    
                     return m;
                 }
 
-                // --- Helper: Runs the engine and prints to screen ---
-                function runValidation(testName, modelToTest) {
-                    try {
-                        const report = Validator.validateModel(modelToTest);
-                        let html = `<h3>Test: ${testName}</h3>`;
-                        
-                        if (report.valid) {
-                            html += `<div class="success">✔ Validation Passed! Model is mathematically sound.</div>`;
-                        } else {
-                            html += `<div class="error" style="border:none; font-weight:bold; font-size:1.2em; padding:0;">✖ Validation Engine Blocked the Model!</div>`;
-                            report.errors.forEach(err => { html += `<div class="error">${err}</div>`; });
-                        }
-                        
-                        report.warnings.forEach(warn => { html += `<div class="warning">Warning: ${warn}</div>`; });
-                        output.innerHTML = html;
-                    } catch (e) {
-                        output.innerHTML = `<h3>Test: ${testName}</h3><div class="error">🔥 CRASH: ${e.message}</div>`;
-                    }
+                htmlLog = "";
+
+                // ==========================================
+                // AUTOMATED TEST CASES
+                // ==========================================
+
+                logSection("Model-Level Validation");
+                
+                let m1 = getPerfectModel();
+                let r1 = Validator.validateModel(m1);
+                if (r1.valid) logPass("Perfect model passes validation.");
+                else logFail("Perfect model was wrongly rejected.", r1.errors.join(" | "));
+
+                let m2 = new Model("Empty");
+                let r2 = Validator.validateModel(m2);
+                if (!r2.valid && r2.errors.some(e => e.includes("No nodes"))) logPass("Empty model correctly rejected (No nodes).");
+                else logFail("Empty model bypassed checks.", "Engine failed to catch empty collections.");
+
+                logSection("Node & Topology Validation");
+
+                let m3 = getPerfectModel();
+                m3.addNode(new Node("N3", 0, 0)); // Coincident with N1
+                let r3 = Validator.validateModel(m3);
+                if (r3.valid && r3.warnings.some(w => w.includes("Coincident"))) logPass("Coincident nodes flagged as a Warning, but model remains valid.");
+                else logFail("Coincident node check failed.", "Did not generate correct warning.");
+
+                try {
+                    let badNode = new Node("N4", NaN, 5);
+                    logFail("Data integrity failure.", "Node allowed NaN coordinate.");
+                } catch (e) {
+                    logPass("Node Data Self-Defense successfully caught NaN coordinate.");
                 }
 
+                logSection("Element Validation");
+
+                let m4 = getPerfectModel();
+                let badEl = new Element("E2", "Ghost1", "Ghost2", "beam");
+                badEl.material = "FakeMat";
+                m4.addElement(badEl);
+                let r4 = Validator.validateModel(m4);
+                if (!r4.valid && r4.errors.some(e => e.includes("Dangling Reference"))) logPass("Caught element pointing to non-existent nodes.");
+                else logFail("Dangling node reference bypassed.", r4.errors.join(" | "));
+
+                if (!r4.valid && r4.errors.some(e => e.includes("Missing Material Reference"))) logPass("Caught element referencing non-existent material.");
+                else logFail("Material reference check bypassed.", r4.errors.join(" | "));
+
+                let m5 = getPerfectModel();
+                let zeroEl = new Element("E3", "N1", "N1", "beam");
+                m5.addElement(zeroEl);
+                let r5 = Validator.validateModel(m5);
+                if (!r5.valid && r5.errors.some(e => e.includes("Same Node"))) logPass("Caught element connecting a node to itself.");
+                else logFail("Zero-length topology check bypassed.", r5.errors.join(" | "));
+
+                logSection("Support & Load Validation");
+
+                let m6 = getPerfectModel();
+                let badSup = new Support("S2", "N2", "Roller");
+                badSup.restrainedDOFs = { dx: "yes", dy: false, mz: false }; // String instead of boolean
+                m6.addSupport(badSup);
+                let r6 = Validator.validateModel(m6);
+                if (!r6.valid && r6.errors.some(e => e.includes("strictly booleans"))) logPass("Caught malformed support restraint data.");
+                else logFail("Support restraints check bypassed.", r6.errors.join(" | "));
+
+                let m7 = getPerfectModel();
+                m7.addLoad(new Load("L1", { targetType: 'node', target: 'N2', loadType: 'Point Load', direction: 'DIAGONAL', magnitude: 100 }));
+                let r7 = Validator.validateModel(m7);
+                if (!r7.valid && r7.errors.some(e => e.includes("unsupported"))) logPass("Caught load with invalid direction (DIAGONAL).");
+                else logFail("Load direction check bypassed.", r7.errors.join(" | "));
+
                 // ==========================================
-                // TEST CASES (Each starts perfect, then gets sabotaged)
+                // PRINT RESULTS
                 // ==========================================
                 
-                window.testValidModel = () => {
-                    const model = getPerfectModel();
-                    runValidation("Perfect Model", model);
-                };
+                let summaryColor = failedCount === 0 ? "#22c55e" : "#ef4444";
+                let summaryText = failedCount === 0 ? "ALL TESTS PASSED" : `${failedCount} TESTS FAILED`;
 
-                window.testEmptyModel = () => {
-                    const model = new Model("Empty"); // No nodes, no elements
-                    runValidation("Completely Empty Model", model);
-                };
-
-                window.testCoincidentNode = () => {
-                    const model = getPerfectModel();
-                    // Sabotage: Add a node exactly on top of an existing node (N1 is at 0,0)
-                    model.addNode(new Node("N3", 0, 0)); 
-                    runValidation("Coincident Node Test", model);
-                };
-
-                window.testBadElement = () => {
-                    const model = getPerfectModel();
-                    // Sabotage: Add an element pointing to nodes that don't exist
-                    const badBeam = new Element("BadE", "GhostNode1", "GhostNode2", "beam");
-                    badBeam.material = "FakeMaterial"; // Missing material reference
-                    model.addElement(badBeam);
-                    runValidation("Dangling Element & Missing Material Test", model);
-                };
-
-                window.testBadSupport = () => {
-                    const model = getPerfectModel();
-                    // Sabotage: Add a support with strings instead of booleans
-                    const badSupport = new Support("BadS", "N2", "Pin");
-                    badSupport.restrainedDOFs = { dx: "yes", dy: "no", mz: false }; 
-                    model.addSupport(badSupport);
-                    runValidation("Malformed Support Restraints Test", model);
-                };
-
-                window.testBadLoad = () => {
-                    const model = getPerfectModel();
-                    // Sabotage: Add a load with an unsupported direction
-                    model.addLoad(new Load("BadL", { targetType: 'node', target: 'N1', loadType: 'Point Load', direction: 'DIAGONAL', magnitude: 100 }));
-                    runValidation("Invalid Load Direction Test", model);
-                };
-
-                // --- Inject Buttons into the UI ---
-                controls.innerHTML = `
-                    <button onclick="testValidModel()">1. Test Valid Model</button>
-                    <button class="btn-clear" onclick="testEmptyModel()">2. Test Empty Model</button>
-                    <button onclick="testCoincidentNode()">3. Test Coincident Node</button>
-                    <button onclick="testBadElement()">4. Test Bad Element</button>
-                    <button onclick="testBadSupport()">5. Test Bad Support</button>
-                    <button onclick="testBadLoad()">6. Test Bad Load</button>
+                htmlLog += `
+                    <div class="summary" style="color: ${summaryColor}; border-color: ${summaryColor};">
+                        ${summaryText} <br>
+                        <span style="font-size:14px; font-weight:normal; color:#d4d4d4;">
+                            Passed: ${passedCount} | Failed: ${failedCount}
+                        </span>
+                    </div>
                 `;
 
-                // Run the valid test on startup automatically
-                window.testValidModel();
+                out.innerHTML = htmlLog;
 
-            } catch (err) {
-                output.innerHTML = `<div class="error">Setup Error: ${err.message}</div>`;
+            } catch (setupError) {
+                out.innerHTML = `<div class="fail">🔥 FATAL SYSTEM ERROR:<br><br>${setupError.message}</div>`;
             }
         }
 
-        init();
+        runAutomatedTests();
     </script>
 </body>
 </html>

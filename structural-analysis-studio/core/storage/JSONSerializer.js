@@ -1,11 +1,3 @@
-/**
- * Storage / JSONSerializer.js
- * ------------------------------------------------------------------
- * Wraps Model <-> JSON conversion with a format version, so future
- * versions of the app can migrate older project files safely.
- * ------------------------------------------------------------------
- */
-
 import { Model } from "../modeling/Model.js";
 
 export const PROJECT_FORMAT_VERSION = 1;

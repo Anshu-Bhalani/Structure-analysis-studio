@@ -1,6 +1,3 @@
-/**
- * Helper class to standardize validation outputs.
- */
 class ValidationResult {
     constructor() {
         this.valid = true;
@@ -8,20 +5,9 @@ class ValidationResult {
         this.warnings = [];
         this.info = [];
     }
-
-    addError(message) {
-        this.errors.push(message);
-        this.valid = false;
-    }
-
-    addWarning(message) {
-        this.warnings.push(message);
-    }
-
-    addInfo(message) {
-        this.info.push(message);
-    }
-
+    addError(message) { this.errors.push(message); this.valid = false; }
+    addWarning(message) { this.warnings.push(message); }
+    addInfo(message) { this.info.push(message); }
     merge(otherResult) {
         if (!otherResult.valid) this.valid = false;
         this.errors.push(...otherResult.errors);
@@ -30,12 +16,11 @@ class ValidationResult {
     }
 }
 
-/**
- * LEVEL 4: Validation Engine
- * Prevents an invalid model from ever reaching Level 5 (Formulations) or Level 6 (Solver).
- */
 export class Validator {
     
+    // ==========================================
+    // ENTRY POINT: MODEL-LEVEL CHECKS
+    // ==========================================
     static validateModel(model) {
         const result = new ValidationResult();
 
@@ -44,13 +29,29 @@ export class Validator {
             return result;
         }
 
-        result.merge(this.validateNodes(model));
-        result.merge(this.validateElements(model));
-        result.merge(this.validateSupports(model));
-        result.merge(this.validateLoads(model));
+        // 1. At least one node
+        if (!model.nodes || model.nodes.size === 0) {
+            result.addError("Invalid Model: No nodes found.");
+        }
+        
+        // 2. At least one element
+        if (!model.elements || model.elements.size === 0) {
+            result.addError("Invalid Model: No elements found.");
+        }
+        
+        // 3. At least one support
+        if (!model.supports || model.supports.size === 0) {
+            result.addError("Invalid Model: Structure is unstable because no supports exist.");
+        }
+
+        // Merge specific validations (only run if collections exist)
+        if (model.nodes && model.nodes.size > 0) result.merge(this.validateNodes(model));
+        if (model.elements && model.elements.size > 0) result.merge(this.validateElements(model));
+        if (model.supports && model.supports.size > 0) result.merge(this.validateSupports(model));
+        if (model.loads && model.loads.size > 0) result.merge(this.validateLoads(model));
 
         if (result.valid) {
-            result.addInfo("Model validation passed successfully. Geometry and properties are mathematically sound.");
+            result.addInfo("Model validation passed successfully. Ready for Analysis.");
         }
 
         return result;
@@ -58,11 +59,6 @@ export class Validator {
 
     static validateNodes(model) {
         const result = new ValidationResult();
-        if (!model.nodes || model.nodes.size === 0) {
-            result.addError("Fatal: Model contains no nodes.");
-            return result;
-        }
-        
         const coordinatesSet = new Set();
         const idSet = new Set();
 
@@ -70,6 +66,7 @@ export class Validator {
             if (!node) continue; 
             const id = node.id || mapKey;
 
+            // Note: Map inherently prevents duplicate keys, but this checks if IDs were manually duplicated
             if (idSet.has(id)) result.addError(`Duplicate ID: Node ID [${id}] is used more than once.`);
             idSet.add(id);
 
@@ -86,11 +83,6 @@ export class Validator {
 
     static validateElements(model) {
         const result = new ValidationResult();
-        if (!model.elements || model.elements.size === 0) {
-            result.addError("Fatal: Model contains no elements.");
-            return result;
-        }
-
         const validTypes = ['beam', 'frame', 'truss', 'spring'];
 
         for (const [id, element] of model.elements.entries()) {
@@ -114,23 +106,29 @@ export class Validator {
             const sNode = typeof model.findNodeById === 'function' ? model.findNodeById(sNodeId) : model.nodes.get(sNodeId);
             const eNode = typeof model.findNodeById === 'function' ? model.findNodeById(eNodeId) : model.nodes.get(eNodeId);
 
+            // 4. Every element references valid nodes
             if (!sNode) result.addError(`Dangling Reference: Element [${id}] points to missing Start Node [${sNodeId}].`);
             if (!eNode) result.addError(`Dangling Reference: Element [${id}] points to missing End Node [${eNodeId}].`);
 
-            if (sNode && eNode && sNodeId !== eNodeId) {
-                if (sNode.distanceTo && sNode.distanceTo(eNode) === 0) {
+            if (sNode && eNode && sNodeId !== eNodeId && sNode.distanceTo) {
+                if (sNode.distanceTo(eNode) === 0) {
                     result.addError(`Zero Length: Element [${id}] connects distinct nodes that occupy the exact same physical coordinates.`);
                 }
             }
 
             if (element.type === 'beam' || element.type === 'frame' || element.type === 'truss') {
-                if (!element.material) result.addError(`Missing Material: ${element.type.toUpperCase()} [${id}] requires a Material assignment.`);
-                if (!element.section) result.addError(`Missing Section: ${element.type.toUpperCase()} [${id}] requires a Section assignment.`);
-            }
+                // 5. Every material reference exists
+                if (!element.material) {
+                    result.addError(`Missing Material: Element [${id}] requires a Material assignment.`);
+                } else if (!model.materials.has(element.material)) {
+                    result.addError(`Missing Material Reference: Element [${id}] references Material '${element.material}' which does not exist in the model.`);
+                }
 
-            if (element.type === 'spring') {
-                if (element.springStiffness === undefined || element.springStiffness <= 0) {
-                    result.addError(`Invalid Spring: SPRING [${id}] requires a stiffness value greater than 0.`);
+                // 6. Every section reference exists
+                if (!element.section) {
+                    result.addError(`Missing Section: Element [${id}] requires a Section assignment.`);
+                } else if (!model.sections.has(element.section)) {
+                    result.addError(`Missing Section Reference: Element [${id}] references Section '${element.section}' which does not exist in the model.`);
                 }
             }
         }
@@ -139,12 +137,6 @@ export class Validator {
 
     static validateSupports(model) {
         const result = new ValidationResult();
-        
-        if (!model.supports || model.supports.size === 0) {
-            result.addWarning("No supports defined. The structure is currently unstable (Rigid Body Motion).");
-            return result;
-        }
-
         const supportedNodes = new Set();
 
         for (const [id, support] of model.supports.entries()) {
@@ -162,7 +154,7 @@ export class Validator {
             }
 
             if (supportedNodes.has(nodeId)) {
-                result.addError(`Duplicate Support: Node [${nodeId}] has multiple supports assigned. A node can only have one support.`);
+                result.addError(`Duplicate Support: Node [${nodeId}] has multiple supports assigned.`);
             }
             supportedNodes.add(nodeId);
 
@@ -171,32 +163,15 @@ export class Validator {
             } else {
                 const { dx, dy, mz } = support.restrainedDOFs;
                 if (typeof dx !== 'boolean' || typeof dy !== 'boolean' || typeof mz !== 'boolean') {
-                    result.addError(`Malformed Restraints: Support [${id}] restrainedDOFs values (dx, dy, mz) must be strictly true/false booleans.`);
-                }
-                if (dx === false && dy === false && mz === false && support.type !== 'Spring') {
-                    result.addWarning(`Useless Support: Support [${id}] on Node [${nodeId}] has all restraints set to false (Free).`);
-                }
-            }
-
-            if (support.type === 'Spring') {
-                const k = support.springStiffness;
-                if (!k || (k.kx === 0 && k.ky === 0 && k.kmz === 0)) {
-                    result.addError(`Invalid Spring Support: Support [${id}] is set to 'Spring' but has zero stiffness in all directions.`);
+                    result.addError(`Malformed Restraints: Support [${id}] restrainedDOFs values must be strictly booleans.`);
                 }
             }
         }
-
         return result;
     }
 
     static validateLoads(model) {
         const result = new ValidationResult();
-        
-        if (!model.loads || model.loads.size === 0) {
-            result.addInfo("No external loads applied to the model.");
-            return result;
-        }
-
         const validDirections = ['FX', 'FY', 'FZ', 'MX', 'MY', 'MZ', 'Local-X', 'Local-Y', 'Global-X', 'Global-Y'];
         const validTypes = ['Point Load', 'Moment', 'Uniform Load', 'Triangular Load', 'Trapezoidal Load', 'Temperature Load'];
 
@@ -206,35 +181,18 @@ export class Validator {
             if (!load.loadType) { result.addError(`Missing Type: Load [${id}] has no loadType assigned.`); continue; }
             if (!load.direction) { result.addError(`Missing Direction: Load [${id}] has no direction assigned.`); continue; }
 
-            if (!validTypes.includes(load.loadType)) {
-                result.addError(`Invalid Load Type: Load [${id}] type '${load.loadType}' is unsupported.`);
-            }
-
-            if (!validDirections.includes(load.direction)) {
-                result.addError(`Invalid Direction: Load [${id}] direction '${load.direction}' is unsupported.`);
-            }
+            if (!validTypes.includes(load.loadType)) result.addError(`Invalid Load Type: Load [${id}] type '${load.loadType}' is unsupported.`);
+            if (!validDirections.includes(load.direction)) result.addError(`Invalid Direction: Load [${id}] direction '${load.direction}' is unsupported.`);
 
             const validateMagnitude = (mag, name) => {
-                if (mag === undefined || mag === null) {
-                    result.addError(`Missing Magnitude: Load [${id}] is missing ${name}.`);
-                    return false;
-                }
-                if (typeof mag !== 'number' || Number.isNaN(mag)) {
-                    result.addError(`Invalid Magnitude (NaN): Load [${id}] ${name} must be a valid number.`);
-                    return false;
-                }
-                if (!Number.isFinite(mag)) {
-                    result.addError(`Infinity Error: Load [${id}] ${name} is infinite.`);
-                    return false;
-                }
+                if (mag === undefined || mag === null) return result.addError(`Missing Magnitude: Load [${id}] is missing ${name}.`);
+                if (typeof mag !== 'number' || Number.isNaN(mag)) return result.addError(`Invalid Magnitude (NaN): Load [${id}] ${name} must be a number.`);
+                if (!Number.isFinite(mag)) return result.addError(`Infinity Error: Load [${id}] ${name} is infinite.`);
                 return true;
             };
 
             if (['Point Load', 'Moment', 'Temperature Load', 'Uniform Load'].includes(load.loadType)) {
                 validateMagnitude(load.magnitude, 'magnitude');
-            } else if (['Triangular Load', 'Trapezoidal Load'].includes(load.loadType)) {
-                validateMagnitude(load.startMagnitude, 'startMagnitude');
-                validateMagnitude(load.endMagnitude, 'endMagnitude');
             }
 
             const targetId = load.target?.id || load.target;
@@ -245,40 +203,9 @@ export class Validator {
             
             } else if (load.targetType === 'element') {
                 const element = typeof model.findElementById === 'function' ? model.findElementById(targetId) : model.elements.get(targetId);
-                if (!element) {
-                    result.addError(`Dangling Reference: Load [${id}] targets missing Element [${targetId}].`);
-                } else {
-                    const sNode = typeof model.findNodeById === 'function' ? model.findNodeById(element.startNode?.id || element.startNode) : model.nodes.get(element.startNode);
-                    const eNode = typeof model.findNodeById === 'function' ? model.findNodeById(element.endNode?.id || element.endNode) : model.nodes.get(element.endNode);
-                    
-                    if (sNode && eNode && sNode.distanceTo) {
-                        const length = sNode.distanceTo(eNode);
-
-                        if (['Point Load', 'Moment'].includes(load.loadType) && load.position !== undefined) {
-                            if (load.position < 0 || load.position > length) {
-                                result.addError(`Position Error: Load [${id}] position (${load.position}) is outside element length (${length}).`);
-                            }
-                        }
-
-                        if (['Uniform Load', 'Triangular Load', 'Trapezoidal Load'].includes(load.loadType)) {
-                            const p1 = load.startPosition !== undefined ? load.startPosition : 0;
-                            const p2 = load.endPosition !== undefined ? load.endPosition : length;
-
-                            if (p1 < 0 || p1 > length || p2 < 0 || p2 > length) {
-                                result.addError(`Distributed Limit Error: Load [${id}] start/end positions must lie inside element length (0 to ${length}).`);
-                            }
-                            if (p1 > p2) {
-                                result.addError(`Distributed Limit Error: Load [${id}] startPosition (${p1}) cannot be greater than endPosition (${p2}).`);
-                            }
-                            if (p1 === p2) {
-                                result.addError(`Distributed Limit Error: Load [${id}] length must be > 0 (startPosition == endPosition).`);
-                            }
-                        }
-                    }
-                }
+                if (!element) result.addError(`Dangling Reference: Load [${id}] targets missing Element [${targetId}].`);
             }
         }
-
         return result;
     }
-} // <--- This final bracket properly closes the Validator class.
+}

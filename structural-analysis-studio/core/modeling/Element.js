@@ -1,54 +1,26 @@
 export class Element {
-    // We default to 'beam' so previous code doesn't break
-    constructor(id, startNode, endNode, type = 'beam') {
+    constructor(id, startNode, endNode, type = "beam") {
+        if (!id) throw new Error("Element must have a valid ID.");
+        
         this.id = id;
-        this.type = type.toLowerCase(); // 'beam', 'frame', 'truss', 'spring'
-        this.startNode = startNode;     // Reference to Node object
-        this.endNode = endNode;         // Reference to Node object
+        this.startNode = startNode; // Can be a string ID or Node object
+        this.endNode = endNode;     // Can be a string ID or Node object
+        this.type = type;           // 'beam', 'frame', 'truss', 'spring'
         
-        // Common property for all elements
-        this.label = "";
-        
-        // Properties specific to Beam, Frame, and Truss
-        if (this.type === 'beam' || this.type === 'frame' || this.type === 'truss') {
-            this.material = null; 
-            this.section = null;  
-            this.angle = 0;       
-            
-            // Member end releases (e.g., for internal hinges in frames)
-            this.releases = {
-                start: { dx: false, dy: false, mz: false },
-                end: { dx: false, dy: false, mz: false }
-            };
-        }
-
-        // Properties specific to Spring
-        if (this.type === 'spring') {
-            this.springStiffness = 0; // Placeholder for Phase 4 (Analysis)
-        }
+        this.material = null;
+        this.section = null;
+        this.springStiffness = 0; // Only used if type === 'spring'
     }
-
+    
     toJSON() {
-        const out = {
+        return {
             id: this.id,
+            startNode: this.startNode?.id || this.startNode,
+            endNode: this.endNode?.id || this.endNode,
             type: this.type,
-            // Defensive checks in case nodes are passed as IDs instead of objects
-            startNode: this.startNode ? (this.startNode.id || this.startNode) : null,
-            endNode: this.endNode ? (this.endNode.id || this.endNode) : null,
-            label: this.label
+            material: this.material,
+            section: this.section,
+            springStiffness: this.springStiffness
         };
-
-        if (this.type === 'beam' || this.type === 'frame' || this.type === 'truss') {
-            out.material = this.material ? (this.material.id || this.material) : null;
-            out.section = this.section ? (this.section.id || this.section) : null;
-            out.angle = this.angle;
-            out.releases = this.releases;
-        }
-
-        if (this.type === 'spring') {
-            out.springStiffness = this.springStiffness;
-        }
-
-        return out;
     }
 }

@@ -3,124 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Node Creation & Editing Test</title>
+    <title>Structure Studio - Node & Element Test</title>
     <style>
-        body { 
-            font-family: sans-serif; 
-            margin: 0; 
-            background: #121212; 
-            color: #e0e0e0; 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh;
-        }
-        .toolbar {
-            padding: 15px;
-            background: #1e1e1e;
-            border-bottom: 1px solid #333;
-        }
+        body { font-family: sans-serif; margin: 0; background: #121212; color: #e0e0e0; display: flex; flex-direction: column; height: 100vh; }
+        .toolbar { padding: 15px; background: #1e1e1e; border-bottom: 1px solid #333; }
         h2 { margin: 0; font-size: 16px; color: #3b82f6; }
-        p { margin: 5px 0 0 0; font-size: 12px; color: #888; }
+        p { margin: 5px 0 10px 0; font-size: 12px; color: #888; }
         
-        #canvas-container {
-            width: 100%;
-            height: 35vh; 
-            background: #181818;
-            position: relative;
-            touch-action: none; /* Prevents scrolling when tapping canvas on mobile */
-            border-bottom: 1px solid #333;
-        }
+        .mode-switch { display: flex; gap: 10px; background: #000; padding: 5px; border-radius: 6px; width: max-content;}
+        .mode-btn { background: transparent; color: #888; border: none; padding: 8px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s;}
+        .mode-btn.active { background: #3b82f6; color: #fff; }
+
+        #canvas-container { width: 100%; height: 40vh; background: #181818; position: relative; touch-action: none; border-bottom: 1px solid #333; }
         canvas { display: block; width: 100%; height: 100%; }
         
-        .bottom-area {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        .properties-panel {
-            padding: 15px;
-            background: #1e1e1e;
-            border-bottom: 1px solid #333;
-        }
+        .bottom-area { display: flex; flex-direction: column; flex: 1; overflow-y: auto; }
+        .properties-panel { padding: 15px; background: #1e1e1e; border-bottom: 1px solid #333; }
+        .prop-title { color: #22c55e; font-size: 14px; margin-bottom: 10px; font-weight: bold; display: flex; justify-content: space-between;}
         
-        .prop-title {
-            color: #22c55e;
-            font-size: 14px;
-            margin-bottom: 10px;
-            font-weight: bold;
-        }
-
-        .input-row {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-            gap: 10px;
-        }
+        .input-row { display: flex; align-items: center; margin-bottom: 10px; gap: 10px; }
         label { font-size: 12px; color: #aaa; width: 50px; }
-        input[type="text"], input[type="number"] {
-            flex: 1;
-            background: #000;
-            border: 1px solid #444;
-            color: #fff;
-            padding: 8px;
-            border-radius: 4px;
-            font-family: monospace;
-        }
+        input[type="text"], input[type="number"] { flex: 1; background: #000; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; font-family: monospace; }
         input:disabled { background: #111; color: #555; }
         
-        .checkbox-group {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 15px;
-        }
-        .checkbox-label {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 13px;
-            color: #ddd;
-        }
+        .checkbox-group { display: flex; gap: 20px; margin-bottom: 15px; }
+        .checkbox-label { display: flex; align-items: center; gap: 5px; font-size: 13px; color: #ddd; }
 
-        .btn-group {
-            display: flex;
-            gap: 10px;
-        }
-        button {
-            background: #3b82f6;
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 4px;
-            font-weight: bold;
-            flex: 1;
-            touch-action: manipulation;
-        }
+        .btn-group { display: flex; gap: 10px; }
+        button { background: #3b82f6; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; flex: 1; touch-action: manipulation; }
         button:active { background: #2563eb; }
         button:disabled { background: #444; color: #888; }
-        #btnClear { background: #ef4444; flex: 0.4; }
-        #btnClear:active { background: #dc2626; }
+        #btnDelete { background: #ef4444; flex: 0.4; }
+        #btnDelete:active { background: #dc2626; }
+        #btnDelete:disabled { background: #444; }
 
-        .data-panel {
-            padding: 15px;
-            background: #000;
-            flex: 1;
-        }
-        pre {
-            margin: 0;
-            font-family: monospace;
-            font-size: 11px;
-            color: #22c55e;
-            white-space: pre-wrap;
-        }
+        .data-panel { padding: 15px; background: #000; flex: 1; overflow-y: auto;}
+        pre { margin: 0; font-family: monospace; font-size: 11px; color: #22c55e; white-space: pre-wrap; }
     </style>
 </head>
 <body>
 
     <div class="toolbar">
-        <h2>Node Workflow (Phase 2)</h2>
-        <p>Tap empty space to create. Tap a node to select and edit.</p>
+        <h2>Structure Studio (Phase 3)</h2>
+        <p>Current Action: <span id="statusText" style="color:#22c55e;">Select a node or empty space.</span></p>
+        <div class="mode-switch">
+            <button class="mode-btn active" id="modeSelect">🎯 Select/Edit</button>
+            <button class="mode-btn" id="modeElement">✏️ Draw Element</button>
+        </div>
     </div>
 
     <div id="canvas-container">
@@ -128,9 +57,10 @@
     </div>
 
     <div class="bottom-area">
-        <!-- Properties Panel -->
         <div class="properties-panel">
-            <div class="prop-title" id="propTitle">Properties: No Node Selected</div>
+            <div class="prop-title">
+                <span id="propTitle">Properties: No Node Selected</span>
+            </div>
             
             <div class="input-row">
                 <label>ID</label>
@@ -139,31 +69,21 @@
             
             <div class="input-row">
                 <label>X, Y</label>
-                <input type="number" id="nodeX" disabled placeholder="X">
-                <input type="number" id="nodeY" disabled placeholder="Y">
-            </div>
-
-            <div class="input-row">
-                <label>Label</label>
-                <input type="text" id="nodeLabel" disabled placeholder="Optional label">
+                <input type="number" id="nodeX" disabled placeholder="X" step="0.5">
+                <input type="number" id="nodeY" disabled placeholder="Y" step="0.5">
             </div>
 
             <div class="checkbox-group">
-                <label class="checkbox-label">
-                    <input type="checkbox" id="nodeVisible" disabled> Visible
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="nodeLocked" disabled> Locked
-                </label>
+                <label class="checkbox-label"><input type="checkbox" id="nodeVisible" disabled> Visible</label>
+                <label class="checkbox-label"><input type="checkbox" id="nodeLocked" disabled> Locked</label>
             </div>
 
             <div class="btn-group">
                 <button id="btnApply" disabled>Apply Changes</button>
-                <button id="btnClear">Clear All</button>
+                <button id="btnDelete" disabled>Delete</button>
             </div>
         </div>
 
-        <!-- JSON Output Panel -->
         <div class="data-panel">
             <div style="color: #888; margin-bottom: 5px; font-size: 12px;">MODEL DATA (JSON):</div>
             <pre id="output">{}</pre>
@@ -172,29 +92,41 @@
 
     <script type="module">
         import { Node } from './core/modeling/Node.js';
+        import { Element } from './core/modeling/Element.js';
         import { Model } from './core/modeling/Model.js';
 
         const canvas = document.getElementById('gridCanvas');
         const ctx = canvas.getContext('2d');
         const output = document.getElementById('output');
+        const statusText = document.getElementById('statusText');
         
-        let model = new Model("Phase 2 Test");
+        // --- State ---
+        let model = new Model("Phase 3 Test");
+        // Defensive check: ensure elements map exists
+        if(!model.elements) model.elements = new Map(); 
+        
         let nodeCounter = 1;
+        let elementCounter = 1;
         let selectedNodeId = null;
+        
+        let appMode = 'SELECT'; // 'SELECT' or 'DRAW_ELEMENT'
+        let drawStartNode = null; 
+        let pointerPos = { x: 0, y: 0 }; 
 
         const scale = 40; 
         let originX, originY;
 
-        // UI Elements
+        // --- UI Elements ---
+        const btnSelect = document.getElementById('modeSelect');
+        const btnElement = document.getElementById('modeElement');
         const elTitle = document.getElementById('propTitle');
         const elId = document.getElementById('nodeId');
         const elX = document.getElementById('nodeX');
         const elY = document.getElementById('nodeY');
-        const elLabel = document.getElementById('nodeLabel');
         const elVisible = document.getElementById('nodeVisible');
         const elLocked = document.getElementById('nodeLocked');
         const btnApply = document.getElementById('btnApply');
-        const btnClear = document.getElementById('btnClear');
+        const btnDelete = document.getElementById('btnDelete');
 
         function resize() {
             canvas.width = canvas.parentElement.clientWidth;
@@ -206,163 +138,217 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // --- Interaction Logic (Create & Select) ---
+        // --- Mode Switching ---
+        btnSelect.addEventListener('click', () => {
+            appMode = 'SELECT'; drawStartNode = null;
+            btnSelect.classList.add('active'); btnElement.classList.remove('active');
+            statusText.innerText = "Select a node or click empty space to create.";
+            render();
+        });
+
+        btnElement.addEventListener('click', () => {
+            appMode = 'DRAW_ELEMENT'; drawStartNode = null; selectNode(null);
+            btnElement.classList.add('active'); btnSelect.classList.remove('active');
+            statusText.innerText = "Click first node (or empty space).";
+            render();
+        });
+
+        // --- Helpers ---
+        function getOccupyingNodeId(x, y, excludeId = null) {
+            for (const [id, node] of model.nodes.entries()) {
+                if (id !== excludeId && node.x === x && node.y === y) return id;
+            }
+            return null;
+        }
+
+        // Track pointer for Element Preview Line
+        canvas.addEventListener('pointermove', (e) => {
+            if (appMode !== 'DRAW_ELEMENT' || !drawStartNode) return;
+            const rect = canvas.getBoundingClientRect();
+            pointerPos.x = e.clientX - rect.left;
+            pointerPos.y = e.clientY - rect.top;
+            render();
+        });
+
+        // --- Interaction Logic ---
         canvas.addEventListener('pointerdown', (e) => {
             const rect = canvas.getBoundingClientRect();
             const pixelX = e.clientX - rect.left;
             const pixelY = e.clientY - rect.top;
 
-            let engX = (pixelX - originX) / scale;
-            let engY = -(pixelY - originY) / scale; 
-            engX = Math.round(engX * 2) / 2; 
-            engY = Math.round(engY * 2) / 2; 
+            let engX = Math.round(((pixelX - originX) / scale) * 2) / 2; 
+            let engY = Math.round((-(pixelY - originY) / scale) * 2) / 2; 
 
             // Hit Detection
-            let clickedExisting = false;
-            const hitTolerance = 15; // pixels
-
+            let clickedNodeId = null;
             for (const [id, node] of model.nodes.entries()) {
                 const px = originX + (node.x * scale);
                 const py = originY - (node.y * scale);
-                const dist = Math.hypot(pixelX - px, pixelY - py);
-                
-                if (dist < hitTolerance) {
-                    selectNode(node.id);
-                    clickedExisting = true;
-                    break;
+                if (Math.hypot(pixelX - px, pixelY - py) < 15) {
+                    clickedNodeId = id; break;
                 }
             }
 
-            // Create New Node
-            if (!clickedExisting) {
-                const newNode = new Node("N" + nodeCounter++, engX, engY);
-                model.addNode(newNode);
-                selectNode(newNode.id); 
+            // Create node if empty space clicked
+            if (!clickedNodeId) {
+                clickedNodeId = getOccupyingNodeId(engX, engY);
+                if (!clickedNodeId) {
+                    const newNode = new Node("N" + nodeCounter++, engX, engY);
+                    model.addNode(newNode);
+                    clickedNodeId = newNode.id;
+                }
             }
-        });
 
-        // --- Select Node ---
-        function selectNode(id) {
-            selectedNodeId = id;
-            const node = model.findNodeById(id);
-            
-            if (node) {
-                elTitle.innerText = `Properties: Selected [${node.id}]`;
-                elTitle.style.color = "#eab308"; 
-                
-                elX.disabled = elY.disabled = elLabel.disabled = false;
-                elVisible.disabled = elLocked.disabled = btnApply.disabled = false;
-
-                elId.value = node.id;
-                elX.value = node.x;
-                elY.value = node.y;
-                elLabel.value = node.label;
-                elVisible.checked = node.visible;
-                elLocked.checked = node.locked;
-            } else {
-                // Deselect state
-                elTitle.innerText = "Properties: No Node Selected";
-                elTitle.style.color = "#22c55e"; 
-                elX.disabled = elY.disabled = elLabel.disabled = true;
-                elVisible.disabled = elLocked.disabled = btnApply.disabled = true;
-                elId.value = elX.value = elY.value = elLabel.value = "";
-                elVisible.checked = elLocked.checked = false;
+            // --- State Machine ---
+            if (appMode === 'SELECT') {
+                selectNode(clickedNodeId);
+            } 
+            else if (appMode === 'DRAW_ELEMENT') {
+                if (!drawStartNode) {
+                    // Click 1: Start Element
+                    drawStartNode = model.findNodeById(clickedNodeId);
+                    statusText.innerText = `Drawing from ${drawStartNode.id}. Click end node.`;
+                    pointerPos.x = pixelX; pointerPos.y = pixelY;
+                } else {
+                    // Click 2: Finish Element
+                    const targetNode = model.findNodeById(clickedNodeId);
+                    if (targetNode.id !== drawStartNode.id) {
+                        const newElement = new Element("E" + elementCounter++, drawStartNode, targetNode);
+                        model.addElement(newElement);
+                    }
+                    drawStartNode = null; 
+                    statusText.innerText = "Click first node (or empty space).";
+                }
             }
             render();
             updateJSON();
+        });
+
+        // --- Select & Properties ---
+        function selectNode(id) {
+            selectedNodeId = id;
+            const node = model.findNodeById(id);
+            if (node) {
+                elTitle.innerText = `Selected [${node.id}]`;
+                elLocked.checked = node.locked;
+                elLocked.disabled = btnApply.disabled = btnDelete.disabled = false;
+                elX.disabled = elY.disabled = elVisible.disabled = node.locked;
+                elId.value = node.id; elX.value = node.x; elY.value = node.y; elVisible.checked = node.visible;
+            } else {
+                elTitle.innerText = "No Node Selected";
+                elX.disabled = elY.disabled = elVisible.disabled = elLocked.disabled = btnApply.disabled = btnDelete.disabled = true;
+                elId.value = elX.value = elY.value = ""; elVisible.checked = elLocked.checked = false;
+            }
         }
 
-        // --- Edit Logic ---
+        elLocked.addEventListener('change', (e) => {
+            elX.disabled = elY.disabled = elVisible.disabled = e.target.checked;
+        });
+
+        // --- Edit Node ---
         btnApply.addEventListener('click', () => {
             if (!selectedNodeId) return;
-            
             const node = model.findNodeById(selectedNodeId);
             if (node) {
-                node.unlock(); 
-                node.setPosition(parseFloat(elX.value) || 0, parseFloat(elY.value) || 0);
-                
-                node.label = elLabel.value;
-                if (elVisible.checked) node.show(); else node.hide();
+                const targetX = parseFloat(elX.value) || 0;
+                const targetY = parseFloat(elY.value) || 0;
+
+                if (!node.locked && getOccupyingNodeId(targetX, targetY, node.id)) {
+                    elTitle.innerText = "Error: Position Occupied!"; elTitle.style.color = "#ef4444";
+                    setTimeout(() => selectNode(node.id), 1500); return;
+                }
+
+                if (!elLocked.checked) node.unlock(); 
+                node.setPosition(targetX, targetY);
+                if (!node.locked) { if (elVisible.checked) node.show(); else node.hide(); }
                 if (elLocked.checked) node.lock();
                 
-                model._invalidateResults(); 
-
-                render();
-                updateJSON();
-                
-                elTitle.innerText = "Changes Applied ✓";
-                elTitle.style.color = "#22c55e";
-                setTimeout(() => { 
-                    if(selectedNodeId === node.id) elTitle.style.color = "#eab308"; 
-                }, 1000);
+                model._invalidateResults(); render(); updateJSON();
             }
         });
 
-        // --- Clear Tool ---
-        btnClear.addEventListener('click', () => {
-            model = new Model("Phase 2 Test");
-            nodeCounter = 1;
-            selectNode(null); // Deselect and clear form
+        // --- Delete Node (Safe Deletion) ---
+        btnDelete.addEventListener('click', () => {
+            if (!selectedNodeId) return;
+            
+            // Try standard delete
+            const result = model.deleteNode(selectedNodeId, false);
+            
+            if (!result.success) {
+                // If it fails, ask user for explicit override
+                const confirmCascade = confirm(`Cannot delete. Node belongs to ${result.connectedElements.length} element(s).\n\nDelete connected elements also?`);
+                if (confirmCascade) {
+                    model.deleteNode(selectedNodeId, true);
+                    selectNode(null);
+                    render(); updateJSON();
+                }
+            } else {
+                selectNode(null);
+                render(); updateJSON();
+            }
         });
 
         // --- Rendering Engine ---
         function render() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw Grid & Axes
-            ctx.strokeStyle = '#2a2a2a';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            for(let x = originX % scale; x < canvas.width; x += scale) {
-                ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height);
-            }
-            for(let y = originY % scale; y < canvas.height; y += scale) {
-                ctx.moveTo(0, y); ctx.lineTo(canvas.width, y);
-            }
+            // Draw Grid
+            ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 1; ctx.beginPath();
+            for(let x = originX % scale; x < canvas.width; x += scale) { ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); }
+            for(let y = originY % scale; y < canvas.height; y += scale) { ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); }
             ctx.stroke();
 
-            ctx.strokeStyle = '#555';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
+            // Draw Axes
+            ctx.strokeStyle = '#555'; ctx.lineWidth = 2; ctx.beginPath();
             ctx.moveTo(0, originY); ctx.lineTo(canvas.width, originY); 
             ctx.moveTo(originX, 0); ctx.lineTo(originX, canvas.height); 
             ctx.stroke();
+
+            // Draw Elements
+            model.elements.forEach(element => {
+                const px1 = originX + (element.startNode.x * scale);
+                const py1 = originY - (element.startNode.y * scale);
+                const px2 = originX + (element.endNode.x * scale);
+                const py2 = originY - (element.endNode.y * scale);
+
+                ctx.strokeStyle = '#a3e635'; // Lime green
+                ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.moveTo(px1, py1); ctx.lineTo(px2, py2); ctx.stroke();
+            });
+
+            // Draw Preview Element
+            if (appMode === 'DRAW_ELEMENT' && drawStartNode) {
+                const px1 = originX + (drawStartNode.x * scale);
+                const py1 = originY - (drawStartNode.y * scale);
+                ctx.strokeStyle = 'rgba(163, 230, 53, 0.5)';
+                ctx.setLineDash([5, 5]); ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(px1, py1); ctx.lineTo(pointerPos.x, pointerPos.y); ctx.stroke();
+                ctx.setLineDash([]); 
+            }
 
             // Draw Nodes
             model.nodes.forEach(node => {
                 const px = originX + (node.x * scale);
                 const py = originY - (node.y * scale);
-                const isSelected = (node.id === selectedNodeId);
+                const isSelected = (node.id === selectedNodeId) || (drawStartNode && node.id === drawStartNode.id);
 
-                ctx.beginPath();
-                ctx.arc(px, py, isSelected ? 8 : 6, 0, Math.PI * 2); 
-                
-                if (!node.visible) {
-                    ctx.fillStyle = 'rgba(59, 130, 246, 0.2)'; 
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-                } else {
-                    ctx.fillStyle = '#3b82f6';
-                    ctx.strokeStyle = isSelected ? '#eab308' : '#fff'; 
-                }
-                
-                ctx.fill();
-                ctx.lineWidth = isSelected ? 3 : 2;
-                ctx.stroke();
+                ctx.beginPath(); ctx.arc(px, py, isSelected ? 8 : 6, 0, Math.PI * 2); 
+                ctx.fillStyle = node.visible ? '#3b82f6' : 'rgba(59, 130, 246, 0.2)';
+                ctx.strokeStyle = isSelected ? '#eab308' : '#fff'; 
+                ctx.fill(); ctx.lineWidth = isSelected ? 3 : 2; ctx.stroke();
 
                 if (node.visible || isSelected) {
-                    ctx.fillStyle = isSelected ? '#eab308' : '#fff';
-                    ctx.font = '11px sans-serif';
-                    let displayString = `${node.id}`;
-                    if (node.label) displayString += ` "${node.label}"`;
-                    if (node.locked) displayString += ` [LOCKED]`;
-                    
-                    ctx.fillText(displayString, px + 12, py - 12);
+                    ctx.fillStyle = isSelected ? '#eab308' : '#fff'; ctx.font = '11px sans-serif';
+                    ctx.fillText(`${node.id}`, px + 12, py - 12);
                 }
             });
         }
 
         function updateJSON() {
-            output.innerText = model.toJSON();
+            const out = { nodes: [], elements: [] };
+            model.nodes.forEach(n => out.nodes.push(n.toJSON()));
+            model.elements.forEach(e => out.elements.push(e.toJSON()));
+            output.innerText = JSON.stringify(out, null, 2);
         }
     </script>
 </body>

@@ -18,6 +18,11 @@ export class Node {
     constructor(id, x, y, z = 0, label = "") {
         if (!id) throw new Error("Node must have a valid ID.");
         
+        // --- LEVEL 3 SELF-DEFENSE ---
+        if (typeof x !== 'number' || !Number.isFinite(x)) throw new Error(`Invalid X coordinate for Node [${id}]. Must be a finite number.`);
+        if (typeof y !== 'number' || !Number.isFinite(y)) throw new Error(`Invalid Y coordinate for Node [${id}]. Must be a finite number.`);
+        if (typeof z !== 'number' || !Number.isFinite(z)) throw new Error(`Invalid Z coordinate for Node [${id}]. Must be a finite number.`);
+        
         // --- Core Properties ---
         this.id = id;
         this.x = x;
@@ -46,6 +51,14 @@ export class Node {
     /** Sets the node to an exact absolute position. */
     setPosition(x, y, z = this.z) {
         if (this.locked) return; // Prevent movement if locked
+        
+        // --- LEVEL 3 SELF-DEFENSE ---
+        if (typeof x !== 'number' || !Number.isFinite(x) || 
+            typeof y !== 'number' || !Number.isFinite(y) || 
+            typeof z !== 'number' || !Number.isFinite(z)) {
+            throw new Error("Coordinates must be finite numbers.");
+        }
+
         this.x = x;
         this.y = y;
         this.z = z;
@@ -54,6 +67,13 @@ export class Node {
     /** Moves the node by a relative delta distance. */
     move(dx, dy, dz = 0) {
         if (this.locked) return; // Prevent movement if locked
+        
+        if (typeof dx !== 'number' || !Number.isFinite(dx) || 
+            typeof dy !== 'number' || !Number.isFinite(dy) || 
+            typeof dz !== 'number' || !Number.isFinite(dz)) {
+            throw new Error("Movement deltas must be finite numbers.");
+        }
+
         this.x += dx;
         this.y += dy;
         this.z += dz;

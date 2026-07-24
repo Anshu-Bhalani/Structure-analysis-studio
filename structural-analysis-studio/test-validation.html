@@ -19,19 +19,17 @@
     <script type="module">
         const output = document.getElementById('output');
 
-        // Using asynchronous dynamic imports to catch exact file errors on mobile!
         async function bootTests() {
             try {
                 output.innerHTML = "<div class='test-case'>Attempting to load files...</div>";
                 
-                // If any of these fail, it jumps straight to the catch block and tells us which one
                 const { Model } = await import('./core/modeling/Model.js');
                 const { Node } = await import('./core/modeling/Node.js');
                 const { Element } = await import('./core/modeling/Element.js');
                 const { Load } = await import('./core/modeling/Load.js');
                 const { Validator } = await import('./core/utilities/Validation.js');
 
-                output.innerHTML = ""; // Clear loading message
+                output.innerHTML = ""; 
 
                 function runTest(testName, loadConfig) {
                     try {
@@ -66,7 +64,6 @@
                     }
                 }
 
-                // --- The 13 Test Cases ---
                 runTest("1. Valid point load", { targetType: 'node', target: 'N1', loadType: 'Point Load', direction: 'FY', magnitude: -50 });
                 runTest("2. Node load referencing node 999", { targetType: 'node', target: 'N999', loadType: 'Point Load', direction: 'FY', magnitude: -50 });
                 runTest("3. Element load referencing element 999", { targetType: 'element', target: 'E999', loadType: 'Uniform Load', direction: 'Local-Y', magnitude: -10 });
@@ -85,14 +82,7 @@
                 output.innerHTML = `<div class="test-case" style="border-color: #ef4444;">
                     <h3>🔥 IMPORT OR SYNTAX ERROR</h3>
                     <div class="error" style="font-size: 1.1em;">
-                        The browser aborted because a file could not be loaded or has a syntax error:<br><br>
-                        <strong>${setupError.message}</strong><br><br>
-                        <strong>Things to check:</strong>
-                        <ul>
-                            <li>Is a file name misspelled? (e.g., <code>model.js</code> instead of <code>Model.js</code>)</li>
-                            <li>Are the folders exactly <code>core/modeling/</code> and <code>core/utilities/</code>?</li>
-                            <li>Did you forget to add <code>export class Element</code> in Element.js?</li>
-                        </ul>
+                        <strong>${setupError.message}</strong>
                     </div>
                 </div>`;
             }

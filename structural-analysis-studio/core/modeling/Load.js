@@ -1,34 +1,41 @@
 /**
- * Modeling / Load.js
- * ------------------------------------------------------------------
- * A nodal load: forces/moment applied directly at a node.
- * Version 1 supports nodal loads only. Distributed member loads are
- * a natural future extension (converted to equivalent nodal loads
- * by the Analysis module) and do not require changes to this class.
- * ------------------------------------------------------------------
+ * Load.js (Level 3 - Core Data Models)
+ * Represents an external load applied to a Node or Element.
  */
-
-import { nextId } from "../utilities/Helpers.js";
-
 export class Load {
-  /**
-   * @param {string} nodeId
-   * @param {{Fx?:number, Fy?:number, Mz?:number}} values
-   * @param {string=} id
-   */
-  constructor(nodeId, values = {}, id = null) {
-    this.id = id || nextId("load");
-    this.nodeId = nodeId;
-    this.Fx = values.Fx || 0;
-    this.Fy = values.Fy || 0;
-    this.Mz = values.Mz || 0;
-  }
+    constructor(id, config) {
+        if (!id) throw new Error("Load must have a valid ID.");
+        
+        this.id = id;
+        this.targetType = config.targetType || null; // 'node' or 'element'
+        this.target = config.target || null;         // Node ID or Element ID
+        this.loadType = config.loadType || null;     // 'Point Load', 'Uniform Load', etc.
+        this.direction = config.direction || null;   // 'FX', 'FY', 'Local-Y', etc.
 
-  toJSON() {
-    return { id: this.id, nodeId: this.nodeId, Fx: this.Fx, Fy: this.Fy, Mz: this.Mz };
-  }
+        // Optional numeric properties depending on load type
+        if (config.magnitude !== undefined) this.magnitude = config.magnitude;
+        if (config.startMagnitude !== undefined) this.startMagnitude = config.startMagnitude;
+        if (config.endMagnitude !== undefined) this.endMagnitude = config.endMagnitude;
 
-  static fromJSON(json) {
-    return new Load(json.nodeId, { Fx: json.Fx, Fy: json.Fy, Mz: json.Mz }, json.id);
-  }
+        // Optional positioning for element loads
+        if (config.position !== undefined) this.position = config.position;
+        if (config.startPosition !== undefined) this.startPosition = config.startPosition;
+        if (config.endPosition !== undefined) this.endPosition = config.endPosition;
+    }
+
+    toJSON() {
+        return {
+            id: this.id,
+            targetType: this.targetType,
+            target: this.target?.id || this.target,
+            loadType: this.loadType,
+            direction: this.direction,
+            magnitude: this.magnitude,
+            startMagnitude: this.startMagnitude,
+            endMagnitude: this.endMagnitude,
+            position: this.position,
+            startPosition: this.startPosition,
+            endPosition: this.endPosition
+        };
+    }
 }

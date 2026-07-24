@@ -3,99 +3,339 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Math Foundation Test</title>
+    <title>Math Engine Interactive Test</title>
     <style>
         body { 
-            font-family: monospace; 
-            padding: 15px; 
-            background: #1e1e1e; 
-            color: #d4d4d4; 
-            font-size: 14px; 
-            margin: 0;
-        }
-        h2 { 
-            color: #3b82f6; 
             font-family: sans-serif; 
-            margin-top: 5px;
+            margin: 0; 
+            background: #121212; 
+            color: #e0e0e0; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh;
         }
-        #output { 
-            background: #000; 
-            padding: 15px; 
-            border-radius: 8px; 
-            overflow-x: auto; 
-            white-space: pre-wrap; 
-            line-height: 1.5;
+        .toolbar {
+            padding: 15px;
+            background: #1e1e1e;
+            border-bottom: 1px solid #333;
         }
-        .pass { color: #22c55e; font-weight: bold; }
-        .fail { color: #ef4444; font-weight: bold; }
-        .info { color: #eab308; font-weight: bold; margin-top: 10px; display: inline-block; }
+        h2 { margin: 0; font-size: 16px; color: #3b82f6; }
+        p { margin: 5px 0 0 0; font-size: 12px; color: #888; }
+        
+        .container {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        
+        .card {
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #333;
+        }
+        
+        .card h3 { margin-top: 0; font-size: 14px; color: #22c55e; border-bottom: 1px solid #333; padding-bottom: 8px;}
+        
+        .input-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+        
+        label { font-size: 12px; color: #aaa; width: 30px; }
+        
+        input[type="number"] {
+            background: #000;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 8px;
+            border-radius: 4px;
+            width: 50px;
+            font-family: monospace;
+            text-align: center;
+        }
+
+        .matrix-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            overflow-x: auto;
+        }
+
+        .matrix {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            background: #000;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 2px solid #fff;
+            border-right: 2px solid #fff;
+        }
+
+        .vector {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 5px;
+            background: #000;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 2px solid #fff;
+            border-right: 2px solid #fff;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            flex: 1;
+            min-width: 80px;
+            touch-action: manipulation;
+        }
+        button:active { background: #2563eb; }
+
+        .result-box {
+            margin-top: 15px;
+            padding: 10px;
+            background: #000;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            min-height: 20px;
+            overflow-x: auto;
+        }
+        .error { color: #ef4444; }
+        .success { color: #22c55e; }
     </style>
 </head>
 <body>
-    <h2>Math Test (Mobile View)</h2>
-    <div id="output">Running tests... Please wait.<br><br></div>
+
+    <div class="toolbar">
+        <h2>Math Engine Interactive Test</h2>
+        <p>Manually input values to test the math classes.</p>
+    </div>
+
+    <div class="container">
+        <!-- TEST 1: MathUtils -->
+        <div class="card">
+            <h3>1. MathUtils.js</h3>
+            <div class="input-group">
+                <label>P1:</label>
+                <input type="number" id="x1" value="0" placeholder="X1">
+                <input type="number" id="y1" value="0" placeholder="Y1">
+            </div>
+            <div class="input-group">
+                <label>P2:</label>
+                <input type="number" id="x2" value="3" placeholder="X2">
+                <input type="number" id="y2" value="4" placeholder="Y2">
+            </div>
+            <button id="btnDist" style="width: 100%; margin-top: 5px;">Calculate Distance</button>
+            <div id="resDist" class="result-box">Result...</div>
+        </div>
+
+        <!-- TEST 2: Matrix.js -->
+        <div class="card">
+            <h3>2. Matrix.js (2x2)</h3>
+            <div class="matrix-container">
+                <div>
+                    <div style="font-size: 12px; color: #aaa; margin-bottom: 5px; text-align: center;">Matrix A</div>
+                    <div class="matrix">
+                        <input type="number" id="a00" value="1"><input type="number" id="a01" value="2">
+                        <input type="number" id="a10" value="3"><input type="number" id="a11" value="4">
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size: 12px; color: #aaa; margin-bottom: 5px; text-align: center;">Matrix B</div>
+                    <div class="matrix">
+                        <input type="number" id="b00" value="2"><input type="number" id="b01" value="0">
+                        <input type="number" id="b10" value="1"><input type="number" id="b11" value="2">
+                    </div>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button id="btnMatAdd">A + B</button>
+                <button id="btnMatSub">A - B</button>
+                <button id="btnMatMul">A * B</button>
+                <button id="btnMatTrans">Trans(A)</button>
+                <button id="btnMatDet">Det(A)</button>
+            </div>
+            <div id="resMat" class="result-box">Result...</div>
+        </div>
+
+        <!-- TEST 3: Vector.js -->
+        <div class="card">
+            <h3>3. Vector.js</h3>
+            <div class="matrix-container">
+                <div>
+                    <div style="font-size: 12px; color: #aaa; margin-bottom: 5px; text-align: center;">Vec V1</div>
+                    <div class="vector">
+                        <input type="number" id="v1_0" value="3">
+                        <input type="number" id="v1_1" value="4">
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size: 12px; color: #aaa; margin-bottom: 5px; text-align: center;">Vec V2</div>
+                    <div class="vector">
+                        <input type="number" id="v2_0" value="1">
+                        <input type="number" id="v2_1" value="-2">
+                    </div>
+                </div>
+            </div>
+            <div class="input-group">
+                <label style="width:50px;">Scalar:</label>
+                <input type="number" id="vScalar" value="2">
+            </div>
+            <div class="btn-group">
+                <button id="btnVecAdd">V1 + V2</button>
+                <button id="btnVecSub">V1 - V2</button>
+                <button id="btnVecDot">V1 • V2</button>
+                <button id="btnVecScale">V1 * Scalar</button>
+            </div>
+            <div id="resVec" class="result-box">Result...</div>
+        </div>
+
+        <!-- TEST 4: Gaussian Elimination -->
+        <div class="card">
+            <h3>4. GaussianElimination.js [K]{x} = {F}</h3>
+            <div class="matrix-container">
+                <div>
+                    <div style="font-size: 12px; color: #aaa; margin-bottom: 5px; text-align: center;">Matrix [K]</div>
+                    <div class="matrix">
+                        <input type="number" id="k00" value="4"><input type="number" id="k01" value="-2">
+                        <input type="number" id="k10" value="-2"><input type="number" id="k11" value="4">
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size: 12px; color: #aaa; margin-bottom: 5px; text-align: center;">Vector {F}</div>
+                    <div class="vector">
+                        <input type="number" id="f0" value="10">
+                        <input type="number" id="f1" value="-5">
+                    </div>
+                </div>
+            </div>
+            <button id="btnSolve" style="width: 100%;">Solve for {x}</button>
+            <div id="resSolve" class="result-box">Result...</div>
+        </div>
+    </div>
 
     <script type="module">
+        import { MathUtils } from './core/math/MathUtils.js';
         import { Matrix } from './core/math/Matrix.js';
         import { Vector } from './core/math/Vector.js';
         import { GaussianElimination } from './core/math/GaussianElimination.js';
-        import { MathUtils } from './core/math/MathUtils.js';
 
-        // Helper function to print directly to the mobile screen
-        const out = document.getElementById('output');
-        out.innerHTML = ''; // Clear loading text
-
-        function printScreen(msg, cssClass = '') {
-            const span = document.createElement('span');
-            if (cssClass) span.className = cssClass;
-            span.innerText = msg + '\n';
-            out.appendChild(span);
-        }
-
-        try {
-            printScreen("--- 1. TESTING MATH UTILS ---", "info");
-            
-            const dist = MathUtils.distance(0, 0, 3, 4);
-            const distPass = dist === 5;
-            printScreen(`Distance (0,0) to (3,4) == 5: ${distPass ? "✅ PASS" : "❌ FAIL"}`, distPass ? "pass" : "fail");
-            
-            const zeroPass = MathUtils.isZero(1e-11);
-            printScreen(`Is 1e-11 zero?: ${zeroPass ? "✅ PASS" : "❌ FAIL"}`, zeroPass ? "pass" : "fail");
-
-            printScreen("\n--- 2. TESTING MATRIX & VECTOR ---", "info");
-            
-            // Create a 2x2 Stiffness Matrix [K]
-            const K = Matrix.fromArray([
-                [4, -2],
-                [-2, 4]
+        // --- Helper functions for inputs/outputs ---
+        function getMatA() {
+            return Matrix.fromArray([
+                [parseFloat(document.getElementById('a00').value)||0, parseFloat(document.getElementById('a01').value)||0],
+                [parseFloat(document.getElementById('a10').value)||0, parseFloat(document.getElementById('a11').value)||0]
             ]);
-            printScreen("Stiffness Matrix [K]:\n" + JSON.stringify(K.toArray(), null, 2));
-
-            // Create a Load Vector [F]
-            const F = Vector.fromArray([10, -5]);
-            printScreen("\nLoad Vector [F]:\n" + JSON.stringify(F.toArray(), null, 2));
-
-            printScreen("\n--- 3. TESTING GAUSSIAN ELIMINATION ---", "info");
-            
-            // Solve for Displacements [x]
-            const result = GaussianElimination.solve(K, F);
-
-            if (result.status === 'success') {
-                printScreen("✅ SOLVER SUCCESS! Displacement Vector [x]:", "pass");
-                printScreen(JSON.stringify(result.solution.toArray(), null, 2));
-                
-                // Expected answer is x1 = 2.5, x2 = 0
-                if (result.solution.get(0) === 2.5 && result.solution.get(1) === 0) {
-                    printScreen("\n✅ Math engine is 100% accurate!", "pass");
-                } else {
-                    printScreen("\n❌ Math ran, but the answer is incorrect.", "fail");
-                }
-            } else {
-                printScreen("\n❌ SOLVER FAILED: " + result.error, "fail");
-            }
-        } catch (error) {
-            printScreen("\n❌ CRITICAL ERROR: " + error.message, "fail");
         }
+        function getMatB() {
+            return Matrix.fromArray([
+                [parseFloat(document.getElementById('b00').value)||0, parseFloat(document.getElementById('b01').value)||0],
+                [parseFloat(document.getElementById('b10').value)||0, parseFloat(document.getElementById('b11').value)||0]
+            ]);
+        }
+        function getVec1() {
+            return Vector.fromArray([parseFloat(document.getElementById('v1_0').value)||0, parseFloat(document.getElementById('v1_1').value)||0]);
+        }
+        function getVec2() {
+            return Vector.fromArray([parseFloat(document.getElementById('v2_0').value)||0, parseFloat(document.getElementById('v2_1').value)||0]);
+        }
+        function formatMat(mat) {
+            return mat.toArray().map(row => "[ " + row.map(v => v.toFixed(2).padStart(6, ' ')).join(", ") + " ]").join("\n");
+        }
+        function formatVec(vec) {
+            return vec.toArray().map(v => "[ " + v.toFixed(2).padStart(6, ' ') + " ]").join("\n");
+        }
+
+        // --- 1. MathUtils Test ---
+        document.getElementById('btnDist').addEventListener('click', () => {
+            const x1 = parseFloat(document.getElementById('x1').value) || 0;
+            const y1 = parseFloat(document.getElementById('y1').value) || 0;
+            const x2 = parseFloat(document.getElementById('x2').value) || 0;
+            const y2 = parseFloat(document.getElementById('y2').value) || 0;
+            const dist = MathUtils.distance(x1, y1, x2, y2);
+            document.getElementById('resDist').innerHTML = `<span class="success">Distance: ${dist.toFixed(4)}</span>`;
+        });
+
+        // --- 2. Matrix Tests ---
+        const resMat = document.getElementById('resMat');
+        document.getElementById('btnMatAdd').addEventListener('click', () => {
+            try { resMat.innerHTML = formatMat(getMatA().add(getMatB())); } catch(e) { resMat.innerHTML = `<span class="error">${e.message}</span>`; }
+        });
+        document.getElementById('btnMatSub').addEventListener('click', () => {
+            try { resMat.innerHTML = formatMat(getMatA().subtract(getMatB())); } catch(e) { resMat.innerHTML = `<span class="error">${e.message}</span>`; }
+        });
+        document.getElementById('btnMatMul').addEventListener('click', () => {
+            try { resMat.innerHTML = formatMat(getMatA().multiply(getMatB())); } catch(e) { resMat.innerHTML = `<span class="error">${e.message}</span>`; }
+        });
+        document.getElementById('btnMatTrans').addEventListener('click', () => {
+            try { resMat.innerHTML = formatMat(getMatA().transpose()); } catch(e) { resMat.innerHTML = `<span class="error">${e.message}</span>`; }
+        });
+        document.getElementById('btnMatDet').addEventListener('click', () => {
+            try { resMat.innerHTML = `<span class="success">Determinant: ${getMatA().determinant().toFixed(4)}</span>`; } catch(e) { resMat.innerHTML = `<span class="error">${e.message}</span>`; }
+        });
+
+        // --- 3. Vector Tests ---
+        const resVec = document.getElementById('resVec');
+        document.getElementById('btnVecAdd').addEventListener('click', () => {
+            try { resVec.innerHTML = formatVec(getVec1().add(getVec2())); } catch(e) { resVec.innerHTML = `<span class="error">${e.message}</span>`; }
+        });
+        document.getElementById('btnVecSub').addEventListener('click', () => {
+            try { resVec.innerHTML = formatVec(getVec1().subtract(getVec2())); } catch(e) { resVec.innerHTML = `<span class="error">${e.message}</span>`; }
+        });
+        document.getElementById('btnVecDot').addEventListener('click', () => {
+            try { resVec.innerHTML = `<span class="success">Dot Product: ${getVec1().dot(getVec2()).toFixed(4)}</span>`; } catch(e) { resVec.innerHTML = `<span class="error">${e.message}</span>`; }
+        });
+        document.getElementById('btnVecScale').addEventListener('click', () => {
+            try { 
+                const s = parseFloat(document.getElementById('vScalar').value) || 0;
+                resVec.innerHTML = formatVec(getVec1().scale(s)); 
+            } catch(e) { resVec.innerHTML = `<span class="error">${e.message}</span>`; }
+        });
+
+        // --- 4. Solver Test ---
+        document.getElementById('btnSolve').addEventListener('click', () => {
+            const resBox = document.getElementById('resSolve');
+            try {
+                const K = Matrix.fromArray([
+                    [parseFloat(document.getElementById('k00').value)||0, parseFloat(document.getElementById('k01').value)||0],
+                    [parseFloat(document.getElementById('k10').value)||0, parseFloat(document.getElementById('k11').value)||0]
+                ]);
+                const F = Vector.fromArray([
+                    parseFloat(document.getElementById('f0').value)||0, 
+                    parseFloat(document.getElementById('f1').value)||0
+                ]);
+
+                const result = GaussianElimination.solve(K, F);
+
+                if (result.status === 'success') {
+                    resBox.innerHTML = `<span class="success">Solved Successfully!</span>\n\n` + formatVec(result.solution);
+                } else {
+                    resBox.innerHTML = `<span class="error">Solver Failed: ${result.error}</span>`;
+                }
+            } catch (err) {
+                resBox.innerHTML = `<span class="error">Error: ${err.message}</span>`;
+            }
+        });
     </script>
 </body>
 </html>

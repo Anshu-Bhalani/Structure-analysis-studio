@@ -1,276 +1,222 @@
 /**
- * Graphics / Canvas.js
+ * Canvas.js
  * ------------------------------------------------------------------
- * The drawing surface. Owns the Camera, Grid and Selection, and
- * delegates actual shape drawing to the renderers/ sub-modules.
- *
- * Canvas captures raw pointer input and turns it into WORLD
- * coordinates + hit-test results, then calls back into whatever
- * controller (App.js) is listening. It does NOT decide what a click
- * means for the application (e.g. "create a node" vs "start a beam")
- * — that decision belongs to App, keeping Graphics reusable no
- * matter how many tools/modes get added later.
+ * The primary drawing surface for the structural modeling environment.
+ * Responsibilities:
+ * - HTML Canvas initialization & High-DPI (Retina) scaling
+ * - Viewport management (Pan, Zoom)
+ * - World ↔ Screen coordinate conversions (Enforcing Y-up Cartesian)
+ * - Optimized Render Loop (Redraws only when marked dirty)
  * ------------------------------------------------------------------
  */
 
-import { Camera } from "./Camera.js";
-import { Grid } from "./Grid.js";
-import { Selection } from "./Selection.js";
-import { NodeRenderer } from "./renderers/NodeRenderer.js";
-import { ElementRenderer } from "./renderers/ElementRenderer.js";
-import { SupportRenderer } from "./renderers/SupportRenderer.js";
-import { LoadRenderer } from "./renderers/LoadRenderer.js";
+export class Canvas {
+    /**
+     * @param {HTMLCanvasElement} canvasElement - The target DOM canvas
+     */
+    constructor(canvasElement) {
+        if (!canvasElement) throw new Error("Canvas element is required.");
+        
+        this.canvas = canvasElement;
+        this.ctx = this.canvas.getContext('2d', { alpha: false }); // alpha: false optimizes background rendering
+        
+        // --- Viewport State (Camera) ---
+        this.panX = 0;       // X translation in screen pixels
+        this.panY = 0;       // Y translation in screen pixels
+        this.zoom = 100;     // Scale factor (Pixels per World Unit)
+        
+        // --- Render State ---
+        this.isDirty = true;           // Flag to prevent continuous wasteful redrawing
+        this.animationFrameId = null;
+        this.renderCallbacks = [];     // Array of functions to call on redraw
 
-const HIT_TOLERANCE_PX = 14;
-
-export class CanvasSurface {
-  /**
-   * @param {HTMLCanvasElement} canvasEl
-   * @param {import('../modeling/Model.js').Model} model
-   */
-  constructor(canvasEl, model) {
-    this.canvasEl = canvasEl;
-    this.ctx = canvasEl.getContext("2d");
-    this.model = model;
-
-    this.camera = new Camera();
-    this.grid = new Grid(0.5);
-    this.selection = new Selection();
-
-    this.colors = null; // set via setColors() by ThemeManager
-    this.hoveredNodeId = null;
-    this.hoveredElementId = null;
-
-    this.isPanning = false;
-    this.isDraggingNode = false;
-    this.lastPointer = [0, 0];
-    this.currentTool = "select";
-
-    this.extraDrawCallback = null; // Visualization module hooks in here
-
-    // Public callbacks — App.js assigns these.
-    this.onNodeClick = null; // (node) => void
-    this.onElementClick = null; // (element) => void
-    this.onEmptyClick = null; // (worldX, worldY) => void
-    this.onNodeMoved = null; // (node) => void
-    this.onSelectionChange = null; // () => void
-
-    this._bindEvents();
-    this._resizeToContainer();
-    window.addEventListener("resize", () => this._resizeToContainer());
-  }
-
-  setColors(colors) {
-    this.colors = colors;
-  }
-
-  /**
-   * Called by App whenever the active toolbar tool changes. This is
-   * what lets the "Pan" tool work by simple touch-and-drag — Alt+drag
-   * and middle-click remain available as desktop shortcuts, but
-   * touch/tablet users have neither, so the explicit Pan tool is the
-   * primary way they navigate the canvas.
-   */
-  setTool(tool) {
-    this.currentTool = tool;
-    this.canvasEl.style.cursor = tool === "pan" ? "grab" : tool === "select" ? "default" : "crosshair";
-  }
-
-  zoomStep(factor) {
-    this.camera.zoomAt(factor, this.width / 2, this.height / 2, this.width, this.height);
-    this.render();
-  }
-
-  setExtraDrawCallback(fn) {
-    this.extraDrawCallback = fn;
-  }
-
-  _resizeToContainer() {
-    const rect = this.canvasEl.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    this.canvasEl.width = rect.width * dpr;
-    this.canvasEl.height = rect.height * dpr;
-    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    this.width = rect.width;
-    this.height = rect.height;
-    this.render();
-  }
-
-  _bindEvents() {
-    const el = this.canvasEl;
-
-    el.addEventListener("pointerdown", (e) => this._onPointerDown(e));
-    el.addEventListener("pointermove", (e) => this._onPointerMove(e));
-    el.addEventListener("pointerup", (e) => this._onPointerUp(e));
-    el.addEventListener("pointerleave", () => {
-      this.hoveredNodeId = null;
-      this.hoveredElementId = null;
-      this.render();
-    });
-    el.addEventListener(
-      "wheel",
-      (e) => {
-        e.preventDefault();
-        const rect = el.getBoundingClientRect();
-        const sx = e.clientX - rect.left;
-        const sy = e.clientY - rect.top;
-        const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
-        this.camera.zoomAt(factor, sx, sy, this.width, this.height);
-        this.render();
-      },
-      { passive: false }
-    );
-  }
-
-  _screenFromEvent(e) {
-    const rect = this.canvasEl.getBoundingClientRect();
-    return [e.clientX - rect.left, e.clientY - rect.top];
-  }
-
-  _onPointerDown(e) {
-    const [sx, sy] = this._screenFromEvent(e);
-    this.lastPointer = [sx, sy];
-
-    if (e.button === 1 || e.altKey || this.currentTool === "pan") {
-      this.isPanning = true;
-      return;
+        this._setupResizeObserver();
     }
 
-    const [wx, wy] = this.camera.screenToWorld(sx, sy, this.width, this.height);
-    const tolerance = HIT_TOLERANCE_PX / this.camera.zoom;
-    const node = this.currentTool === "select" ? Selection.hitTestNode(this.model, wx, wy, tolerance) : null;
+    // ==========================================
+    // Initialization & Resize
+    // ==========================================
 
-    if (node) {
-      this.isDraggingNode = true;
-      this.draggedNodeId = node.id;
-    }
-  }
-
-  _onPointerMove(e) {
-    const [sx, sy] = this._screenFromEvent(e);
-
-    if (this.isPanning) {
-      this.camera.pan(sx - this.lastPointer[0], sy - this.lastPointer[1]);
-      this.lastPointer = [sx, sy];
-      this.render();
-      return;
-    }
-
-    const [wx, wy] = this.camera.screenToWorld(sx, sy, this.width, this.height);
-    const tolerance = HIT_TOLERANCE_PX / this.camera.zoom;
-
-    if (this.isDraggingNode && this.draggedNodeId) {
-      const node = this.model.getNode(this.draggedNodeId);
-      if (node) {
-        const [snapX, snapY] = this.grid.snap(wx, wy);
-        node.x = snapX;
-        node.y = snapY;
-        this.onNodeMoved?.(node);
-        this.render();
-      }
-      this.lastPointer = [sx, sy];
-      return;
+    /**
+     * Ensures the canvas always fits its container and remains sharp on High-DPI screens.
+     */
+    _setupResizeObserver() {
+        const resizeObserver = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                const { width, height } = entry.contentRect;
+                this.resize(width, height);
+            }
+        });
+        
+        // Observe the parent container instead of the canvas itself to avoid infinite resize loops
+        if (this.canvas.parentElement) {
+            resizeObserver.observe(this.canvas.parentElement);
+        } else {
+            window.addEventListener('resize', () => {
+                this.resize(window.innerWidth, window.innerHeight);
+            });
+        }
     }
 
-    const node = Selection.hitTestNode(this.model, wx, wy, tolerance);
-    const element = node ? null : Selection.hitTestElement(this.model, wx, wy, tolerance);
-    const newHoveredNode = node?.id || null;
-    const newHoveredElement = element?.id || null;
-    if (newHoveredNode !== this.hoveredNodeId || newHoveredElement !== this.hoveredElementId) {
-      this.hoveredNodeId = newHoveredNode;
-      this.hoveredElementId = newHoveredElement;
-      this.render();
-    }
-    this.lastPointer = [sx, sy];
-  }
-
-  _onPointerUp(e) {
-    const [sx, sy] = this._screenFromEvent(e);
-    const moved = Math.hypot(sx - this.lastPointer[0], sy - this.lastPointer[1]) > 3;
-
-    if (this.isPanning) {
-      this.isPanning = false;
-      return;
-    }
-    if (this.isDraggingNode) {
-      this.isDraggingNode = false;
-      this.draggedNodeId = null;
-      return;
-    }
-    if (moved) return; // was a drag, not a click
-
-    const [wx, wy] = this.camera.screenToWorld(sx, sy, this.width, this.height);
-    const tolerance = HIT_TOLERANCE_PX / this.camera.zoom;
-    const node = Selection.hitTestNode(this.model, wx, wy, tolerance);
-
-    if (node) {
-      this.selection.selectNode(node.id);
-      this.onNodeClick?.(node);
-      this.onSelectionChange?.();
-      this.render();
-      return;
+    /**
+     * Resizes the canvas backing store accounting for device pixel ratio.
+     * @param {number} width - CSS width
+     * @param {number} height - CSS height
+     */
+    resize(width, height) {
+        const dpr = window.devicePixelRatio || 1;
+        
+        this.canvas.style.width = `${width}px`;
+        this.canvas.style.height = `${height}px`;
+        
+        this.canvas.width = width * dpr;
+        this.canvas.height = height * dpr;
+        
+        // Normalize the coordinate system to use CSS pixels
+        this.ctx.scale(dpr, dpr);
+        
+        this.width = width;
+        this.height = height;
+        
+        this.requestRedraw();
     }
 
-    const element = Selection.hitTestElement(this.model, wx, wy, tolerance);
-    if (element) {
-      this.selection.selectElement(element.id);
-      this.onElementClick?.(element);
-      this.onSelectionChange?.();
-      this.render();
-      return;
+    // ==========================================
+    // World ↔ Screen Coordinate Conversions
+    // ==========================================
+    // IMPORTANT: Engineering models use a Cartesian system (+X Right, +Y Up).
+    // HTML Canvas uses a Screen system (+X Right, +Y Down).
+    // These functions mathematically enforce the Y-axis flip.
+
+    /**
+     * Converts a World coordinate (engineering units) to a Screen coordinate (pixels).
+     * @param {number} worldX 
+     * @param {number} worldY 
+     * @returns {{x: number, y: number}} Screen coordinates
+     */
+    worldToScreen(worldX, worldY) {
+        return {
+            x: (worldX * this.zoom) + this.panX,
+            // Flip Y: Subtract from canvas height
+            y: this.height - ((worldY * this.zoom) + this.panY)
+        };
     }
 
-    this.selection.clear();
-    this.onEmptyClick?.(wx, wy);
-    this.onSelectionChange?.();
-    this.render();
-  }
-
-  fitToModel() {
-    const nodes = this.model.getAllNodes();
-    if (nodes.length === 0) return;
-    const xs = nodes.map((n) => n.x);
-    const ys = nodes.map((n) => n.y);
-    this.camera.fitToBounds(Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys), this.width, this.height);
-  }
-
-  render() {
-    const { ctx, width, height, colors } = this;
-    if (!colors) return;
-    ctx.save();
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = colors.canvasBackground;
-    ctx.fillRect(0, 0, width, height);
-
-    this.grid.draw(ctx, this.camera, width, height, colors);
-
-    SupportRenderer.draw(ctx, this.camera, width, height, this.model.getAllSupports(), this.model, colors);
-    ElementRenderer.draw(
-      ctx,
-      this.camera,
-      width,
-      height,
-      this.model.getAllElements(),
-      this.model,
-      colors,
-      this.selection.selectedElementId,
-      this.hoveredElementId
-    );
-    LoadRenderer.draw(ctx, this.camera, width, height, this.model.getAllLoads(), this.model, colors);
-    NodeRenderer.draw(
-      ctx,
-      this.camera,
-      width,
-      height,
-      this.model.getAllNodes(),
-      colors,
-      this.selection.selectedNodeId,
-      this.hoveredNodeId
-    );
-
-    if (this.extraDrawCallback) {
-      this.extraDrawCallback(ctx, this.camera, width, height);
+    /**
+     * Converts a Screen coordinate (pixels) to a World coordinate (engineering units).
+     * @param {number} screenX 
+     * @param {number} screenY 
+     * @returns {{x: number, y: number}} World coordinates
+     */
+    screenToWorld(screenX, screenY) {
+        return {
+            x: (screenX - this.panX) / this.zoom,
+            // Flip Y: Inverse of worldToScreen
+            y: (this.height - screenY - this.panY) / this.zoom
+        };
     }
-    ctx.restore();
-  }
+
+    // ==========================================
+    // Viewport Controls
+    // ==========================================
+
+    setPan(x, y) {
+        this.panX = x;
+        this.panY = y;
+        this.requestRedraw();
+    }
+
+    movePan(dx, dy) {
+        this.panX += dx;
+        // Invert DY so dragging "up" moves the camera up (which pulls the world down)
+        this.panY -= dy; 
+        this.requestRedraw();
+    }
+
+    /**
+     * Zooms the canvas while keeping the point under the mouse stationary.
+     * @param {number} newZoom - The new zoom level
+     * @param {number} screenX - The X screen coordinate of the mouse
+     * @param {number} screenY - The Y screen coordinate of the mouse
+     */
+    setZoom(newZoom, screenX, screenY) {
+        // 1. Find where the mouse is in the world right now
+        const worldPos = this.screenToWorld(screenX, screenY);
+        
+        // 2. Apply new zoom
+        this.zoom = Math.max(1, Math.min(newZoom, 10000)); // Clamp zoom limits
+        
+        // 3. Calculate where that world point *would* be on screen with the new zoom
+        const newScreenPosX = (worldPos.x * this.zoom) + this.panX;
+        const newScreenPosY = this.height - ((worldPos.y * this.zoom) + this.panY);
+        
+        // 4. Adjust pan to counteract the drift
+        this.panX -= (newScreenPosX - screenX);
+        this.panY += (newScreenPosY - screenY); // Add because of inverted Y
+
+        this.requestRedraw();
+    }
+
+    /** Center the origin (0,0) in the middle of the screen */
+    resetViewport() {
+        this.panX = this.width / 2;
+        this.panY = this.height / 2;
+        this.zoom = 100; // 100 pixels per 1 meter
+        this.requestRedraw();
+    }
+
+    // ==========================================
+    // Render Loop & Drawing
+    // ==========================================
+
+    /** Registers a rendering layer function (e.g., drawGrid, drawNodes, drawElements) */
+    addRenderLayer(callback) {
+        this.renderCallbacks.push(callback);
+        this.requestRedraw();
+    }
+
+    /** Signals the engine that the canvas needs to be repainted on the next frame */
+    requestRedraw() {
+        this.isDirty = true;
+    }
+
+    /** Starts the highly optimized requestAnimationFrame loop */
+    startRenderLoop() {
+        if (this.animationFrameId) return;
+
+        const loop = () => {
+            if (this.isDirty) {
+                this.draw();
+                this.isDirty = false;
+            }
+            this.animationFrameId = requestAnimationFrame(loop);
+        };
+        loop();
+    }
+
+    /** Stops the render loop completely */
+    stopRenderLoop() {
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+    }
+
+    /** 
+     * The master draw function. Clears the screen and executes all render layers.
+     */
+    draw() {
+        // 1. Clear with base background color
+        this.ctx.fillStyle = "#121212"; 
+        this.ctx.fillRect(0, 0, this.width, this.height);
+
+        // 2. Execute all registered rendering layers in order
+        // Note: The layers are responsible for calling worldToScreen() 
+        // to figure out where to draw their objects.
+        for (const callback of this.renderCallbacks) {
+            this.ctx.save();
+            callback(this.ctx, this); // Pass context and this canvas instance
+            this.ctx.restore();
+        }
+    }
 }

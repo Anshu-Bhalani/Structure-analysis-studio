@@ -3,88 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Load Validation Test Harness</title>
+    <title>Phase 3: Validation Pipeline</title>
     <style>
-        body { font-family: monospace; background: #121212; color: #fff; padding: 20px; }
-        .success { color: #22c55e; margin-bottom: 15px; }
-        .error { color: #ef4444; margin-bottom: 5px; border-left: 2px solid #ef4444; padding-left: 10px; word-break: break-word; }
-        .test-case { background: #1e1e1e; padding: 15px; margin-bottom: 20px; border-radius: 4px; border: 1px solid #333; }
-        h3 { margin-top: 0; color: #3b82f6; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #fff; padding: 20px; }
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+        button { background: #3b82f6; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #2563eb; }
+        .btn-run { background: #10b981; } .btn-run:hover { background: #059669; }
+        .btn-clear { background: #ef4444; } .btn-clear:hover { background: #dc2626; }
+        #output { background: #1e1e1e; padding: 20px; border-radius: 6px; border: 1px solid #333; min-height: 200px; }
+        .success { color: #22c55e; font-weight: bold; font-size: 1.2em; margin-bottom: 10px; }
+        .error { color: #ef4444; margin-bottom: 8px; border-left: 3px solid #ef4444; padding-left: 10px; }
+        .warning { color: #f59e0b; margin-bottom: 8px; border-left: 3px solid #f59e0b; padding-left: 10px; }
     </style>
 </head>
 <body>
-    <h2>Phase 3: Validation Engine - Load Testing</h2>
-    <div id="output"></div>
+    <h2>Phase 3: Validation Engine Dashboard</h2>
+    
+    <div class="controls" id="btn-container">
+        <!-- Buttons will be injected here after JS loads -->
+    </div>
+    
+    <div id="output">Initialize the model to begin...</div>
 
     <script type="module">
         const output = document.getElementById('output');
+        const controls = document.getElementById('btn-container');
+        let currentModel;
 
-        async function bootTests() {
+        async function init() {
             try {
-                output.innerHTML = "<div class='test-case'>Attempting to load files...</div>";
-                
                 const { Model } = await import('./core/modeling/Model.js');
                 const { Node } = await import('./core/modeling/Node.js');
                 const { Element } = await import('./core/modeling/Element.js');
+                const { Material } = await import('./core/modeling/Material.js');
+                const { Section } = await import('./core/modeling/Section.js');
+                const { Support } = await import('./core/modeling/Support.js');
                 const { Load } = await import('./core/modeling/Load.js');
                 const { Validator } = await import('./core/utilities/Validation.js');
 
-                output.innerHTML = ""; 
+                // Helper to quickly log actions to the screen
+                const log = (msg) => { output.innerHTML = `<div style="color: #9ca3af;">${msg}</div>`; };
 
-                function runTest(testName, loadConfig) {
-                    try {
-                        const model = new Model("Test Model");
-                        model.addNode(new Node("N1", 0, 0));
-                        model.addNode(new Node("N2", 10, 0));
-                        
-                        const e1 = new Element("E1", "N1", "N2", "beam");
-                        e1.material = "Steel"; e1.section = "W8x31";
-                        model.addElement(e1);
+                // --- Button Logic Functions ---
+                
+                window.clearModel = () => {
+                    currentModel = new Model("Active Model");
+                    log("Model cleared. Currently empty.");
+                };
 
-                        model.addLoad(new Load("L1", loadConfig));
+                window.createValidModel = () => {
+                    clearModel();
+                    currentModel.addNode(new Node("N1", 0, 0));
+                    currentModel.addNode(new Node("N2", 10, 0));
+                    currentModel.materials.set("Steel01", new Material("Steel01"));
+                    currentModel.sections.set("ISMB300", new Section("ISMB300"));
+                    
+                    const beam = new Element("E1", "N1", "N2", "beam");
+                    beam.material = "Steel01"; beam.section = "ISMB300";
+                    currentModel.addElement(beam);
 
-                        const report = Validator.validateLoads(model);
-                        
-                        const div = document.createElement('div');
-                        div.className = 'test-case';
-                        
-                        let html = `<h3>${testName}</h3>`;
-                        if (report.valid) {
-                            html += `<div class="success">✔ Passed Validation</div>`;
-                        } else {
-                            report.errors.forEach(err => { html += `<div class="error">✖ ${err}</div>`; });
-                        }
-                        div.innerHTML = html;
-                        output.appendChild(div);
-                    } catch (error) {
-                        const div = document.createElement('div');
-                        div.className = 'test-case';
-                        div.innerHTML = `<h3>${testName}</h3><div class="error">🔥 CRASH DURING TEST: ${error.message}</div>`;
-                        output.appendChild(div);
+                    const support = new Support("S1", "N1", "Fixed");
+                    support.restrainedDOFs = { dx: true, dy: true, mz: true };
+                    currentModel.addSupport(support);
+
+                    currentModel.addLoad(new Load("L1", { targetType: 'node', target: 'N2', loadType: 'Point Load', direction: 'FY', magnitude: -50 }));
+                    
+                    log("✔ Created a perfectly valid model (2 nodes, 1 beam, supports, loads, materials, sections).");
+                };
+
+                window.createInvalidNode = () => {
+                    if (!currentModel) clearModel();
+                    try { 
+                        // Will throw error instantly from Node's internal self-defense!
+                        currentModel.addNode(new Node("BadNode", NaN, 5)); 
+                    } catch (e) {
+                        currentModel.addNode(new Node("BadNode2", 0, 0)); // Valid creation, but duplicate coordinates if N1 exists
+                        log(`Caught internal error: ${e.message}<br>Added node with duplicate coords instead.`);
                     }
-                }
+                };
 
-                runTest("1. Valid point load", { targetType: 'node', target: 'N1', loadType: 'Point Load', direction: 'FY', magnitude: -50 });
-                runTest("2. Node load referencing node 999", { targetType: 'node', target: 'N999', loadType: 'Point Load', direction: 'FY', magnitude: -50 });
-                runTest("3. Element load referencing element 999", { targetType: 'element', target: 'E999', loadType: 'Uniform Load', direction: 'Local-Y', magnitude: -10 });
-                runTest("4. Magnitude = NaN", { targetType: 'node', target: 'N1', loadType: 'Point Load', direction: 'FY', magnitude: NaN });
-                runTest("5. Magnitude = Infinity", { targetType: 'node', target: 'N1', loadType: 'Point Load', direction: 'FY', magnitude: Infinity });
-                runTest("6. Invalid direction", { targetType: 'node', target: 'N1', loadType: 'Point Load', direction: 'DIAGONAL', magnitude: 100 });
-                runTest("7. Unsupported load type", { targetType: 'node', target: 'N1', loadType: 'Magic Load', direction: 'FY', magnitude: 100 });
-                runTest("8. Position outside element", { targetType: 'element', target: 'E1', loadType: 'Point Load', direction: 'FY', magnitude: -50, position: 15 }); 
-                runTest("9. startPosition > endPosition", { targetType: 'element', target: 'E1', loadType: 'Uniform Load', direction: 'FY', magnitude: -10, startPosition: 8, endPosition: 2 });
-                runTest("10. Missing target", { targetType: 'node', loadType: 'Point Load', direction: 'FY', magnitude: 50 });
-                runTest("11. Missing magnitude", { targetType: 'node', target: 'N1', loadType: 'Point Load', direction: 'FY' });
-                runTest("12. Missing direction", { targetType: 'node', target: 'N1', loadType: 'Point Load', magnitude: 50 });
-                runTest("13. Missing type", { targetType: 'node', target: 'N1', direction: 'FY', magnitude: 50 });
+                window.createInvalidElement = () => {
+                    if (!currentModel) clearModel();
+                    const e = new Element("BadE", "N99", "N100", "beam"); // Dangling references
+                    e.material = "FakeMaterial"; // Missing material reference
+                    currentModel.addElement(e);
+                    log("✖ Added element with missing nodes and non-existent material.");
+                };
 
-            } catch (setupError) {
-                output.innerHTML = `<div class="test-case" style="border-color: #ef4444;">
-                    <h3>🔥 IMPORT OR SYNTAX ERROR</h3>
-                    <div class="error" style="font-size: 1.1em;">
-                        <strong>${setupError.message}</strong>
-                    </div>
-                </div>`;
+                window.createInvalidSupport = () => {
+                    if (!currentModel) clearModel();
+                    const s = new Support("BadS", "GhostNode", "Pin");
+                    s.restrainedDOFs = { dx: "yes", dy: false, mz: false }; // Malformed restraint
+                    currentModel.addSupport(s);
+                    log("✖ Added support to a non-existent node with bad restraint booleans.");
+                };
+
+                window.createInvalidLoad = () => {
+                    if (!currentModel) clearModel();
+                    currentModel.addLoad(new Load("BadL", { targetType: 'node', target: 'N1', loadType: 'Magic Load', direction: 'UP' }));
+                    log("✖ Added load with unsupported type and direction.");
+                };
+
+                window.runValidation = () => {
+                    if (!currentModel) return log("No model exists to validate!");
+                    
+                    const report = Validator.validateModel(currentModel);
+                    let html = '';
+                    
+                    if (report.valid) {
+                        html += `<div class="success">✔ Validation Passed! Model is ready for Phase 4.</div>`;
+                    } else {
+                        html += `<div class="error" style="border:none; font-weight:bold; font-size:1.2em; padding:0;">✖ Validation Failed!</div><hr style="border-color:#333; margin:10px 0;">`;
+                        report.errors.forEach(err => { html += `<div class="error">${err}</div>`; });
+                    }
+                    
+                    report.warnings.forEach(warn => { html += `<div class="warning">Warning: ${warn}</div>`; });
+                    report.info.forEach(info => { html += `<div style="color:#60a5fa; margin-top:10px;">ℹ ${info}</div>`; });
+                    
+                    output.innerHTML = html;
+                };
+
+                // Inject Buttons
+                controls.innerHTML = `
+                    <button onclick="createValidModel()">Create Valid Model</button>
+                    <button onclick="createInvalidNode()">Add Invalid Node</button>
+                    <button onclick="createInvalidElement()">Add Invalid Element</button>
+                    <button onclick="createInvalidSupport()">Add Invalid Support</button>
+                    <button onclick="createInvalidLoad()">Add Invalid Load</button>
+                    <button class="btn-clear" onclick="clearModel()">Clear Model</button>
+                    <button class="btn-run" onclick="runValidation()">▶ Run Validation</button>
+                `;
+
+                clearModel();
+
+            } catch (err) {
+                output.innerHTML = `<div class="error">Setup Error: ${err.message}</div>`;
             }
         }
 

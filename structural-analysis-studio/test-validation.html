@@ -7,7 +7,7 @@
     <style>
         body { font-family: monospace; background: #121212; color: #fff; padding: 20px; }
         .success { color: #22c55e; margin-bottom: 15px; }
-        .error { color: #ef4444; margin-bottom: 5px; border-left: 2px solid #ef4444; padding-left: 10px; }
+        .error { color: #ef4444; margin-bottom: 5px; border-left: 2px solid #ef4444; padding-left: 10px; word-break: break-word; }
         .test-case { background: #1e1e1e; padding: 15px; margin-bottom: 20px; border-radius: 4px; border: 1px solid #333; }
         h3 { margin-top: 0; color: #3b82f6; }
     </style>
@@ -17,56 +17,88 @@
     <div id="output"></div>
 
     <script type="module">
-        import { Model } from './core/modeling/Model.js';
-        import { Node } from './core/modeling/Node.js';
-        import { Element } from './core/modeling/Element.js';
-        import { Load } from './core/modeling/Load.js';
-        import { Validator } from './core/utilities/Validation.js';
-
         const output = document.getElementById('output');
 
-        function runTest(testName, loadConfig) {
-            const model = new Model("Test Model");
-            model.addNode(new Node("N1", 0, 0));
-            model.addNode(new Node("N2", 10, 0));
-            
-            // Basic valid element (length = 10)
-            const e1 = new Element("E1", "N1", "N2", "beam");
-            e1.material = "Steel"; e1.section = "W8x31";
-            model.addElement(e1);
+        // Using asynchronous dynamic imports to catch exact file errors on mobile!
+        async function bootTests() {
+            try {
+                output.innerHTML = "<div class='test-case'>Attempting to load files...</div>";
+                
+                // If any of these fail, it jumps straight to the catch block and tells us which one
+                const { Model } = await import('./core/modeling/Model.js');
+                const { Node } = await import('./core/modeling/Node.js');
+                const { Element } = await import('./core/modeling/Element.js');
+                const { Load } = await import('./core/modeling/Load.js');
+                const { Validator } = await import('./core/utilities/Validation.js');
 
-            model.addLoad(new Load("L1", loadConfig));
+                output.innerHTML = ""; // Clear loading message
 
-            const report = Validator.validateLoads(model);
-            
-            const div = document.createElement('div');
-            div.className = 'test-case';
-            
-            let html = `<h3>${testName}</h3>`;
-            if (report.valid) {
-                html += `<div class="success">✔ Passed Validation</div>`;
-            } else {
-                report.errors.forEach(err => { html += `<div class="error">✖ ${err}</div>`; });
+                function runTest(testName, loadConfig) {
+                    try {
+                        const model = new Model("Test Model");
+                        model.addNode(new Node("N1", 0, 0));
+                        model.addNode(new Node("N2", 10, 0));
+                        
+                        const e1 = new Element("E1", "N1", "N2", "beam");
+                        e1.material = "Steel"; e1.section = "W8x31";
+                        model.addElement(e1);
+
+                        model.addLoad(new Load("L1", loadConfig));
+
+                        const report = Validator.validateLoads(model);
+                        
+                        const div = document.createElement('div');
+                        div.className = 'test-case';
+                        
+                        let html = `<h3>${testName}</h3>`;
+                        if (report.valid) {
+                            html += `<div class="success">✔ Passed Validation</div>`;
+                        } else {
+                            report.errors.forEach(err => { html += `<div class="error">✖ ${err}</div>`; });
+                        }
+                        div.innerHTML = html;
+                        output.appendChild(div);
+                    } catch (error) {
+                        const div = document.createElement('div');
+                        div.className = 'test-case';
+                        div.innerHTML = `<h3>${testName}</h3><div class="error">🔥 CRASH DURING TEST: ${error.message}</div>`;
+                        output.appendChild(div);
+                    }
+                }
+
+                // --- The 13 Test Cases ---
+                runTest("1. Valid point load", { targetType: 'node', target: 'N1', loadType: 'Point Load', direction: 'FY', magnitude: -50 });
+                runTest("2. Node load referencing node 999", { targetType: 'node', target: 'N999', loadType: 'Point Load', direction: 'FY', magnitude: -50 });
+                runTest("3. Element load referencing element 999", { targetType: 'element', target: 'E999', loadType: 'Uniform Load', direction: 'Local-Y', magnitude: -10 });
+                runTest("4. Magnitude = NaN", { targetType: 'node', target: 'N1', loadType: 'Point Load', direction: 'FY', magnitude: NaN });
+                runTest("5. Magnitude = Infinity", { targetType: 'node', target: 'N1', loadType: 'Point Load', direction: 'FY', magnitude: Infinity });
+                runTest("6. Invalid direction", { targetType: 'node', target: 'N1', loadType: 'Point Load', direction: 'DIAGONAL', magnitude: 100 });
+                runTest("7. Unsupported load type", { targetType: 'node', target: 'N1', loadType: 'Magic Load', direction: 'FY', magnitude: 100 });
+                runTest("8. Position outside element", { targetType: 'element', target: 'E1', loadType: 'Point Load', direction: 'FY', magnitude: -50, position: 15 }); 
+                runTest("9. startPosition > endPosition", { targetType: 'element', target: 'E1', loadType: 'Uniform Load', direction: 'FY', magnitude: -10, startPosition: 8, endPosition: 2 });
+                runTest("10. Missing target", { targetType: 'node', loadType: 'Point Load', direction: 'FY', magnitude: 50 });
+                runTest("11. Missing magnitude", { targetType: 'node', target: 'N1', loadType: 'Point Load', direction: 'FY' });
+                runTest("12. Missing direction", { targetType: 'node', target: 'N1', loadType: 'Point Load', magnitude: 50 });
+                runTest("13. Missing type", { targetType: 'node', target: 'N1', direction: 'FY', magnitude: 50 });
+
+            } catch (setupError) {
+                output.innerHTML = `<div class="test-case" style="border-color: #ef4444;">
+                    <h3>🔥 IMPORT OR SYNTAX ERROR</h3>
+                    <div class="error" style="font-size: 1.1em;">
+                        The browser aborted because a file could not be loaded or has a syntax error:<br><br>
+                        <strong>${setupError.message}</strong><br><br>
+                        <strong>Things to check:</strong>
+                        <ul>
+                            <li>Is a file name misspelled? (e.g., <code>model.js</code> instead of <code>Model.js</code>)</li>
+                            <li>Are the folders exactly <code>core/modeling/</code> and <code>core/utilities/</code>?</li>
+                            <li>Did you forget to add <code>export class Element</code> in Element.js?</li>
+                        </ul>
+                    </div>
+                </div>`;
             }
-            div.innerHTML = html;
-            output.appendChild(div);
         }
 
-        // --- The 13 Test Cases ---
-        runTest("1. Valid point load", { targetType: 'node', target: 'N1', loadType: 'Point Load', direction: 'FY', magnitude: -50 });
-        runTest("2. Node load referencing node 999", { targetType: 'node', target: 'N999', loadType: 'Point Load', direction: 'FY', magnitude: -50 });
-        runTest("3. Element load referencing element 999", { targetType: 'element', target: 'E999', loadType: 'Uniform Load', direction: 'Local-Y', magnitude: -10 });
-        runTest("4. Magnitude = NaN", { targetType: 'node', target: 'N1', loadType: 'Point Load', direction: 'FY', magnitude: NaN });
-        runTest("5. Magnitude = Infinity", { targetType: 'node', target: 'N1', loadType: 'Point Load', direction: 'FY', magnitude: Infinity });
-        runTest("6. Invalid direction", { targetType: 'node', target: 'N1', loadType: 'Point Load', direction: 'DIAGONAL', magnitude: 100 });
-        runTest("7. Unsupported load type", { targetType: 'node', target: 'N1', loadType: 'Magic Load', direction: 'FY', magnitude: 100 });
-        runTest("8. Position outside element", { targetType: 'element', target: 'E1', loadType: 'Point Load', direction: 'FY', magnitude: -50, position: 15 }); // Length is 10
-        runTest("9. startPosition > endPosition", { targetType: 'element', target: 'E1', loadType: 'Uniform Load', direction: 'FY', magnitude: -10, startPosition: 8, endPosition: 2 });
-        runTest("10. Missing target", { targetType: 'node', loadType: 'Point Load', direction: 'FY', magnitude: 50 });
-        runTest("11. Missing magnitude", { targetType: 'node', target: 'N1', loadType: 'Point Load', direction: 'FY' });
-        runTest("12. Missing direction", { targetType: 'node', target: 'N1', loadType: 'Point Load', magnitude: 50 });
-        runTest("13. Missing type", { targetType: 'node', target: 'N1', direction: 'FY', magnitude: 50 });
-
+        bootTests();
     </script>
 </body>
 </html>

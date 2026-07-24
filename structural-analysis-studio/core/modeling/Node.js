@@ -1,6 +1,7 @@
 /**
  * Node.js
  * Represents a single structural joint in the user model.
+ * Strictly contains geometry and state flags. Does not contain loads, supports, or results.
  */
 
 import { MathUtils } from '../math/MathUtils.js';
@@ -11,20 +12,20 @@ export class Node {
      * @param {string} id - Unique identifier (e.g., "N1").
      * @param {number} x - X coordinate.
      * @param {number} y - Y coordinate.
-     * @param {number} [z=0] - Z coordinate (Reserved for future 3D expansion).
+     * @param {number} [z=0] - Z coordinate (Reserved for future 3D).
      * @param {string} [label=""] - Optional text label.
      */
     constructor(id, x, y, z = 0, label = "") {
         if (!id) throw new Error("Node must have a valid ID.");
         
-        // Properties
+        // --- Core Properties ---
         this.id = id;
         this.x = x;
         this.y = y;
-        this.z = z;
+        this.z = z; 
         this.label = label;
         
-        // State
+        // --- State ---
         this.visible = true;
         this.locked = false;
     }
@@ -59,7 +60,7 @@ export class Node {
     }
 
     // ==========================================
-    // State
+    // State Management
     // ==========================================
 
     /** Locks the node so its coordinates cannot be changed. */
@@ -115,9 +116,11 @@ export class Node {
      * Reconstructs a Node instance from a parsed JSON object. 
      */
     static fromJSON(data) {
-        const node = new Node(data.id, data.x, data.y, data.z, data.label);
-        node.visible = data.visible !== undefined ? data.visible : true;
-        node.locked = data.locked || false;
+        const node = new Node(data.id, data.x, data.y, data.z || 0, data.label || "");
+        
+        if (data.visible !== undefined) node.visible = data.visible;
+        if (data.locked !== undefined) node.locked = data.locked;
+        
         return node;
     }
 }

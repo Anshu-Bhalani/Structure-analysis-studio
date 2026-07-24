@@ -1,45 +1,46 @@
 /**
- * Modeling / Support.js
- * ------------------------------------------------------------------
- * A support restrains one or more DOFs of a node. Pure data — the
- * Solver decides how to apply these restraints to the global system.
- * ------------------------------------------------------------------
+ * Support.js (Level 3 - Core Data Models)
+ * Represents a boundary condition applied to a Node.
  */
-
-import { nextId } from "../utilities/Helpers.js";
-
-/** Common support presets, expressed as restrained DOFs [ux, uy, rz]. */
-export const SUPPORT_PRESETS = {
-  pin: { ux: true, uy: true, rz: false },
-  roller: { ux: false, uy: true, rz: false },
-  fixed: { ux: true, uy: true, rz: true },
-  rollerHorizontal: { ux: true, uy: false, rz: false },
-};
-
 export class Support {
-  /**
-   * @param {string} nodeId
-   * @param {{ux:boolean, uy:boolean, rz:boolean}} restraints
-   * @param {string=} type   preset name, purely for icon/labeling purposes
-   * @param {string=} id
-   */
-  constructor(nodeId, restraints, type = "custom", id = null) {
-    this.id = id || nextId("support");
-    this.nodeId = nodeId;
-    this.restraints = { ux: false, uy: false, rz: false, ...restraints };
-    this.type = type;
-  }
+    constructor(id, node, type = 'Custom') {
+        if (!id) throw new Error("Support must have a valid ID.");
+        
+        this.id = id;
+        this.node = node; // Can be a Node object or just the Node ID string
+        this.type = type; // 'Fixed', 'Pin', 'Roller', 'Spring', 'Custom'
 
-  toJSON() {
-    return { id: this.id, nodeId: this.nodeId, restraints: { ...this.restraints }, type: this.type };
-  }
+        // Restraints (true = locked/restrained, false = free)
+        this.restrainedDOFs = { dx: false, dy: false, mz: false };
 
-  static fromJSON(json) {
-    return new Support(json.nodeId, json.restraints, json.type, json.id);
-  }
+        // Spring properties (Only utilized if type === 'Spring' or if partially elastic)
+        this.springStiffness = { kx: 0, ky: 0, kmz: 0 };
 
-  static preset(nodeId, presetName) {
-    const restraints = SUPPORT_PRESETS[presetName] || SUPPORT_PRESETS.pin;
-    return new Support(nodeId, restraints, presetName);
-  }
+        // Support settlements (prescribed displacements)
+        this.settlement = { dx: 0, dy: 0 };
+        this.rotationSettlement = 0;
+
+        // Metadata & State
+        this.label = "";
+        this.visible = true;
+        this.locked = false;
+    }
+
+    /** 
+     * Serializes the support to a plain JavaScript object for JSON storage. 
+     */
+    toJSON() {
+        return {
+            id: this.id,
+            node: this.node ? (this.node.id || this.node) : null,
+            type: this.type,
+            restrainedDOFs: { ...this.restrainedDOFs },
+            springStiffness: { ...this.springStiffness },
+            settlement: { ...this.settlement },
+            rotationSettlement: this.rotationSettlement,
+            label: this.label,
+            visible: this.visible,
+            locked: this.locked
+        };
+    }
 }

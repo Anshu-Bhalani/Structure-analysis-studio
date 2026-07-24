@@ -3,120 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Node & Model Test</title>
+    <title>Node & Model Interactive Test</title>
     <style>
         body { 
-            font-family: monospace; 
-            padding: 15px; 
-            background: #1e1e1e; 
-            color: #d4d4d4; 
-            font-size: 14px; 
-            margin: 0;
-        }
-        h2 { 
-            color: #3b82f6; 
             font-family: sans-serif; 
-            margin-top: 5px;
+            margin: 0; 
+            background: #121212; 
+            color: #e0e0e0; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh;
         }
-        #output { 
-            background: #000; 
-            padding: 15px; 
-            border-radius: 8px; 
-            overflow-x: auto; 
-            white-space: pre-wrap; 
-            line-height: 1.5;
+        .toolbar {
+            padding: 15px;
+            background: #1e1e1e;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .pass { color: #22c55e; font-weight: bold; }
-        .fail { color: #ef4444; font-weight: bold; }
-        .info { color: #eab308; font-weight: bold; margin-top: 15px; display: inline-block; }
+        h2 { margin: 0; font-size: 16px; color: #3b82f6; }
+        button {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        #canvas-container {
+            width: 100%;
+            height: 50vh;
+            background: #181818;
+            position: relative;
+            touch-action: none; /* Prevents scrolling when tapping canvas on mobile */
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .data-panel {
+            flex: 1;
+            padding: 15px;
+            background: #000;
+            overflow-y: auto;
+            border-top: 1px solid #333;
+        }
+        pre {
+            margin: 0;
+            font-family: monospace;
+            font-size: 12px;
+            color: #22c55e;
+            white-space: pre-wrap;
+        }
     </style>
 </head>
 <body>
-    <h2>Node & Model Test (Mobile)</h2>
-    <div id="output">Running tests... Please wait.<br></div>
+
+    <div class="toolbar">
+        <h2>Tap Canvas to Create Nodes</h2>
+        <button id="clearBtn">Clear</button>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="gridCanvas"></canvas>
+    </div>
+
+    <div class="data-panel">
+        <div style="color: #888; margin-bottom: 10px; font-size: 12px;">MODEL DATA (JSON):</div>
+        <pre id="output">{}</pre>
+    </div>
 
     <script type="module">
         import { Node } from './core/modeling/Node.js';
         import { Model } from './core/modeling/Model.js';
 
-        const out = document.getElementById('output');
-        out.innerHTML = ''; 
+        // --- Setup ---
+        const canvas = document.getElementById('gridCanvas');
+        const ctx = canvas.getContext('2d');
+        const output = document.getElementById('output');
+        
+        let model = new Model("Interactive Test");
+        let nodeCounter = 1;
 
-        function printScreen(msg, cssClass = '') {
-            const span = document.createElement('span');
-            if (cssClass) span.className = cssClass;
-            span.innerText = msg + '\n';
-            out.appendChild(span);
+        // Viewport settings (1 unit = 40 pixels for display)
+        const scale = 40; 
+        let originX, originY;
+
+        // --- Resize & Setup Canvas ---
+        function resize() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            // Set (0,0) to the center of the canvas
+            originX = canvas.width / 2;
+            originY = canvas.height / 2;
+            render();
         }
+        window.addEventListener('resize', resize);
+        resize();
 
-        try {
-            printScreen("--- 1. TESTING NODE CREATION ---", "info");
+        // --- Core Interaction ---
+        canvas.addEventListener('pointerdown', (e) => {
+            const rect = canvas.getBoundingClientRect();
             
-            // Create nodes matching your Phase 2 example
-            const n1 = new Node("N1", 0, 0);
-            const n2 = new Node("N2", 5, 0);
-            const n3 = new Node("N3", 5, 5);
+            // 1. Read raw mouse/touch pixel coordinates
+            const pixelX = e.clientX - rect.left;
+            const pixelY = e.clientY - rect.top;
 
-            printScreen(`Created Node ${n1.id} at (${n1.x}, ${n1.y})`);
-            printScreen(`Created Node ${n2.id} at (${n2.x}, ${n2.y})`);
-
-            printScreen("\n--- 2. TESTING NODE DISTANCE ---", "info");
+            // 2. Convert pixels to engineering coordinates (Grid snapping to nearest 0.5)
+            let engX = (pixelX - originX) / scale;
+            let engY = -(pixelY - originY) / scale; // Invert Y so UP is positive
             
-            const dist12 = n1.distanceTo(n2);
-            const dist12Pass = dist12 === 5;
-            printScreen(`Distance N1 to N2 == 5: ${dist12Pass ? "✅ PASS" : "❌ FAIL"}`, dist12Pass ? "pass" : "fail");
+            engX = Math.round(engX * 2) / 2; // Snap to 0.5
+            engY = Math.round(engY * 2) / 2; // Snap to 0.5
 
-            const dist13 = n1.distanceTo(n3);
-            // 0,0 to 5,5 should be approx 7.071
-            const dist13Pass = Math.abs(dist13 - 7.071) < 0.01;
-            printScreen(`Distance N1 to N3 == 7.071: ${dist13Pass ? "✅ PASS" : "❌ FAIL"}`, dist13Pass ? "pass" : "fail");
+            // 3. Create Node object & Assign unique ID
+            const nodeId = "N" + nodeCounter++;
+            const newNode = new Node(nodeId, engX, engY);
 
-            printScreen("\n--- 3. TESTING NODE MOVEMENT ---", "info");
-            
-            n2.move(0, 2); // Move N2 up by 2
-            const movePass = n2.x === 5 && n2.y === 2;
-            printScreen(`Moved N2 by (0, 2). New pos (${n2.x}, ${n2.y}): ${movePass ? "✅ PASS" : "❌ FAIL"}`, movePass ? "pass" : "fail");
-
-            n2.lock();
-            n2.move(10, 10); // Attempt to move while locked
-            const lockPass = n2.x === 5 && n2.y === 2;
-            printScreen(`Locked N2 movement prevented: ${lockPass ? "✅ PASS" : "❌ FAIL"}`, lockPass ? "pass" : "fail");
-
-            printScreen("\n--- 4. TESTING MODEL INTEGRATION ---", "info");
-            
-            const myProject = new Model("Test Project");
-            myProject.addNode(n1);
-            myProject.addNode(n2);
-            
-            const countPass = myProject.nodes.size === 2;
-            printScreen(`Model holds 2 nodes: ${countPass ? "✅ PASS" : "❌ FAIL"}`, countPass ? "pass" : "fail");
-
-            // Test duplicate ID prevention
-            let caughtDuplicateError = false;
+            // 4. Store in Model
             try {
-                const duplicateNode = new Node("N1", 10, 10);
-                myProject.addNode(duplicateNode);
+                model.addNode(newNode);
+                render();
+                updateJSON();
             } catch (err) {
-                caughtDuplicateError = true;
-                printScreen(`Expected Error Caught: ${err.message}`);
+                alert(err.message);
             }
-            printScreen(`Duplicate ID Prevention: ${caughtDuplicateError ? "✅ PASS" : "❌ FAIL"}`, caughtDuplicateError ? "pass" : "fail");
+        });
 
-            printScreen("\n--- 5. TESTING SERIALIZATION ---", "info");
-            
-            const jsonString = myProject.toJSON();
-            if (jsonString.includes('"id": "N1"')) {
-                printScreen("✅ Model to JSON serialization successful!", "pass");
-                // Print a small snippet of the JSON to prove it worked
-                printScreen(jsonString.substring(0, 150) + "...\n}"); 
-            } else {
-                printScreen("❌ JSON serialization failed.", "fail");
+        // --- Rendering Engine ---
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Grid & Axes
+            ctx.strokeStyle = '#2a2a2a';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            // Vertical lines
+            for(let x = originX % scale; x < canvas.width; x += scale) {
+                ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height);
             }
+            // Horizontal lines
+            for(let y = originY % scale; y < canvas.height; y += scale) {
+                ctx.moveTo(0, y); ctx.lineTo(canvas.width, y);
+            }
+            ctx.stroke();
 
-        } catch (error) {
-            printScreen("\n❌ CRITICAL ERROR: " + error.message, "fail");
-            console.error(error);
+            // Draw X and Y Axes
+            ctx.strokeStyle = '#555';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, originY); ctx.lineTo(canvas.width, originY); // X
+            ctx.moveTo(originX, 0); ctx.lineTo(originX, canvas.height); // Y
+            ctx.stroke();
+
+            // Draw Nodes from the Model
+            model.nodes.forEach(node => {
+                // Convert engineering coords back to screen pixels
+                const px = originX + (node.x * scale);
+                const py = originY - (node.y * scale);
+
+                // Draw Node Circle
+                ctx.beginPath();
+                ctx.arc(px, py, 6, 0, Math.PI * 2);
+                ctx.fillStyle = '#3b82f6'; // Blue
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Draw Label
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px sans-serif';
+                ctx.fillText(`${node.id} (${node.x}, ${node.y})`, px + 10, py - 10);
+            });
         }
+
+        // --- Update Output ---
+        function updateJSON() {
+            // Re-parse to show exactly what's inside the model
+            output.innerText = model.toJSON();
+        }
+
+        // --- Clear Tool ---
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            model = new Model("Interactive Test");
+            nodeCounter = 1;
+            render();
+            updateJSON();
+        });
+
     </script>
 </body>
 </html>

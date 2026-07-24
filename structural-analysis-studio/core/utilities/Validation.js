@@ -1,3 +1,5 @@
+import { MathUtils } from '../math/MathUtils.js';
+
 class ValidationResult {
     constructor() {
         this.valid = true;
@@ -18,9 +20,6 @@ class ValidationResult {
 
 export class Validator {
     
-    // ==========================================
-    // ENTRY POINT: MODEL-LEVEL CHECKS
-    // ==========================================
     static validateModel(model) {
         const result = new ValidationResult();
 
@@ -29,22 +28,18 @@ export class Validator {
             return result;
         }
 
-        // 1. At least one node
         if (!model.nodes || model.nodes.size === 0) {
             result.addError("Invalid Model: No nodes found.");
         }
         
-        // 2. At least one element
         if (!model.elements || model.elements.size === 0) {
             result.addError("Invalid Model: No elements found.");
         }
         
-        // 3. At least one support
         if (!model.supports || model.supports.size === 0) {
             result.addError("Invalid Model: Structure is unstable because no supports exist.");
         }
 
-        // Merge specific validations (only run if collections exist)
         if (model.nodes && model.nodes.size > 0) result.merge(this.validateNodes(model));
         if (model.elements && model.elements.size > 0) result.merge(this.validateElements(model));
         if (model.supports && model.supports.size > 0) result.merge(this.validateSupports(model));
@@ -59,23 +54,31 @@ export class Validator {
 
     static validateNodes(model) {
         const result = new ValidationResult();
-        const coordinatesSet = new Set();
         const idSet = new Set();
+        const nodesArray = Array.from(model.nodes.values());
 
-        for (const [mapKey, node] of model.nodes.entries()) {
+        for (let i = 0; i < nodesArray.length; i++) {
+            const node = nodesArray[i];
             if (!node) continue; 
-            const id = node.id || mapKey;
+            const id = node.id;
 
-            // Note: Map inherently prevents duplicate keys, but this checks if IDs were manually duplicated
             if (idSet.has(id)) result.addError(`Duplicate ID: Node ID [${id}] is used more than once.`);
             idSet.add(id);
 
-            if (Number.isFinite(node.x) && Number.isFinite(node.y)) {
-                const coordString = `${node.x},${node.y}`;
-                if (coordinatesSet.has(coordString)) {
-                    result.addWarning(`Coincident Nodes: Node [${id}] shares exact coordinates (${node.x}, ${node.y}).`);
+            if (typeof node.x !== 'number' || !Number.isFinite(node.x) || typeof node.y !== 'number' || !Number.isFinite(node.y)) {
+                result.addError(`Invalid Coordinates: Node [${id}] has missing or invalid (NaN/Infinity) coordinates.`);
+                continue;
+            }
+
+            // Math tolerance check for duplicate coordinates
+            for (let j = i + 1; j < nodesArray.length; j++) {
+                const otherNode = nodesArray[j];
+                if (typeof otherNode.x === 'number' && typeof otherNode.y === 'number') {
+                    const dist = MathUtils.distance(node.x, node.y, otherNode.x, otherNode.y);
+                    if (dist < 1e-6) {
+                        result.addWarning(`Coincident Nodes: Node [${id}] and Node [${otherNode.id}] occupy the exact same physical coordinates (within tolerance).`);
+                    }
                 }
-                coordinatesSet.add(coordString);
             }
         }
         return result;
@@ -83,7 +86,7 @@ export class Validator {
 
     static validateElements(model) {
         const result = new ValidationResult();
-        const validTypes = ['beam', 'frame', 'truss', 'spring'];
+        const validTypes = ['beam', 'frame', 'truss', 'spring', 'bar'];
 
         for (const [id, element] of model.elements.entries()) {
             if (!element.type || !validTypes.includes(element.type.toLowerCase())) {
@@ -106,25 +109,23 @@ export class Validator {
             const sNode = typeof model.findNodeById === 'function' ? model.findNodeById(sNodeId) : model.nodes.get(sNodeId);
             const eNode = typeof model.findNodeById === 'function' ? model.findNodeById(eNodeId) : model.nodes.get(eNodeId);
 
-            // 4. Every element references valid nodes
             if (!sNode) result.addError(`Dangling Reference: Element [${id}] points to missing Start Node [${sNodeId}].`);
             if (!eNode) result.addError(`Dangling Reference: Element [${id}] points to missing End Node [${eNodeId}].`);
 
-            if (sNode && eNode && sNodeId !== eNodeId && sNode.distanceTo) {
-                if (sNode.distanceTo(eNode) === 0) {
+            if (sNode && eNode && sNodeId !== eNodeId) {
+                const dist = MathUtils.distance(sNode.x, sNode.y, eNode.x, eNode.y);
+                if (dist < 1e-6) {
                     result.addError(`Zero Length: Element [${id}] connects distinct nodes that occupy the exact same physical coordinates.`);
                 }
             }
 
-            if (element.type === 'beam' || element.type === 'frame' || element.type === 'truss') {
-                // 5. Every material reference exists
+            if (['beam', 'frame', 'truss', 'bar'].includes(element.type.toLowerCase())) {
                 if (!element.material) {
                     result.addError(`Missing Material: Element [${id}] requires a Material assignment.`);
                 } else if (!model.materials.has(element.material)) {
                     result.addError(`Missing Material Reference: Element [${id}] references Material '${element.material}' which does not exist in the model.`);
                 }
 
-                // 6. Every section reference exists
                 if (!element.section) {
                     result.addError(`Missing Section: Element [${id}] requires a Section assignment.`);
                 } else if (!model.sections.has(element.section)) {

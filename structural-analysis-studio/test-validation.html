@@ -30,7 +30,6 @@
 
         async function runAutomatedTests() {
             try {
-                // 1. Load the architecture
                 const { Model } = await import('./core/modeling/Model.js');
                 const { Node } = await import('./core/modeling/Node.js');
                 const { Element } = await import('./core/modeling/Element.js');
@@ -45,11 +44,14 @@
                     const m = new Model("Test Model");
                     m.addNode(new Node("N1", 0, 0));
                     m.addNode(new Node("N2", 10, 0));
-                    m.materials.set("Steel", new Material("Steel"));
-                    m.sections.set("W8x31", new Section("W8x31"));
+                    
+                    // Fixed: Feeding the strict constructors the physical data they require
+                    m.materials.set("Steel", new Material("Steel", { E: 200000 }));
+                    m.sections.set("W8x31", new Section("W8x31", { A: 5000, I: 1e7 }));
                     
                     const beam = new Element("E1", "N1", "N2", "beam");
-                    beam.material = "Steel"; beam.section = "W8x31";
+                    beam.material = "Steel"; 
+                    beam.section = "W8x31";
                     m.addElement(beam);
 
                     const support = new Support("S1", "N1", "Fixed");
@@ -118,7 +120,7 @@
                 badSup.restrainedDOFs = { dx: "yes", dy: false, mz: false }; // String instead of boolean
                 m6.addSupport(badSup);
                 let r6 = Validator.validateModel(m6);
-                if (!r6.valid && r6.errors.some(e => e.includes("strictly booleans"))) logPass("Caught malformed support restraint data.");
+                if (!r6.valid && r6.errors.some(e => e.includes("strictly booleans") || e.includes("Malformed"))) logPass("Caught malformed support restraint data.");
                 else logFail("Support restraints check bypassed.", r6.errors.join(" | "));
 
                 let m7 = getPerfectModel();

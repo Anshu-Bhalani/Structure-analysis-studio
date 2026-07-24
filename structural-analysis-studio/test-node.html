@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Node & Model Test</title>
+    <style>
+        body { 
+            font-family: monospace; 
+            padding: 15px; 
+            background: #1e1e1e; 
+            color: #d4d4d4; 
+            font-size: 14px; 
+            margin: 0;
+        }
+        h2 { 
+            color: #3b82f6; 
+            font-family: sans-serif; 
+            margin-top: 5px;
+        }
+        #output { 
+            background: #000; 
+            padding: 15px; 
+            border-radius: 8px; 
+            overflow-x: auto; 
+            white-space: pre-wrap; 
+            line-height: 1.5;
+        }
+        .pass { color: #22c55e; font-weight: bold; }
+        .fail { color: #ef4444; font-weight: bold; }
+        .info { color: #eab308; font-weight: bold; margin-top: 15px; display: inline-block; }
+    </style>
+</head>
+<body>
+    <h2>Node & Model Test (Mobile)</h2>
+    <div id="output">Running tests... Please wait.<br></div>
+
+    <script type="module">
+        import { Node } from './core/modeling/Node.js';
+        import { Model } from './core/modeling/Model.js';
+
+        const out = document.getElementById('output');
+        out.innerHTML = ''; 
+
+        function printScreen(msg, cssClass = '') {
+            const span = document.createElement('span');
+            if (cssClass) span.className = cssClass;
+            span.innerText = msg + '\n';
+            out.appendChild(span);
+        }
+
+        try {
+            printScreen("--- 1. TESTING NODE CREATION ---", "info");
+            
+            // Create nodes matching your Phase 2 example
+            const n1 = new Node("N1", 0, 0);
+            const n2 = new Node("N2", 5, 0);
+            const n3 = new Node("N3", 5, 5);
+
+            printScreen(`Created Node ${n1.id} at (${n1.x}, ${n1.y})`);
+            printScreen(`Created Node ${n2.id} at (${n2.x}, ${n2.y})`);
+
+            printScreen("\n--- 2. TESTING NODE DISTANCE ---", "info");
+            
+            const dist12 = n1.distanceTo(n2);
+            const dist12Pass = dist12 === 5;
+            printScreen(`Distance N1 to N2 == 5: ${dist12Pass ? "✅ PASS" : "❌ FAIL"}`, dist12Pass ? "pass" : "fail");
+
+            const dist13 = n1.distanceTo(n3);
+            // 0,0 to 5,5 should be approx 7.071
+            const dist13Pass = Math.abs(dist13 - 7.071) < 0.01;
+            printScreen(`Distance N1 to N3 == 7.071: ${dist13Pass ? "✅ PASS" : "❌ FAIL"}`, dist13Pass ? "pass" : "fail");
+
+            printScreen("\n--- 3. TESTING NODE MOVEMENT ---", "info");
+            
+            n2.move(0, 2); // Move N2 up by 2
+            const movePass = n2.x === 5 && n2.y === 2;
+            printScreen(`Moved N2 by (0, 2). New pos (${n2.x}, ${n2.y}): ${movePass ? "✅ PASS" : "❌ FAIL"}`, movePass ? "pass" : "fail");
+
+            n2.lock();
+            n2.move(10, 10); // Attempt to move while locked
+            const lockPass = n2.x === 5 && n2.y === 2;
+            printScreen(`Locked N2 movement prevented: ${lockPass ? "✅ PASS" : "❌ FAIL"}`, lockPass ? "pass" : "fail");
+
+            printScreen("\n--- 4. TESTING MODEL INTEGRATION ---", "info");
+            
+            const myProject = new Model("Test Project");
+            myProject.addNode(n1);
+            myProject.addNode(n2);
+            
+            const countPass = myProject.nodes.size === 2;
+            printScreen(`Model holds 2 nodes: ${countPass ? "✅ PASS" : "❌ FAIL"}`, countPass ? "pass" : "fail");
+
+            // Test duplicate ID prevention
+            let caughtDuplicateError = false;
+            try {
+                const duplicateNode = new Node("N1", 10, 10);
+                myProject.addNode(duplicateNode);
+            } catch (err) {
+                caughtDuplicateError = true;
+                printScreen(`Expected Error Caught: ${err.message}`);
+            }
+            printScreen(`Duplicate ID Prevention: ${caughtDuplicateError ? "✅ PASS" : "❌ FAIL"}`, caughtDuplicateError ? "pass" : "fail");
+
+            printScreen("\n--- 5. TESTING SERIALIZATION ---", "info");
+            
+            const jsonString = myProject.toJSON();
+            if (jsonString.includes('"id": "N1"')) {
+                printScreen("✅ Model to JSON serialization successful!", "pass");
+                // Print a small snippet of the JSON to prove it worked
+                printScreen(jsonString.substring(0, 150) + "...\n}"); 
+            } else {
+                printScreen("❌ JSON serialization failed.", "fail");
+            }
+
+        } catch (error) {
+            printScreen("\n❌ CRITICAL ERROR: " + error.message, "fail");
+            console.error(error);
+        }
+    </script>
+</body>
+</html>

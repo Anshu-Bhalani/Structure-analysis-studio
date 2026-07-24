@@ -1,4 +1,3 @@
-// core/modeling/Element.js
 export class Element {
     constructor(id, startNode, endNode) {
         this.id = id;
@@ -21,8 +20,9 @@ export class Element {
     toJSON() {
         return {
             id: this.id,
-            startNode: this.startNode.id,
-            endNode: this.endNode.id,
+            // Safety check to ensure we get the ID strings for JSON output
+            startNode: this.startNode ? this.startNode.id : null,
+            endNode: this.endNode ? this.endNode.id : null,
             material: this.material ? this.material.id : null,
             section: this.section ? this.section.id : null,
             angle: this.angle,

@@ -105,27 +105,29 @@ export class Toolbar {
    * nothing to actually do. They stay visible as a mockup of what's coming,
    * per the project brief, but are non-interactive until then.
    */
+  _analysisGroup() {
+    const g = this._group("analysis-group");
+    const runBtn = this._btn("▶ Run Analysis", "Coming in Phase 5 — no solver exists yet", () => this.callbacks.onRunAnalysis?.(), "btn-primary");
+    runBtn.disabled = true;
+    g.appendChild(runBtn);
+
+    const learningBtn = this._btn("Learning Mode", "Coming in Phase 5 — no solver walkthrough exists yet", () => {
+      this.learningEnabled = !this.learningEnabled;
+      learningBtn.classList.toggle("active", this.learningEnabled);
+      this.callbacks.onToggleLearning?.(this.learningEnabled);
+    });
+    learningBtn.disabled = true;
+    g.appendChild(learningBtn);
+    return g;
+  }
+
+  /** Snap-to-grid / snap-to-node toggles. Both default on, matching State.js's defaults. */
   _snapGroup() {
-  const g = this._group("snap-group");
-  g.appendChild(this._togglePill("Snap", true, (checked) => this.callbacks.onToggleSnap?.(checked)));
-  g.appendChild(this._togglePill("Node Snap", true, (checked) => this.callbacks.onToggleNodeSnap?.(checked)));
-  g.appendChild(this._togglePill("Grid Snap", true, (checked) => this.callbacks.onToggleGridSnap?.(checked)));
-  return g;
-}
-
-_analysisGroup() {
-  const g = this._group("analysis-group");
-
-  const runBtn = this._btn("▶ Run Analysis", "Phase 5 only", () => this.callbacks.onRunAnalysis?.(), "btn-primary");
-  runBtn.disabled = true;
-  g.appendChild(runBtn);
-
-  const learningBtn = this._btn("Learning Mode", "Phase 5 only", () => this.callbacks.onToggleLearning?.(this.learningEnabled));
-  learningBtn.disabled = true;
-  g.appendChild(learningBtn);
-
-  return g;
-}
+    const g = this._group("snap-group");
+    g.appendChild(this._togglePill("Snap", true, (checked) => this.callbacks.onToggleSnap?.(checked)));
+    g.appendChild(this._togglePill("Grid", true, (checked) => this.callbacks.onToggleGrid?.(checked)));
+    return g;
+  }
 
   /** Undo/Redo. Buttons start disabled since a fresh editor has nothing to undo yet. */
   _historyGroup() {

@@ -1,3 +1,10 @@
+/**
+ * State.js
+ * ------------------------------------------------------------------
+ * Centralized state management for the Geometry Editor.
+ * ------------------------------------------------------------------
+ */
+
 import { Selection } from '../graphics/Selection.js';
 import { CommandHistory } from '../graphics/Commands.js';
 import { ELEMENT_TYPES } from '../modeling/Element.js';
@@ -24,9 +31,7 @@ export class State {
 
         // --- Environment Settings ---
         this.snapEnabled = true;
-        this.snapDistance = 0.5; // Restored: World units (prevents breaking legacy modules)
-        this.snapRadius = 12;    // Added: Screen pixel snap tolerance
-
+        this.snapRadius = 12; // Snap radius in pixels
         this.gridEnabled = true;
 
         this.mouse = {

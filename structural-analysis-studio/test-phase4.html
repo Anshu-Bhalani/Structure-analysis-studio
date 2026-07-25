@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 4: Automated Geometry Editor Test Suite</title>
+    <style>
+        body { font-family: Consolas, monospace; background: #121212; color: #d4d4d4; padding: 20px; font-size: 14px; line-height: 1.5; }
+        h2 { color: #3b82f6; border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 0; }
+        .info { color: #9ca3af; margin-bottom: 16px; display: block; max-width: 900px; }
+        #canvas-preview-wrap {
+            width: 700px; max-width: 100%; height: 320px; border: 1px solid #333; border-radius: 6px;
+            margin-bottom: 16px; background: #0d0d0d; position: relative; overflow: hidden;
+        }
+        #preview-canvas { display: block; width: 100%; height: 100%; }
+        #canvas-preview-label {
+            position: absolute; top: 8px; left: 12px; font-size: 11px; color: #666; pointer-events: none;
+        }
+        #console { background: #000; padding: 20px; border-radius: 6px; border: 1px solid #333; min-height: 400px; }
+        .pass { color: #22c55e; }
+        .fail { color: #ef4444; font-weight: bold; }
+        .summary { margin-top: 20px; padding: 15px; background: #1e1e1e; border: 1px solid #333; border-radius: 4px; display: inline-block; font-size: 16px; font-weight: bold; }
+    </style>
+    <script>
+        // Surfaces any uncaught error (e.g. a real exception thrown from inside
+        // the actual requestAnimationFrame render loop, which runs for real in
+        // a browser and isn't caught by the try/catch around the test runner
+        // below) so a background rendering bug can't silently pass.
+        window.addEventListener('error', function (event) {
+            const out = document.getElementById('console');
+            if (!out) return;
+            const div = document.createElement('div');
+            div.className = 'fail';
+            div.style.marginTop = '10px';
+            div.textContent = `🔴 UNCAUGHT RUNTIME ERROR: ${event.message} (${event.filename}:${event.lineno})`;
+            out.appendChild(div);
+        });
+        window.addEventListener('unhandledrejection', function (event) {
+            const out = document.getElementById('console');
+            if (!out) return;
+            const div = document.createElement('div');
+            div.className = 'fail';
+            div.style.marginTop = '10px';
+            div.textContent = `🔴 UNHANDLED PROMISE REJECTION: ${event.reason}`;
+            out.appendChild(div);
+        });
+    </script>
+</head>
+<body>
+    <h2>⚡ Geometry Editor: Automated Test Suite (Phase 4)</h2>
+    <span class="info">
+        Exercises the real engine — Canvas, Camera, ToolManager, Commands (undo/redo),
+        SnapManager, HitTest, MouseController — plus the desktop Toolbar.js and mobile
+        TouchController.js bootstrap wiring, using a real &lt;canvas&gt; element and real
+        dispatched browser events (MouseEvent / WheelEvent / KeyboardEvent). No mocks.
+    </span>
+
+    <div id="canvas-preview-wrap">
+        <span id="canvas-preview-label">live preview — geometry created by the tests below is actually drawn here</span>
+        <canvas id="preview-canvas"></canvas>
+    </div>
+
+    <div id="console">Running tests...</div>
+
+    <script type="module">
+        const out = document.getElementById('console');
+        let htmlLog = "";
+        let passedCount = 0;
+        let failedCount = 0;
+
+        function logPass(msg) { htmlLog += `<div class="pass">✔ PASS: ${msg}</div>`; passedCount++; }
+        function logFail(msg, details) { htmlLog += `<div class="fail">✖ FAIL: ${msg}${details ? ` <br>&nbsp;&nbsp;&nbsp;↳ [Details]: ${details}` : ""}</div>`; failedCount++; }
+        function logSection(title) { htmlLog += `<br><div style="color:#60a5fa; font-weight:bold; border-bottom:1px dashed #444; margin-bottom:5px;">--- ${title} ---</div>`; }
+        function check(cond, msg, details) { if (cond) logPass(msg); else logFail(msg, details); }
+
+        function dispatchMouse(el, type, x, y, extra = {}) {
+            const rect = el.getBoundingClientRect();
+            el.dispatchEvent(new MouseEvent(type, {
+                clientX: rect.left + x, clientY: rect.top + y,
+                button: 0, bubbles: true, cancelable: true, ...extra,
+            }));
+        }
+        function dispatchKey(target, key, extra = {}) {
+            target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...extra }));
+        }
+        function makeScratchCanvas(width, height) {
+            const canvas = document.createElement('canvas');
+            const container = document.createElement('div');
+            // Off-screen but still laid out (not display:none), so clientWidth/
+            // clientHeight and getBoundingClientRect() report real dimensions.
+            container.style.cssText = `width:${width}px;height:${height}px;position:absolute;left:-9999px;top:0;`;
+            container.appendChild(canvas);
+            document.body.appendChild(container);
+            return { canvas, container };
+        }
+
+        async function runAutomatedTests() {
+            try {
+                const { Model } = await import('./core/modeling/Model.js');
+                const { ELEMENT_TYPES } = await import('./core/modeling/Element.js');
+                const { App } = await import('./core/app/app.js');
+                const { TOOLS } = await import('./core/state/State.js');
+                const { HitTest } = await import('./core/graphics/HitTest.js');
+                const { Toolbar } = await import('./frontend/desktop/components/Toolbar.js');
+                const { TouchController } = await import('./frontend/mobile/components/TouchController.js');
+
+                htmlLog = "";
+
+                // ==========================================
+                // Canvas & Camera Bootstrap
+                // ==========================================
+                logSection("Canvas & Camera Bootstrap");
+
+                const canvasEl = document.getElementById('preview-canvas');
+                const model = new Model("Phase 4 Test Model");
+                const app = new App(canvasEl, model);
+                app.canvas.resize(canvasEl.parentElement.clientWidth, canvasEl.parentElement.clientHeight);
+
+                check(app.canvas.width > 0 && app.canvas.height > 0,
+                    "Canvas acquired a real pixel size from its container.",
+                    `width=${app.canvas.width}, height=${app.canvas.height}`);
+                check(app.canvas.zoom === 100, "Camera defaults to 100 px/world-unit.", `zoom=${app.canvas.zoom}`);
+
+                const originScreen = app.canvas.worldToScreen(0, 0);
+                const backToWorld = app.canvas.screenToWorld(originScreen.x, originScreen.y);
+                check(Math.abs(backToWorld.x) < 1e-9 && Math.abs(backToWorld.y) < 1e-9,
+                    "worldToScreen() -> screenToWorld() round-trips exactly.");
+
+                // ==========================================
+                // Node & Element Creation Tools
+                // ==========================================
+                logSection("Node & Element Creation Tools");
+
+                app.setTool(TOOLS.DRAW_NODE);
+                check(app.getActiveTool() === TOOLS.DRAW_NODE, "ToolManager activated the Node tool.");
+
+                let before = model.getAllNodes().length;
+                app.toolManager.onPointerDown({ x: 0, y: 0 }, app.canvas.worldToScreen(0, 0), {});
+                check(model.getAllNodes().length === before + 1, "Clicking with the Node tool created a node at the world origin.");
+
+                app.toolManager.onPointerDown({ x: 3, y: 0 }, app.canvas.worldToScreen(3, 0), {});
+                check(model.getAllNodes().length === before + 2, "A second click created a second node.");
+
+                const [nodeA, nodeB] = model.getAllNodes();
+
+                app.setElementTool(ELEMENT_TYPES.BEAM);
+                check(app.getActiveTool() === TOOLS.DRAW_ELEMENT && app.state.drawElementType === ELEMENT_TYPES.BEAM,
+                    "setElementTool(BEAM) activated the Element tool with type BEAM.");
+
+                app.toolManager.onPointerDown({ x: nodeA.x, y: nodeA.y }, app.canvas.worldToScreen(nodeA.x, nodeA.y), {});
+                app.toolManager.onPointerDown({ x: nodeB.x, y: nodeB.y }, app.canvas.worldToScreen(nodeB.x, nodeB.y), {});
+                check(model.getAllElements().length === 1, "Clicking node A then node B created exactly one beam between them.");
+
+                const beam = model.getAllElements()[0];
+                check(
+                    [beam.startNode, beam.endNode].includes(nodeA.id) && [beam.startNode, beam.endNode].includes(nodeB.id),
+                    "The beam references the correct start/end node IDs."
+                );
+                check(beam.type === ELEMENT_TYPES.BEAM, "The beam has the correct element type.");
+
+                // ==========================================
+                // Selection & Move
+                // ==========================================
+                logSection("Selection & Move");
+
+                app.setTool(TOOLS.SELECT);
+                app.toolManager.onPointerDown({ x: nodeA.x, y: nodeA.y }, app.canvas.worldToScreen(nodeA.x, nodeA.y), {});
+                check(app.state.selection.isNodeSelected(nodeA.id), "SelectTool selected node A on click.");
+
+                app.setSnapEnabled(false);
+                const dragTo = { x: nodeA.x + 1, y: nodeA.y + 1 };
+                const dragToScreen = app.canvas.worldToScreen(dragTo.x, dragTo.y);
+                app.toolManager.onPointerMove(dragTo, dragToScreen, {});
+                app.toolManager.onPointerUp(dragTo, dragToScreen, {});
+                const moved = model.getNode(nodeA.id);
+                check(Math.abs(moved.x - dragTo.x) < 1e-9 && Math.abs(moved.y - dragTo.y) < 1e-9,
+                    "Dragging a selected node in Select tool moved it to the exact drop position.");
+
+                app.undo();
+                const reverted = model.getNode(nodeA.id);
+                check(Math.abs(reverted.x - nodeA.x) < 1e-9 && Math.abs(reverted.y - nodeA.y) < 1e-9,
+                    "Undo reverted the drag back to its original position.");
+                app.redo();
+
+                app.state.selection.clear();
+                const boxStart = app.canvas.worldToScreen(-1, -1);
+                const boxEnd = app.canvas.worldToScreen(10, 10);
+                app.toolManager.onPointerDown({ x: -1, y: -1 }, boxStart, {});
+                app.toolManager.onPointerMove({ x: 10, y: 10 }, boxEnd, {});
+                app.toolManager.onPointerUp({ x: 10, y: 10 }, boxEnd, {});
+                check(app.state.selection.nodes.size === 2, "Box select captured both nodes.", `count=${app.state.selection.nodes.size}`);
+                check(app.state.selection.elements.size === 1, "Box select also captured the connecting beam (both endpoints inside the box).");
+
+                // ==========================================
+                // Delete Tool & Cascading Delete
+                // ==========================================
+                logSection("Delete Tool & Cascading Delete");
+
+                app.setTool(TOOLS.DELETE);
+                const victim = model.getAllNodes()[0];
+                app.toolManager.onPointerDown({ x: victim.x, y: victim.y }, app.canvas.worldToScreen(victim.x, victim.y), {});
+                check(model.getAllNodes().length === 1, "DeleteTool removed the clicked node.");
+                check(model.getAllElements().length === 0, "DeleteTool cascade-removed the beam attached to the deleted node.");
+
+                app.undo();
+                check(model.getAllNodes().length === 2 && model.getAllElements().length === 1,
+                    "Undo restored both the deleted node and its cascade-deleted beam in one step.");
+
+                app.state.selection.clear();
+                model.getAllNodes().forEach(n => app.state.selection.nodes.add(n.id));
+                app.deleteSelection();
+                check(model.getAllNodes().length === 0 && model.getAllElements().length === 0,
+                    "deleteSelection() removed every selected node and cascade-removed the beam.");
+                app.undo();
+                check(model.getAllNodes().length === 2 && model.getAllElements().length === 1,
+                    "Undo restored the whole compound delete as a single step.");
+
+                // ==========================================
+                // Snap Manager
+                // ==========================================
+                logSection("Snap Manager");
+
+                app.setSnapEnabled(true);
+                const nearNode = model.getAllNodes()[0];
+                const snapResult = app.snapManager.snap(nearNode.x + 0.05, nearNode.y + 0.05, model, app.canvas.camera);
+                check(snapResult.snappedTo?.type === 'node' && snapResult.x === nearNode.x && snapResult.y === nearNode.y,
+                    "A point just off an existing node snaps exactly onto that node.");
+
+                const gridSnapResult = app.snapManager.snap(103.3, 47.8, model, app.canvas.camera);
+                check(Number.isFinite(gridSnapResult.x) && Number.isFinite(gridSnapResult.y),
+                    "A point far from any node snaps to a finite grid coordinate without throwing.");
+
+                // ==========================================
+                // Viewport Controls
+                // ==========================================
+                logSection("Viewport Controls");
+
+                const zoomBefore = app.canvas.zoom;
+                app.zoomIn();
+                check(app.canvas.zoom > zoomBefore, "zoomIn() increased the camera zoom.");
+                app.zoomOut(); app.zoomOut();
+                check(app.canvas.zoom < zoomBefore, "zoomOut() decreased the camera zoom below its starting value.");
+
+                app.fitView();
+                check(Number.isFinite(app.canvas.zoom) && app.canvas.zoom > 0, "fitView() produced a finite, positive zoom.");
+
+                app.resetView();
+                check(app.canvas.zoom === 100, "resetView() restored the default 100 px/unit zoom.");
+
+                app.setTool(TOOLS.PAN);
+                const panBefore = { x: app.canvas.panX, y: app.canvas.panY };
+                app.toolManager.onPointerDown({ x: 0, y: 0 }, { x: 100, y: 100 }, {});
+                app.toolManager.onPointerMove({ x: 0, y: 0 }, { x: 130, y: 120 }, {});
+                app.toolManager.onPointerUp({ x: 0, y: 0 }, { x: 130, y: 120 }, {});
+                check(app.canvas.panX !== panBefore.x || app.canvas.panY !== panBefore.y, "PanTool moved the camera's pan offset.");
+
+                app.setTool(TOOLS.SELECT);
+                app.state.selection.clear();
+                app.state.selection.nodes.add(model.getAllNodes()[0].id);
+                app.toolManager.beginTemporaryPan();
+                check(app.getActiveTool() === TOOLS.PAN, "Spacebar-style beginTemporaryPan() switched to the Pan tool.");
+                check(app.state.selection.nodes.size === 1, "beginTemporaryPan() preserved the existing selection.");
+                app.toolManager.endTemporaryPan();
+                check(app.getActiveTool() === TOOLS.SELECT, "endTemporaryPan() restored the previously active tool.");
+
+                // ==========================================
+                // HitTest Priority (Node > Element > null)
+                // ==========================================
+                logSection("HitTest Priority (Node &gt; Element &gt; null)");
+
+                const [hA, hB] = model.getAllNodes();
+                check(HitTest.hit(hA.x, hA.y, model, app.canvas.camera).type === 'node',
+                    "A point exactly on a node hit-tests as type \"node\".");
+
+                const midX = (hA.x + hB.x) / 2, midY = (hA.y + hB.y) / 2;
+                check(HitTest.hit(midX, midY, model, app.canvas.camera).type === 'element',
+                    "A point on the element's mid-span hit-tests as type \"element\".");
+
+                check(HitTest.hit(midX + 1000, midY + 1000, model, app.canvas.camera).type === null,
+                    "A point far from any geometry hit-tests as type null.");
+
+                // ==========================================
+                // Real Mouse/Wheel Events (MouseController)
+                // ==========================================
+                logSection("Real Mouse/Wheel Events (MouseController)");
+
+                app.setTool(TOOLS.DRAW_NODE);
+                let realBefore = model.getAllNodes().length;
+                const clickPos = app.canvas.worldToScreen(7, 7);
+                dispatchMouse(canvasEl, 'mousedown', clickPos.x, clickPos.y);
+                check(model.getAllNodes().length === realBefore + 1,
+                    "A real dispatched MouseEvent(\"mousedown\") created a node through MouseController.");
+
+                const wheelZoomBefore = app.canvas.zoom;
+                canvasEl.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, clientX: 100, clientY: 100, bubbles: true, cancelable: true }));
+                check(app.canvas.zoom > wheelZoomBefore, "A real WheelEvent zoomed the camera through MouseController.");
+
+                app.setTool(TOOLS.DRAW_ELEMENT);
+                const firstBeamNode = model.getAllNodes()[0];
+                const fbnScreen = app.canvas.worldToScreen(firstBeamNode.x, firstBeamNode.y);
+                dispatchMouse(canvasEl, 'mousedown', fbnScreen.x, fbnScreen.y);
+                check(app.toolManager.active.firstNodeId === firstBeamNode.id, "Element tool captured a first node from a real mousedown.");
+                canvasEl.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+                check(app.toolManager.active.firstNodeId === null,
+                    "A real \"contextmenu\" (right-click) event cancelled the in-progress beam chain.");
+
+                // ==========================================
+                // Real Keyboard Shortcuts
+                // ==========================================
+                logSection("Real Keyboard Shortcuts");
+
+                app.setTool(TOOLS.SELECT);
+                app.selectAll();
+                const preDeleteCount = model.getAllNodes().length;
+                check(app.state.selection.nodes.size === preDeleteCount && preDeleteCount > 0,
+                    "selectAll() selected every node before the shortcut test.");
+
+                dispatchKey(window, 'Delete');
+                check(model.getAllNodes().length === 0, "A real Delete keydown removed the selection.");
+
+                dispatchKey(window, 'z', { ctrlKey: true });
+                check(model.getAllNodes().length === preDeleteCount, "A real Ctrl+Z keydown undid the delete.");
+
+                const guardInput = document.createElement('input');
+                document.body.appendChild(guardInput);
+                guardInput.focus();
+                const guardBefore = model.getAllNodes().length;
+                guardInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true }));
+                check(model.getAllNodes().length === guardBefore, "Delete is ignored while a real &lt;input&gt; element is the event target.");
+                guardInput.remove();
+
+                app.setTool(TOOLS.DRAW_ELEMENT);
+                const escNode = model.getAllNodes()[0];
+                const escScreen = app.canvas.worldToScreen(escNode.x, escNode.y);
+                app.toolManager.onPointerDown({ x: escNode.x, y: escNode.y }, escScreen, {});
+                check(app.toolManager.active.firstNodeId === escNode.id, "Element tool captured a first node before the Escape test.");
+                dispatchKey(window, 'Escape');
+                check(app.toolManager.active.firstNodeId === null, "A real Escape keydown cancelled the in-progress beam chain.");
+
+                app.destroy(); // stop this App's render loop + window listeners before wiring up the next one
+
+                // ==========================================
+                // Toolbar.js Bootstrap Integration (Blocker #1 / #3)
+                // ==========================================
+                logSection("Toolbar.js Bootstrap Integration (Blocker #1 / #3)");
+
+                const tb = makeScratchCanvas(400, 300);
+                const tbModel = new Model("Toolbar Test Model");
+                const tbApp = new App(tb.canvas, tbModel);
+                tbApp.canvas.resize(400, 300);
+
+                const tbMount = document.createElement('div');
+                document.body.appendChild(tbMount);
+                const toolbar = new Toolbar(tbMount, {
+                    onToolChange: (id) => {
+                        const map = {
+                            select: () => tbApp.setTool(TOOLS.SELECT),
+                            move: () => tbApp.setTool(TOOLS.MOVE),
+                            pan: () => tbApp.setTool(TOOLS.PAN),
+                            addNode: () => tbApp.setTool(TOOLS.DRAW_NODE),
+                            addBeam: () => tbApp.setElementTool(ELEMENT_TYPES.BEAM),
+                            addBar: () => tbApp.setElementTool(ELEMENT_TYPES.BAR),
+                            addSpring: () => tbApp.setElementTool(ELEMENT_TYPES.SPRING),
+                            delete: () => tbApp.setTool(TOOLS.DELETE),
+                        };
+                        map[id]?.();
+                    },
+                    onToggleSnap: (checked) => tbApp.setSnapEnabled(checked),
+                    onToggleGrid: (checked) => tbApp.setGridEnabled(checked),
+                    onUndo: () => tbApp.undo(),
+                    onRedo: () => tbApp.redo(),
+                    onZoomIn: () => tbApp.zoomIn(),
+                    onZoomOut: () => tbApp.zoomOut(),
+                    onFitView: () => tbApp.fitView(),
+                });
+
+                const findBtn = (text) => [...tbMount.querySelectorAll('button')].find(b => b.textContent === text);
+
+                check(findBtn('+ Support')?.disabled === true, "\"+ Support\" tool button is disabled (not implemented in ToolManager yet).");
+                check(findBtn('+ Load')?.disabled === true, "\"+ Load\" tool button is disabled (not implemented in ToolManager yet).");
+                check(findBtn('▶ Run Analysis')?.disabled === true, "\"Run Analysis\" is disabled (Phase 5 solver doesn't exist yet).");
+                check(findBtn('Learning Mode')?.disabled === true, "\"Learning Mode\" is disabled (Phase 5 solver doesn't exist yet).");
+
+                const viewToggleInputs = [...tbMount.querySelectorAll('.view-group input[type=checkbox]')];
+                check(viewToggleInputs.length === 4 && viewToggleInputs.every(cb => cb.disabled),
+                    "All 4 analysis-result view toggles (Deflected Shape/Reactions/SFD/BMD) are disabled.");
+
+                check(findBtn('Select')?.disabled === false, "\"Select\" tool button is enabled.");
+                check(findBtn('Delete')?.disabled === false, "\"Delete\" tool button is enabled.");
+
+                findBtn('+ Node').click();
+                check(tbApp.getActiveTool() === TOOLS.DRAW_NODE, "Clicking \"+ Node\" in the live Toolbar switched the real App to the Node tool.");
+
+                findBtn('+ Beam').click();
+                check(tbApp.getActiveTool() === TOOLS.DRAW_ELEMENT && tbApp.state.drawElementType === ELEMENT_TYPES.BEAM,
+                    "Clicking \"+ Beam\" switched the real App to the Element tool with type BEAM.");
+
+                const tbUndoBtn = findBtn('↩ Undo');
+                check(tbUndoBtn.disabled === true, "Undo button starts disabled on a fresh model.");
+                findBtn('+ Node').click();
+                tbApp.toolManager.onPointerDown({ x: 1, y: 1 }, tbApp.canvas.worldToScreen(1, 1), {});
+                toolbar.setHistoryState(tbApp.canUndo(), tbApp.canRedo());
+                check(tbUndoBtn.disabled === false, "setHistoryState() enables Undo after a real node was created through the Toolbar-driven tool.");
+
+                const snapCheckbox = tbMount.querySelector('.snap-group .checkbox-pill input');
+                snapCheckbox.checked = false;
+                snapCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+                check(tbApp.state.snapEnabled === false, "Unchecking the \"Snap\" pill disabled snapping on the real App.");
+
+                tbApp.destroy();
+                tb.container.remove();
+                tbMount.remove();
+
+                // ==========================================
+                // TouchController.js Bootstrap Integration (Blocker #2)
+                // ==========================================
+                logSection("TouchController.js Bootstrap Integration (Blocker #2)");
+
+                const m = makeScratchCanvas(360, 500);
+                const mModel = new Model("Mobile Test Model");
+                const mApp = new App(m.canvas, mModel);
+                mApp.canvas.resize(360, 500);
+
+                const menuHost = document.createElement('div');
+                document.body.appendChild(menuHost);
+                const touchController = new TouchController(mApp, menuHost);
+
+                mApp.setTool(TOOLS.DRAW_NODE);
+                const tapScreen = mApp.canvas.worldToScreen(0, 0);
+                touchController._onTouchStart({ changedTouches: [{ identifier: 1, clientX: tapScreen.x, clientY: tapScreen.y }], preventDefault() {} });
+                touchController._onTouchEnd({ changedTouches: [{ identifier: 1, clientX: tapScreen.x, clientY: tapScreen.y }], preventDefault() {} });
+                check(mModel.getAllNodes().length === 1, "A single-finger tap created a node via the Node tool.");
+
+                mApp.setTool(TOOLS.SELECT);
+                const pinchZoomBefore = mApp.canvas.zoom;
+                touchController._onTouchStart({ changedTouches: [{ identifier: 1, clientX: 100, clientY: 300 }, { identifier: 2, clientX: 300, clientY: 300 }], preventDefault() {} });
+                touchController._onTouchMove({ changedTouches: [{ identifier: 1, clientX: 50, clientY: 300 }, { identifier: 2, clientX: 350, clientY: 300 }], preventDefault() {} });
+                check(mApp.canvas.zoom > pinchZoomBefore, "A two-finger pinch-out gesture zoomed the camera in.");
+                touchController._onTouchEnd({ changedTouches: [{ identifier: 1, clientX: 50, clientY: 300 }, { identifier: 2, clientX: 350, clientY: 300 }], preventDefault() {} });
+
+                mApp.setSnapEnabled(false);
+                const touchNode = mModel.getAllNodes()[0];
+                const touchNodeScreen = mApp.canvas.worldToScreen(touchNode.x, touchNode.y);
+                touchController._triggerLongPress(touchNodeScreen, { x: touchNode.x, y: touchNode.y });
+                check(mApp.state.selection.isNodeSelected(touchNode.id), "A long-press selected the node under the finger.");
+                check(menuHost.querySelector('.touch-context-menu') !== null, "A long-press opened the floating context menu.");
+
+                const menuDeleteBtn = [...menuHost.querySelectorAll('button')].find(b => b.textContent.includes('Delete'));
+                menuDeleteBtn.click();
+                check(mModel.getAllNodes().length === 0, "Tapping \"Delete\" in the context menu removed the node.");
+                check(menuHost.querySelector('.touch-context-menu') === null, "The context menu closed after Delete.");
+
+                mApp.destroy();
+                m.container.remove();
+                menuHost.remove();
+
+                // ==========================================
+                // PRINT RESULTS
+                // ==========================================
+                let summaryColor = failedCount === 0 ? "#22c55e" : "#ef4444";
+                let summaryText = failedCount === 0 ? "ALL TESTS PASSED" : `${failedCount} TESTS FAILED`;
+
+                htmlLog += `
+                    <div class="summary" style="color: ${summaryColor}; border-color: ${summaryColor};">
+                        ${summaryText} <br>
+                        <span style="font-size:14px; font-weight:normal; color:#d4d4d4;">
+                            Passed: ${passedCount} | Failed: ${failedCount}
+                        </span>
+                    </div>
+                `;
+
+                out.innerHTML = htmlLog;
+
+            } catch (setupError) {
+                out.innerHTML = `<div class="fail">🔥 FATAL SYSTEM ERROR:<br><br>${setupError.message}<br><pre>${(setupError.stack || "").replace(/</g, "&lt;")}</pre></div>`;
+            }
+        }
+
+        runAutomatedTests();
+    </script>
+</body>
+</html>

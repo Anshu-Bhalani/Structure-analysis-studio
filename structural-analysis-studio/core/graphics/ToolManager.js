@@ -250,16 +250,15 @@ class NodeTool extends BaseTool {
     }
 
     onPointerMove() {
-        this.app.canvas.requestRedraw(); // repaint so the snap crosshair stays live
+        this.app.canvas.requestRedraw();
     }
 
     getCursor() { return 'crosshair'; }
 }
 
 // ==========================================
-// Element Tool — click Node A, click Node B -> create element
-// IMPORTANT: This version does NOT auto-create nodes on empty space.
-// It only creates beams/bars/frames/springs between existing nodes.
+// Element Tool — connect TWO EXISTING nodes only
+// No auto-node creation here.
 // ==========================================
 
 class ElementTool extends BaseTool {
@@ -286,7 +285,6 @@ class ElementTool extends BaseTool {
             }
         }
 
-        // No existing node at this point.
         return null;
     }
 
@@ -295,9 +293,7 @@ class ElementTool extends BaseTool {
 
         const targetNode = this._pickExistingNodeAt(world);
 
-        // No node under cursor => do nothing.
-        // This is the requested behavior: beam creation is only possible
-        // between already-existing nodes.
+        // No existing node under cursor -> do nothing.
         if (!targetNode) {
             return;
         }
@@ -310,7 +306,6 @@ class ElementTool extends BaseTool {
             return;
         }
 
-        // Same node twice -> ignore and keep waiting for a valid second node.
         if (this.firstNodeId === targetNode.id) {
             return;
         }
@@ -332,8 +327,6 @@ class ElementTool extends BaseTool {
 
         this.app.executeCommand(new CreateBeamCommand(model, element));
 
-        // Continuous drawing: continue chain from the last node.
-        // Single mode: clear chain after each element.
         if (state.drawingMode === 'single') {
             this.firstNodeId = null;
         } else {

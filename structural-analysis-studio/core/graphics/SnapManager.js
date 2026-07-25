@@ -1,3 +1,13 @@
+/**
+ * SnapManager.js
+ * ------------------------------------------------------------------
+ * Computes a "snapped" world position for cursor-driven placement and
+ * movement operations (node creation, beam endpoints, node dragging).
+ *
+ * Priority: Existing Node > Grid > Raw cursor position.
+ * ------------------------------------------------------------------
+ */
+
 export class SnapManager {
     constructor() {
         this.snapToGrid = true;
@@ -17,30 +27,38 @@ export class SnapManager {
         return this.snapToNode;
     }
 
+    /**
+     * @param {number} worldX
+     * @param {number} worldY
+     * @param {import('../modeling/Model.js').Model} model
+     * @param {import('./Camera.js').Camera} camera
+     * @param {{enabled?: boolean, excludeNodeId?: string, snapRadius?: number}} [options]
+     * @returns {{x: number, y: number, snapped: boolean, type: "node" | "grid" | "none", id?: string}}
+     */
     snap(worldX, worldY, model, camera, options = {}) {
         const enabled = options.enabled !== undefined ? options.enabled : true;
         if (!enabled) {
             return { x: worldX, y: worldY, snapped: false, type: "none" };
         }
 
+        // Priority 1: Node Snapping
         if (this.snapToNode) {
             const nodeSnap = this._snapToNearestNode(worldX, worldY, model, camera, options);
             if (nodeSnap) return nodeSnap;
         }
 
+        // Priority 2: Grid Snapping
         if (this.snapToGrid) {
             return this._snapToGrid(worldX, worldY, camera);
         }
 
+        // Priority 3: Free Position
         return { x: worldX, y: worldY, snapped: false, type: "none" };
     }
 
     _snapToNearestNode(worldX, worldY, model, camera, options) {
         const radiusPx = options.snapRadius || 12;
-        // Fix: Safety fallback for zoom
-        const zoom = (camera && camera.zoom) ? camera.zoom : 60; 
-        const toleranceWorld = radiusPx / zoom;
-        
+        const toleranceWorld = radiusPx / camera.zoom;
         let closest = null;
         let minDist = Infinity;
 
@@ -58,8 +76,7 @@ export class SnapManager {
     }
 
     _snapToGrid(worldX, worldY, camera) {
-        const zoom = (camera && camera.zoom) ? camera.zoom : 60;
-        const spacing = this.gridSnapSpacing || this._adaptiveSpacing(zoom);
+        const spacing = this.gridSnapSpacing || this._adaptiveSpacing(camera.zoom);
         const x = Math.round(worldX / spacing) * spacing;
         const y = Math.round(worldY / spacing) * spacing;
         return { x, y, snapped: true, type: "grid" };

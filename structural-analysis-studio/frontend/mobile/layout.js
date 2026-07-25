@@ -1,3 +1,8 @@
+import { App } from '../../core/app/app.js';
+import { TOOLS } from '../../core/state/State.js';
+import { ELEMENT_TYPES } from '../../core/modeling/Element.js';
+import { TouchController } from './components/TouchController.js';
+
 document.addEventListener("DOMContentLoaded", () => {
     // Only execute if mobile view is present
     const mobileApp = document.getElementById('mobile-view');
@@ -68,4 +73,46 @@ document.addEventListener("DOMContentLoaded", () => {
             overlay.classList.remove('show');
         });
     });
+
+    // ==========================================
+    // Phase 4: Real Geometry Editor bootstrap (mobile)
+    // ------------------------------------------
+    // Wires the same App(...) engine used on desktop to the mobile
+    // #editor-canvas-mobile element, and — the actual blocker being fixed
+    // here — imports and activates TouchController so touch pan/pinch-zoom/
+    // tap-select/long-press actually run. It previously existed as a file
+    // but was never imported anywhere.
+    // ==========================================
+    const canvasEl = document.getElementById('editor-canvas-mobile');
+    if (canvasEl) {
+        const app = new App(canvasEl);
+        new TouchController(app); // activates the touch gesture layer
+        window.editorAppMobile = app; // handy for manual verification from the browser console
+
+        // The vertical tool strip in the Modeling screen. Support/Load/Moment
+        // are marked disabled in index.html (phase-creep guard — those tools
+        // don't exist in ToolManager yet), so they're skipped here rather
+        // than wired to anything. "More" has no defined behavior yet either.
+        const vertToolbarButtons = document.querySelectorAll('.mob-vert-toolbar button');
+        const MOBILE_TOOL_ACTIONS = [
+            () => app.setTool(TOOLS.SELECT),                    // Select
+            () => app.setTool(TOOLS.DRAW_NODE),                 // Node
+            () => app.setElementTool(ELEMENT_TYPES.BEAM),       // Beam
+            null,                                                // Support (disabled)
+            null,                                                // Load (disabled)
+            null,                                                // Moment (disabled)
+            () => app.setTool(TOOLS.DELETE),                    // Delete
+            null,                                                // More (not implemented yet)
+        ];
+
+        vertToolbarButtons.forEach((btn, index) => {
+            const action = MOBILE_TOOL_ACTIONS[index];
+            if (!action || btn.disabled) return;
+            btn.addEventListener('click', () => {
+                vertToolbarButtons.forEach((b) => b.classList.remove('active'));
+                btn.classList.add('active');
+                action();
+            });
+        });
+    }
 });

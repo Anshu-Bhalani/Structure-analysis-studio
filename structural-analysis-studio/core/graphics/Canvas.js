@@ -4,11 +4,15 @@
  * The primary drawing surface for the structural modeling environment.
  * Responsibilities:
  * - HTML Canvas initialization & High-DPI (Retina) scaling
- * - Viewport management (Pan, Zoom)
- * - World ↔ Screen coordinate conversions (Enforcing Y-up Cartesian)
  * - Optimized Render Loop (Redraws only when marked dirty)
+ * - Owns the Camera (viewport/coordinate math lives there — see
+ *   Camera.js) and exposes thin pass-through methods so callers that
+ *   only have a `canvas` reference can still pan/zoom/convert without
+ *   reaching into `canvas.camera` directly.
  * ------------------------------------------------------------------
  */
+
+import { Camera } from './Camera.js';
 
 export class Canvas {
     /**
@@ -20,10 +24,10 @@ export class Canvas {
         this.canvas = canvasElement;
         this.ctx = this.canvas.getContext('2d', { alpha: false }); // alpha: false optimizes background rendering
         
-        // --- Viewport State (Camera) ---
-        this.panX = 0;       // X translation in screen pixels
-        this.panY = 0;       // Y translation in screen pixels
-        this.zoom = 100;     // Scale factor (Pixels per World Unit)
+        // --- Viewport (delegated to Camera; see Camera.js) ---
+        this.width = 0;
+        this.height = 0;
+        this.camera = new Camera(0, 0);
         
         // --- Render State ---
         this.isDirty = true;           // Flag to prevent continuous wasteful redrawing
@@ -72,9 +76,16 @@ export class Canvas {
         this.canvas.width = width * dpr;
         this.canvas.height = height * dpr;
         
-        // Normalize the coordinate system to use CSS pixels
+        // Reset the transform before rescaling — otherwise repeated
+        // resize() calls would compound the DPI scale each time.
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.scale(dpr, dpr);
         
+        // Camera.updateSize() re-centers the origin relative to the size
+        // delta, so growing from (0,0) on the very first resize lands it
+        // exactly in the middle — no special-casing needed here.
+        this.camera.updateSize(width, height);
+
         this.width = width;
         this.height = height;
         
@@ -84,52 +95,36 @@ export class Canvas {
     // ==========================================
     // World ↔ Screen Coordinate Conversions
     // ==========================================
-    // IMPORTANT: Engineering models use a Cartesian system (+X Right, +Y Up).
-    // HTML Canvas uses a Screen system (+X Right, +Y Down).
-    // These functions mathematically enforce the Y-axis flip.
+    // All viewport math (pan/zoom/fit/coordinate conversion) lives in
+    // Camera.js. These are thin pass-throughs kept for convenience and
+    // backward compatibility with code that only holds a Canvas reference.
 
-    /**
-     * Converts a World coordinate (engineering units) to a Screen coordinate (pixels).
-     * @param {number} worldX 
-     * @param {number} worldY 
-     * @returns {{x: number, y: number}} Screen coordinates
-     */
+    /** @see Camera#worldToScreen */
     worldToScreen(worldX, worldY) {
-        return {
-            x: (worldX * this.zoom) + this.panX,
-            // Flip Y: Subtract from canvas height
-            y: this.height - ((worldY * this.zoom) + this.panY)
-        };
+        return this.camera.worldToScreen(worldX, worldY);
     }
 
-    /**
-     * Converts a Screen coordinate (pixels) to a World coordinate (engineering units).
-     * @param {number} screenX 
-     * @param {number} screenY 
-     * @returns {{x: number, y: number}} World coordinates
-     */
+    /** @see Camera#screenToWorld */
     screenToWorld(screenX, screenY) {
-        return {
-            x: (screenX - this.panX) / this.zoom,
-            // Flip Y: Inverse of worldToScreen
-            y: (this.height - screenY - this.panY) / this.zoom
-        };
+        return this.camera.screenToWorld(screenX, screenY);
     }
 
     // ==========================================
     // Viewport Controls
     // ==========================================
 
+    get zoom() { return this.camera.zoom; }
+    get panX() { return this.camera.panX; }
+    get panY() { return this.camera.panY; }
+
     setPan(x, y) {
-        this.panX = x;
-        this.panY = y;
+        this.camera.panX = x;
+        this.camera.panY = y;
         this.requestRedraw();
     }
 
     movePan(dx, dy) {
-        this.panX += dx;
-        // Invert DY so dragging "up" moves the camera up (which pulls the world down)
-        this.panY -= dy; 
+        this.camera.pan(dx, dy);
         this.requestRedraw();
     }
 
@@ -140,28 +135,19 @@ export class Canvas {
      * @param {number} screenY - The Y screen coordinate of the mouse
      */
     setZoom(newZoom, screenX, screenY) {
-        // 1. Find where the mouse is in the world right now
-        const worldPos = this.screenToWorld(screenX, screenY);
-        
-        // 2. Apply new zoom
-        this.zoom = Math.max(1, Math.min(newZoom, 10000)); // Clamp zoom limits
-        
-        // 3. Calculate where that world point *would* be on screen with the new zoom
-        const newScreenPosX = (worldPos.x * this.zoom) + this.panX;
-        const newScreenPosY = this.height - ((worldPos.y * this.zoom) + this.panY);
-        
-        // 4. Adjust pan to counteract the drift
-        this.panX -= (newScreenPosX - screenX);
-        this.panY += (newScreenPosY - screenY); // Add because of inverted Y
-
+        this.camera.setZoom(newZoom, screenX, screenY);
         this.requestRedraw();
     }
 
     /** Center the origin (0,0) in the middle of the screen */
     resetViewport() {
-        this.panX = this.width / 2;
-        this.panY = this.height / 2;
-        this.zoom = 100; // 100 pixels per 1 meter
+        this.camera.resetView();
+        this.requestRedraw();
+    }
+
+    /** Frames the entire model with a comfortable margin. @see Camera#fitModelToScreen */
+    fitModelToScreen(model, padding = 50) {
+        this.camera.fitModelToScreen(model, padding);
         this.requestRedraw();
     }
 
@@ -210,12 +196,13 @@ export class Canvas {
         this.ctx.fillStyle = "#121212"; 
         this.ctx.fillRect(0, 0, this.width, this.height);
 
-        // 2. Execute all registered rendering layers in order
-        // Note: The layers are responsible for calling worldToScreen() 
-        // to figure out where to draw their objects.
+        // 2. Execute all registered rendering layers in order.
+        // Layers receive (ctx, camera, canvas) — most only need `camera`
+        // for worldToScreen()/screenToWorld(), but the raw canvas is
+        // passed too in case a layer needs width/height directly.
         for (const callback of this.renderCallbacks) {
             this.ctx.save();
-            callback(this.ctx, this); // Pass context and this canvas instance
+            callback(this.ctx, this.camera, this);
             this.ctx.restore();
         }
     }

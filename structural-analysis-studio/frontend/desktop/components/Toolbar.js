@@ -1,38 +1,10 @@
-/**
- * UI / Toolbar.js
- * ------------------------------------------------------------------
- * Top command bar. Pure presentation: it renders buttons and reports
- * user intent through callbacks. It never touches the Model, Solver,
- * or Graphics directly — App.js decides what each action means.
- * ------------------------------------------------------------------
- */
-
-const TOOLS = [
-  { id: "select", label: "Select", hint: "Select and drag (V)" },
-  { id: "move", label: "Move", hint: "Drag nodes to reposition them" },
-  { id: "pan", label: "Pan", hint: "Pan the view (hold Space also pans)" },
-  { id: "addNode", label: "+ Node", hint: "Click canvas to place a node" },
-  { id: "addSpring", label: "+ Spring", hint: "Click two nodes to connect a spring" },
-  { id: "addBar", label: "+ Bar", hint: "Click two nodes to connect a truss bar" },
-  { id: "addBeam", label: "+ Beam", hint: "Click two nodes to connect a beam" },
-  { id: "addSupport", label: "+ Support", hint: "Click a node to add a support" },
-  { id: "addLoad", label: "+ Load", hint: "Click a node to add a nodal load" },
-  { id: "delete", label: "Delete", hint: "Click a node or element to delete it" },
-];
-
-const VIEW_TOGGLES = [
-  { id: "showDeflected", label: "Deflected Shape" },
-  { id: "showReactions", label: "Reactions" },
-  { id: "showSFD", label: "SFD" },
-  { id: "showBMD", label: "BMD" },
-];
-
 export class Toolbar {
   constructor(containerEl, callbacks) {
     this.containerEl = containerEl;
     this.callbacks = callbacks;
     this.activeTool = "select";
-    this.viewState = { showDeflected: true, showReactions: true, showSFD: false, showBMD: false };
+    // Force view toggles off for Phase 4
+    this.viewState = { showDeflected: false, showReactions: false, showSFD: false, showBMD: false };
     this.learningEnabled = false;
     this._render();
   }
@@ -43,8 +15,8 @@ export class Toolbar {
     this.containerEl.appendChild(this._toolGroup());
     this.containerEl.appendChild(this._snapGroup());
     this.containerEl.appendChild(this._historyGroup());
-    this.containerEl.appendChild(this._analysisGroup());
-    this.containerEl.appendChild(this._viewGroup());
+    this.containerEl.appendChild(this._analysisGroup()); // Now disabled
+    this.containerEl.appendChild(this._viewGroup());     // Now disabled
     this.containerEl.appendChild(this._rightGroup());
   }
 
@@ -63,6 +35,8 @@ export class Toolbar {
     return btn;
   }
 
+  // ... [Keep _fileGroup, _toolGroup, _snapGroup, _historyGroup, setHistoryState exactly as you had them] ...
+
   _fileGroup() {
     const g = this._group("file-group");
     g.appendChild(this._btn("New", "New project", () => this.callbacks.onNew?.()));
@@ -75,6 +49,17 @@ export class Toolbar {
 
   _toolGroup() {
     const g = this._group("tool-group");
+    const TOOLS = [
+      { id: "select", label: "Select", hint: "Select and drag (V)" },
+      { id: "move", label: "Move", hint: "Drag nodes to reposition them" },
+      { id: "pan", label: "Pan", hint: "Pan the view (hold Space also pans)" },
+      { id: "draw_node", label: "+ Node", hint: "Click canvas to place a node" },
+      { id: "addSpring", label: "+ Spring", hint: "Click two nodes to connect a spring" },
+      { id: "addBar", label: "+ Bar", hint: "Click two nodes to connect a truss bar" },
+      { id: "addBeam", label: "+ Beam", hint: "Click two nodes to connect a beam" },
+      { id: "delete", label: "Delete", hint: "Click a node or element to delete it" },
+    ];
+
     TOOLS.forEach((tool) => {
       const btn = this._btn(tool.label, tool.hint, () => {
         this.setActiveTool(tool.id);
@@ -96,21 +81,6 @@ export class Toolbar {
     });
   }
 
-  _analysisGroup() {
-    const g = this._group("analysis-group");
-    const runBtn = this._btn("▶ Run Analysis", "Solve the structure", () => this.callbacks.onRunAnalysis?.(), "btn-primary");
-    g.appendChild(runBtn);
-
-    const learningBtn = this._btn("Learning Mode", "Show step-by-step solver walkthrough", () => {
-      this.learningEnabled = !this.learningEnabled;
-      learningBtn.classList.toggle("active", this.learningEnabled);
-      this.callbacks.onToggleLearning?.(this.learningEnabled);
-    });
-    g.appendChild(learningBtn);
-    return g;
-  }
-
-  /** Snap-to-grid / snap-to-node toggles. Both default on, matching State.js's defaults. */
   _snapGroup() {
     const g = this._group("snap-group");
     g.appendChild(this._togglePill("Snap", true, (checked) => this.callbacks.onToggleSnap?.(checked)));
@@ -118,7 +88,6 @@ export class Toolbar {
     return g;
   }
 
-  /** Undo/Redo. Buttons start disabled since a fresh editor has nothing to undo yet. */
   _historyGroup() {
     const g = this._group("history-group");
     this.undoBtn = this._btn("↩ Undo", "Undo last action (Ctrl+Z)", () => this.callbacks.onUndo?.());
@@ -130,7 +99,6 @@ export class Toolbar {
     return g;
   }
 
-  /** Call after any model-mutating action so the Undo/Redo buttons reflect what's actually available. */
   setHistoryState(canUndo, canRedo) {
     if (this.undoBtn) this.undoBtn.disabled = !canUndo;
     if (this.redoBtn) this.redoBtn.disabled = !canRedo;
@@ -148,18 +116,33 @@ export class Toolbar {
     return wrapper;
   }
 
+  _analysisGroup() {
+    const g = this._group("analysis-group disabled-phase");
+    const runBtn = this._btn("▶ Run Analysis", "Available in Phase 5", () => {}, "btn-primary");
+    runBtn.disabled = true;
+    g.appendChild(runBtn);
+
+    const learningBtn = this._btn("Learning Mode", "Available in Phase 5", () => {});
+    learningBtn.disabled = true;
+    g.appendChild(learningBtn);
+    return g;
+  }
+
   _viewGroup() {
-    const g = this._group("view-group");
+    const g = this._group("view-group disabled-phase");
+    const VIEW_TOGGLES = [
+      { id: "showDeflected", label: "Deflected Shape" },
+      { id: "showReactions", label: "Reactions" },
+      { id: "showSFD", label: "SFD" },
+      { id: "showBMD", label: "BMD" },
+    ];
     VIEW_TOGGLES.forEach((toggle) => {
       const label = document.createElement("label");
       label.className = "checkbox-pill";
+      label.title = "Available in Phase 5";
       const input = document.createElement("input");
       input.type = "checkbox";
-      input.checked = this.viewState[toggle.id];
-      input.onchange = () => {
-        this.viewState[toggle.id] = input.checked;
-        this.callbacks.onViewOptionChange?.(this.viewState);
-      };
+      input.disabled = true;
       label.appendChild(input);
       label.append(toggle.label);
       g.appendChild(label);
@@ -172,7 +155,6 @@ export class Toolbar {
     g.appendChild(this._btn("−", "Zoom out", () => this.callbacks.onZoomOut?.(), "btn-icon"));
     g.appendChild(this._btn("+", "Zoom in", () => this.callbacks.onZoomIn?.(), "btn-icon"));
     g.appendChild(this._btn("Fit View", "Fit the model to the viewport", () => this.callbacks.onFitView?.()));
-    g.appendChild(this._btn("☾", "Toggle theme", () => this.callbacks.onToggleTheme?.(), "btn-icon"));
     return g;
   }
 }

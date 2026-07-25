@@ -524,34 +524,7 @@
       });
     });
 
-    // Wire Undo / Redo buttons to whichever App instance is active.
-    // desktop/layout.js and mobile/layout.js expose it as window.appInstance.
-    const bindUndoRedo = () => {
-      const app = window.appInstance || window.editorApp || window.editorAppMobile;
-      if (!app) {
-        setTimeout(bindUndoRedo, 100);
-        return;
-      }
-
-      const btnDeskUndo = document.getElementById('desktop-undo');
-      const btnDeskRedo = document.getElementById('desktop-redo');
-      const btnMobUndo = document.getElementById('mob-undo');
-      const btnMobRedo = document.getElementById('mob-redo');
-
-      const bindOnce = (btn, handler) => {
-        if (!btn || btn.dataset.bound === '1') return;
-        btn.addEventListener('click', handler);
-        btn.dataset.bound = '1';
-      };
-
-      bindOnce(btnDeskUndo, () => app.undo?.());
-      bindOnce(btnDeskRedo, () => app.redo?.());
-      bindOnce(btnMobUndo, () => app.undo?.());
-      bindOnce(btnMobRedo, () => app.redo?.());
-    };
-
-    bindUndoRedo();
-  });
+    
 </script>
 </body>
 </html>

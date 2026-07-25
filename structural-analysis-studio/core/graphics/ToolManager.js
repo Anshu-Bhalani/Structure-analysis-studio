@@ -27,8 +27,7 @@ import {
 } from './Commands.js';
 
 // ==========================================
-// Shared drag-to-move helpers (used by Select-tool direct manipulation
-// and by the explicit Move tool)
+// Shared drag-to-move helpers
 // ==========================================
 
 function beginDrag(app, nodeIds) {
@@ -60,6 +59,7 @@ function updateDrag(app, drag, startWorld, currentWorld) {
         move.toX = snapped.x;
         move.toY = snapped.y;
     }
+
     canvas.requestRedraw();
 }
 
@@ -68,7 +68,7 @@ function commitDrag(app, drag) {
     if (moved.length > 0) {
         // Positions were already applied live during the drag — just record
         // the command as history, don't re-apply it.
-        app.history.push(new MoveNodesCommand(app.model, moved));
+        app.pushCommand(new MoveNodesCommand(app.model, moved));
     }
 }
 
@@ -133,6 +133,7 @@ class SelectTool extends BaseTool {
             updateDrag(this.app, this.drag, this.dragStartWorld, world);
             return;
         }
+
         if (state.selection.isDragging) {
             state.selection.updateBoxSelection(screen.x, screen.y);
             canvas.requestRedraw();
@@ -153,6 +154,7 @@ class SelectTool extends BaseTool {
             canvas.requestRedraw();
             return;
         }
+
         if (state.selection.isDragging) {
             const multi = !!(evt.shiftKey || evt.ctrlKey || evt.metaKey);
             state.selection.endBoxSelection(model, canvas.camera, multi);
@@ -168,27 +170,87 @@ class SelectTool extends BaseTool {
 }
 
 // ==========================================
+// Move Tool
+// ==========================================
+
+class MoveTool extends BaseTool {
+    onActivate() {
+        this.drag = null;
+        this.dragStartWorld = null;
+    }
+
+    onDeactivate() {
+        this.drag = null;
+        this.dragStartWorld = null;
+    }
+
+    onPointerDown(world, _screen, evt) {
+        const { state, model, canvas } = this.app;
+        const hit = this.app.hitTest.hit(world.x, world.y, model, canvas.camera);
+
+        if (hit.type !== 'node') return;
+
+        if (!state.selection.isNodeSelected(hit.object.id)) {
+            state.selection.clear();
+            state.selection.nodes.add(hit.object.id);
+        }
+
+        this.dragStartWorld = world;
+        this.drag = beginDrag(this.app, state.selection.nodes);
+        canvas.requestRedraw();
+    }
+
+    onPointerMove(world, _screen) {
+        if (this.drag) {
+            updateDrag(this.app, this.drag, this.dragStartWorld, world);
+        }
+    }
+
+    onPointerUp() {
+        if (this.drag) {
+            commitDrag(this.app, this.drag);
+            this.drag = null;
+            this.dragStartWorld = null;
+            this.app.canvas.requestRedraw();
+        }
+    }
+
+    getCursor() {
+        return this.drag ? 'grabbing' : 'grab';
+    }
+}
+
+// ==========================================
 // Node Tool — click to place a node
 // ==========================================
 
 class NodeTool extends BaseTool {
     onPointerDown(world) {
-        const { model, state, snapManager, canvas, history } = this.app;
+        const { model, state, snapManager, canvas } = this.app;
 
         const snapped = state.snapEnabled
             ? snapManager.snap(world.x, world.y, model, canvas.camera)
-            : { x: world.x, y: world.y };
+            : { x: world.x, y: world.y, snappedTo: null };
+
+        // If we snapped exactly onto an existing node, reuse it instead of
+        // creating a duplicate node at the same coordinates.
+        if (snapped.snappedTo?.type === 'node') {
+            state.selection.clear();
+            state.selection.nodes.add(snapped.snappedTo.id);
+            canvas.requestRedraw();
+            return;
+        }
 
         const node = new Node(this.app.generateNodeId(), snapped.x, snapped.y);
-        history.execute(new CreateNodeCommand(model, node));
+        this.app.executeCommand(new CreateNodeCommand(model, node));
 
         state.selection.clear();
         state.selection.nodes.add(node.id);
         canvas.requestRedraw();
     }
 
-    onPointerMove(world) {
-        this.app.canvas.requestRedraw(); // repaint so the snap crosshair (drawn by app) stays live
+    onPointerMove() {
+        this.app.canvas.requestRedraw(); // repaint so the snap crosshair stays live
     }
 
     getCursor() { return 'crosshair'; }
@@ -201,103 +263,112 @@ class NodeTool extends BaseTool {
 // ==========================================
 
 class ElementTool extends BaseTool {
-    onActivate() { this.firstNodeId = null; }
-    onDeactivate() { this.firstNodeId = null; }
+    onActivate() {
+        this.firstNodeId = null;
+    }
+
+    onDeactivate() {
+        this.firstNodeId = null;
+    }
+
+    _resolveNodeAt(world) {
+        const { model, state, canvas, snapManager } = this.app;
+
+        const hitNode = this.app.hitTest.hitNode(world.x, world.y, model, canvas.camera);
+        if (hitNode) return hitNode;
+
+        const snapped = state.snapEnabled
+            ? snapManager.snap(world.x, world.y, model, canvas.camera)
+            : { x: world.x, y: world.y, snappedTo: null };
+
+        if (snapped.snappedTo?.type === 'node') {
+            return model.getNode(snapped.snappedTo.id);
+        }
+
+        const node = new Node(this.app.generateNodeId(), snapped.x, snapped.y);
+        this.app.executeCommand(new CreateNodeCommand(model, node));
+        return node;
+    }
 
     onPointerDown(world) {
-        const { model, state, canvas, history } = this.app;
+        const { model, state, canvas } = this.app;
 
-        let targetNode = this.app.hitTest.hitNode(world.x, world.y, model, canvas.camera);
+        const targetNode = this._resolveNodeAt(world);
+        if (!targetNode) return;
 
-        // FIX: If they click empty space, cancel the drawing action and do NOT create a node.
-        if (!targetNode) {
-            this.firstNodeId = null;
+        if (!this.firstNodeId) {
+            this.firstNodeId = targetNode.id;
             state.selection.clear();
+            state.selection.nodes.add(targetNode.id);
             canvas.requestRedraw();
             return;
         }
 
-        if (!this.firstNodeId) {
-            this.firstNodeId = targetNode.id;
-        } else if (targetNode.id !== this.firstNodeId) {
-            const element = new Element(
-                this.app.generateElementId(),
-                this.firstNodeId,
-                targetNode.id,
-                state.drawElementType
-            );
-            history.execute(new CreateBeamCommand(model, element));
-            this.firstNodeId = targetNode.id; // chain: next click continues from here
+        // Same node twice -> ignore and keep waiting for a valid second node.
+        if (this.firstNodeId === targetNode.id) {
+            return;
+        }
+
+        const startNode = model.getNode(this.firstNodeId);
+        const endNode = targetNode;
+
+        if (!startNode || !endNode) {
+            this.firstNodeId = null;
+            return;
+        }
+
+        const element = new Element(
+            this.app.generateElementId(),
+            startNode,
+            endNode,
+            state.drawElementType
+        );
+
+        this.app.executeCommand(new CreateBeamCommand(model, element));
+
+        // Continuous drawing: continue chain from the last node.
+        // Single mode: clear chain after each element.
+        if (state.drawingMode === 'single') {
+            this.firstNodeId = null;
+        } else {
+            this.firstNodeId = endNode.id;
         }
 
         state.selection.clear();
-        state.selection.nodes.add(targetNode.id);
+        state.selection.elements.add(element.id);
         canvas.requestRedraw();
     }
 
     onPointerMove() {
-        this.app.canvas.requestRedraw(); // keep the rubber-band preview live
+        this.app.canvas.requestRedraw();
     }
 
     getCursor() { return 'crosshair'; }
 }
 
 // ==========================================
-// Move Tool — click+drag any node (auto-selecting it if needed)
-// ==========================================
-
-class MoveTool extends BaseTool {
-    onDeactivate() { this.drag = null; }
-
-    onPointerDown(world) {
-        const { state, model, canvas } = this.app;
-        const node = this.app.hitTest.hitNode(world.x, world.y, model, canvas.camera);
-        if (!node) return;
-
-        if (!state.selection.isNodeSelected(node.id)) {
-            state.selection.clear();
-            state.selection.nodes.add(node.id);
-        }
-
-        this.dragStartWorld = world;
-        this.drag = beginDrag(this.app, state.selection.nodes);
-    }
-
-    onPointerMove(world) {
-        if (!this.drag) return;
-        updateDrag(this.app, this.drag, this.dragStartWorld, world);
-    }
-
-    onPointerUp() {
-        if (!this.drag) return;
-        commitDrag(this.app, this.drag);
-        this.drag = null;
-        this.app.canvas.requestRedraw();
-    }
-
-    getCursor() { return this.drag ? 'grabbing' : 'move'; }
-}
-
-// ==========================================
-// Delete Tool — click a node/element to remove it immediately
+// Delete Tool
 // ==========================================
 
 class DeleteTool extends BaseTool {
     onPointerDown(world) {
-        const { model, canvas, history } = this.app;
+        const { model, state, canvas } = this.app;
         const hit = this.app.hitTest.hit(world.x, world.y, model, canvas.camera);
-        if (hit.type === 'node') {
-            history.execute(new DeleteSelectionCommand(model, [hit.object.id], []));
-        } else if (hit.type === 'element') {
-            history.execute(new DeleteSelectionCommand(model, [], [hit.object.id]));
-        }
-        canvas.requestRedraw();
-    }
 
-    onPointerMove(world) {
-        const { model, canvas, state } = this.app;
-        const hit = this.app.hitTest.hit(world.x, world.y, model, canvas.camera);
-        state.setHover(hit.object?.id ?? null, hit.type);
+        if (!hit.type) return;
+
+        state.selection.clear();
+        if (hit.type === 'node') state.selection.nodes.add(hit.object.id);
+        else state.selection.elements.add(hit.object.id);
+
+        this.app.executeCommand(
+            new DeleteSelectionCommand(
+                model,
+                [...state.selection.nodes],
+                [...state.selection.elements]
+            )
+        );
+
         canvas.requestRedraw();
     }
 
@@ -305,94 +376,134 @@ class DeleteTool extends BaseTool {
 }
 
 // ==========================================
-// Pan Tool — click+drag pans the viewport
+// Pan Tool
 // ==========================================
 
 class PanTool extends BaseTool {
+    onActivate() {
+        this.panning = false;
+        this.lastScreen = null;
+    }
+
+    onDeactivate() {
+        this.panning = false;
+        this.lastScreen = null;
+    }
+
     onPointerDown(_world, screen) {
         this.panning = true;
-        this.lastScreen = screen;
+        this.lastScreen = { x: screen.x, y: screen.y };
     }
 
     onPointerMove(_world, screen) {
-        if (!this.panning) return;
+        if (!this.panning || !this.lastScreen) return;
         const dx = screen.x - this.lastScreen.x;
         const dy = screen.y - this.lastScreen.y;
         this.app.canvas.movePan(dx, dy);
-        this.lastScreen = screen;
+        this.lastScreen = { x: screen.x, y: screen.y };
     }
 
-    onPointerUp() { this.panning = false; }
+    onPointerUp() {
+        this.panning = false;
+        this.lastScreen = null;
+    }
 
-    getCursor() { return this.panning ? 'grabbing' : 'grab'; }
+    getCursor() {
+        return this.panning ? 'grabbing' : 'grab';
+    }
 }
 
 // ==========================================
-// ToolManager
+// Placeholder tools for Phase 4
+// ==========================================
+
+class PlaceholderTool extends BaseTool {
+    constructor(app, label) {
+        super(app);
+        this.label = label;
+    }
+    getCursor() { return 'not-allowed'; }
+    onPointerDown() {}
+    onPointerMove() {}
+    onPointerUp() {}
+    onDoubleClick() {}
+}
+
+// ==========================================
+// Tool Manager
 // ==========================================
 
 export class ToolManager {
     constructor(app) {
         this.app = app;
+        this.active = null;
 
-        this.tools = {
+        this._tools = {
             [TOOLS.SELECT]: new SelectTool(app),
+            [TOOLS.MOVE]: new MoveTool(app),
             [TOOLS.DRAW_NODE]: new NodeTool(app),
             [TOOLS.DRAW_ELEMENT]: new ElementTool(app),
-            [TOOLS.MOVE]: new MoveTool(app),
-            [TOOLS.PAN]: new PanTool(app),
             [TOOLS.DELETE]: new DeleteTool(app),
+            [TOOLS.PAN]: new PanTool(app),
+            [TOOLS.ADD_SUPPORT]: new PlaceholderTool(app, 'add_support'),
+            [TOOLS.ADD_LOAD]: new PlaceholderTool(app, 'add_load'),
         };
 
-        this.active = this.tools[TOOLS.SELECT];
-        this._tempPanPrevious = null;
+        this.activate(app.state.currentTool || TOOLS.SELECT);
     }
 
-    /**
-     * @param {string} toolName - one of the TOOLS constants
-     * @param {{preserveSelection?: boolean}} [options]
-     */
-    activate(toolName, options = {}) {
-        const next = this.tools[toolName];
-        if (!next) {
-            console.warn(`ToolManager: unknown tool "${toolName}"`);
-            return;
+    activate(toolName) {
+        if (!Object.values(TOOLS).includes(toolName)) {
+            toolName = TOOLS.SELECT;
         }
 
-        if (this.active) this.active.onDeactivate();
-        this.active = next;
-
-        if (options.preserveSelection) {
-            this.app.state.currentTool = toolName; // bypass State.setTool()'s selection-clear side effect
-        } else {
-            this.app.state.setTool(toolName);
+        if (this.active?.onDeactivate) {
+            this.active.onDeactivate();
         }
 
-        this.active.onActivate();
+        this.app.state.setTool(toolName);
+        this.active = this._tools[toolName] || this._tools[TOOLS.SELECT];
+
+        if (this.active?.onActivate) {
+            this.active.onActivate();
+        }
+
         this.app.canvas.requestRedraw();
     }
 
     getActiveName() {
-        return Object.keys(this.tools).find((key) => this.tools[key] === this.active) ?? null;
+        return this.app.state.currentTool;
     }
 
-    /** Holding Space temporarily switches to Pan without disturbing the current selection or tool. */
-    beginTemporaryPan() {
-        if (this._tempPanPrevious) return;
-        this._tempPanPrevious = this.getActiveName();
-        this.activate(TOOLS.PAN, { preserveSelection: true });
+    getCursor() {
+        return this.active?.getCursor?.() || 'default';
     }
 
-    endTemporaryPan() {
-        if (!this._tempPanPrevious) return;
-        this.activate(this._tempPanPrevious, { preserveSelection: true });
-        this._tempPanPrevious = null;
+    onPointerDown(world, screen, evt) {
+        this.active?.onPointerDown?.(world, screen, evt);
+        this.app.canvas.requestRedraw();
     }
 
-    onPointerDown(world, screen, evt) { this.active.onPointerDown(world, screen, evt); }
-    onPointerMove(world, screen, evt) { this.active.onPointerMove(world, screen, evt); }
-    onPointerUp(world, screen, evt) { this.active.onPointerUp(world, screen, evt); }
-    onDoubleClick(world, screen, evt) { this.active.onDoubleClick(world, screen, evt); }
+    onPointerMove(world, screen, evt) {
+        this.active?.onPointerMove?.(world, screen, evt);
+    }
 
-    getCursor() { return this.active.getCursor(); }
+    onPointerUp(world, screen, evt) {
+        this.active?.onPointerUp?.(world, screen, evt);
+        this.app.canvas.requestRedraw();
+    }
+
+    onDoubleClick(world, screen, evt) {
+        this.active?.onDoubleClick?.(world, screen, evt);
+    }
+
+    cancelCurrentAction() {
+        if (!this.active) return;
+
+        if ('firstNodeId' in this.active) this.active.firstNodeId = null;
+        if ('drag' in this.active) this.active.drag = null;
+        if ('dragStartWorld' in this.active) this.active.dragStartWorld = null;
+        if ('panning' in this.active) this.active.panning = false;
+        if ('lastScreen' in this.active) this.active.lastScreen = null;
+    }
 }

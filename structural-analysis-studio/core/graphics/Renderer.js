@@ -1,7 +1,14 @@
 /**
  * Renderer.js
  * ------------------------------------------------------------------
- * Composition point for drawing every engineering object.
+ * Composition point for drawing every engineering object on a single
+ * frame: elements, supports, loads, and nodes (nodes drawn last so
+ * their joints sit visually on top of member end points), plus a
+ * live preview overlay for in-progress tool actions (e.g. the
+ * rubber-band beam preview while placing the second endpoint).
+ *
+ * This module performs NO hit-testing or state mutation — it only
+ * reads Model + State and paints pixels.
  * ------------------------------------------------------------------
  */
 
@@ -12,6 +19,14 @@ import { LoadRenderer } from './renderers/LoadRenderer.js';
 import { TOOLS } from '../state/State.js';
 
 export class Renderer {
+    /**
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {import('../modeling/Model.js').Model} model
+     * @param {import('./Camera.js').Camera} camera
+     * @param {import('../state/State.js').State} state
+     * @param {import('./ToolManager.js').ToolManager} [toolManager] - optional, enables live tool previews
+     * @param {import('./SnapManager.js').SnapManager} [snapManager] - optional, enables the ghost-node preview
+     */
     draw(ctx, model, camera, state, toolManager = null, snapManager = null) {
         ElementRenderer.draw(ctx, model, camera, state);
         SupportRenderer.draw(ctx, model, camera);
@@ -19,9 +34,10 @@ export class Renderer {
         NodeRenderer.draw(ctx, model, camera, state);
 
         this._drawElementPreview(ctx, model, camera, state, toolManager);
-        this._drawSnapIndicator(ctx, model, camera, state, toolManager, snapManager);
+        this._drawGhostNode(ctx, model, camera, state, toolManager, snapManager);
     }
 
+    /** Rubber-band line from the first clicked node to the current cursor while drawing an element. */
     _drawElementPreview(ctx, model, camera, state, toolManager) {
         if (!toolManager || toolManager.getActiveName() !== TOOLS.DRAW_ELEMENT) return;
 
@@ -45,41 +61,27 @@ export class Renderer {
         ctx.restore();
     }
 
-    _drawSnapIndicator(ctx, model, camera, state, toolManager, snapManager) {
+    /** Faint preview circle showing exactly where the next click will place/attach a node. */
+    _drawGhostNode(ctx, model, camera, state, toolManager, snapManager) {
         if (!toolManager || !snapManager) return;
 
         const activeName = toolManager.getActiveName();
-        // Show snap indicators while placing nodes, elements, or dragging
-        if (activeName !== TOOLS.DRAW_NODE && activeName !== TOOLS.DRAW_ELEMENT && activeName !== TOOLS.MOVE && activeName !== TOOLS.SELECT) return;
+        if (activeName !== TOOLS.DRAW_NODE && activeName !== TOOLS.DRAW_ELEMENT) return;
 
-        const snapped = snapManager.snap(state.mouse.worldX, state.mouse.worldY, model, camera, { 
-            enabled: state.snapEnabled, 
-            snapRadius: state.snapRadius 
-        });
-
-        // Disappear if not snapped to anything
-        if (!snapped.snapped) return;
+        const snapped = state.snapEnabled
+            ? snapManager.snap(state.mouse.worldX, state.mouse.worldY, model, camera)
+            : { x: state.mouse.worldX, y: state.mouse.worldY, snappedTo: null };
 
         const pos = camera.worldToScreen(snapped.x, snapped.y);
 
         ctx.save();
         ctx.beginPath();
-        
-        if (snapped.type === "node") {
-            // Draw Highlighted Circle for Node Snap
-            ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2);
-            ctx.strokeStyle = 'rgba(16, 185, 129, 0.9)'; // Green
-            ctx.lineWidth = 2;
-            ctx.stroke();
-        } else if (snapped.type === "grid") {
-            // Draw Highlighted Square for Grid Snap
-            const size = 10;
-            ctx.rect(pos.x - size/2, pos.y - size/2, size, size);
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'; // White
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-        }
-        
+        ctx.arc(pos.x, pos.y, snapped.snappedTo?.type === 'node' ? 7 : 5, 0, Math.PI * 2);
+        ctx.strokeStyle = snapped.snappedTo?.type === 'node'
+            ? 'rgba(16, 185, 129, 0.9)'   // green: will attach to an existing node
+            : 'rgba(255, 255, 255, 0.5)'; // white: free / grid-snapped placement
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
         ctx.restore();
     }
 }

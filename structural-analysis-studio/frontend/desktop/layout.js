@@ -16,6 +16,36 @@ document.addEventListener('DOMContentLoaded', () => {
     window.editorApp = app;
     window.appInstance = app;
 
+    // Desktop ribbon / tab chrome active-state wiring that used to live inline in index.html
+    const setExclusiveActive = (button) => {
+        const group = button.closest('.ribbon-group');
+        if (!group) return;
+        group.querySelectorAll('.ribbon-btn').forEach((b) => b.classList.remove('active'));
+        button.classList.add('active');
+    };
+
+    document.querySelectorAll('.ribbon-btn').forEach((btn) => {
+        btn.addEventListener('click', (evt) => {
+            setExclusiveActive(evt.currentTarget);
+        });
+    });
+
+    document.querySelectorAll('.bp-tab').forEach((tab) => {
+        tab.addEventListener('click', (evt) => {
+            document.querySelectorAll('.bp-tab').forEach((t) => t.classList.remove('active'));
+            evt.currentTarget.classList.add('active');
+        });
+    });
+
+    document.querySelectorAll('.workspace-tabs .tab').forEach((tab) => {
+        tab.addEventListener('click', (evt) => {
+            const current = evt.currentTarget;
+            if (current.classList.contains('disabled-phase')) return;
+            document.querySelectorAll('.workspace-tabs .tab').forEach((t) => t.classList.remove('active'));
+            current.classList.add('active');
+        });
+    });
+
     const toolbar = new Toolbar(toolbarMount, {
         onToolChange: (toolId) => {
             switch (toolId) {
@@ -75,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const desktopUndo = document.getElementById('desktop-undo');
     const desktopRedo = document.getElementById('desktop-redo');
 
-    const syncTopButtons = () => {
+    const syncHistoryButtons = () => {
         if (desktopUndo) desktopUndo.disabled = !app.canUndo();
         if (desktopRedo) desktopRedo.disabled = !app.canRedo();
     };
@@ -83,8 +113,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (desktopUndo) desktopUndo.addEventListener('click', () => app.undo());
     if (desktopRedo) desktopRedo.addEventListener('click', () => app.redo());
 
-    setInterval(syncTopButtons, 250);
-    syncTopButtons();
+    const historySyncTimer = setInterval(syncHistoryButtons, 250);
+    window.addEventListener('beforeunload', () => clearInterval(historySyncTimer));
+    syncHistoryButtons();
 
     app.canvas.fitModelToScreen(app.model, 60);
 });

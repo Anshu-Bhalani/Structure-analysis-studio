@@ -64,8 +64,9 @@
             </nav>
             <div class="top-actions">
                 <button class="btn-icon">💾 Save</button>
-                <button class="btn-icon">↩ Undo</button>
-                <button class="btn-icon">↪ Redo</button>
+                <!-- FIX: Added IDs so JavaScript can trigger Undo/Redo -->
+                <button class="btn-icon" id="desktop-undo">↩ Undo</button>
+                <button class="btn-icon" id="desktop-redo">↪ Redo</button>
                 <select class="theme-select"><option>🌙 Dark</option></select>
                 <button class="btn-icon">⚙</button>
                 <button class="btn-icon">?</button>
@@ -73,9 +74,6 @@
         </header>
 
         <!-- TOOLBAR / RIBBON -->
-        <!-- Phase 4: this used to be a static, unwired button mockup. It's
-             now a mount point — frontend/desktop/layout.js instantiates the
-             real Toolbar.js component here and wires it to a live App(...). -->
         <div class="ribbon" id="toolbar-mount"></div>
 
         <!-- MAIN IDE LAYOUT -->
@@ -178,10 +176,6 @@
                     </div>
                     <select class="view-plane"><option>XY</option></select>
                     
-                    <!-- Phase 4: this used to be a static SVG "recreation" of a
-                         beam model. It's now a real canvas — frontend/desktop/layout.js
-                         instantiates App(...) against it, so this is a live,
-                         editable geometry editor rather than a picture of one. -->
                     <canvas id="editor-canvas"></canvas>
                 </div>
 
@@ -371,8 +365,9 @@
             <header class="mob-header">
                 <button class="mob-icon-btn">←</button>
                 <div class="mob-header-actions">
-                    <button class="mob-icon-btn">↩</button>
-                    <button class="mob-icon-btn">↪</button>
+                    <!-- FIX: Added IDs so JavaScript can trigger Undo/Redo on Mobile -->
+                    <button class="mob-icon-btn" id="mob-undo">↩</button>
+                    <button class="mob-icon-btn" id="mob-redo">↪</button>
                     <button class="mob-icon-btn">💾</button>
                     <button class="mob-icon-btn">⋮</button>
                 </div>
@@ -389,12 +384,6 @@
                     <button><span>🗑</span>Delete</button>
                     <button><span>⋯</span>More</button>
                 </div>
-                <!-- Phase 4: this used to be a static SVG placeholder. It's now
-                     a real canvas — frontend/mobile/layout.js instantiates
-                     App(...) + TouchController against it. The wrapper div
-                     keeps its original .mob-canvas-placeholder class so the
-                     existing flex:1 CSS still gives the canvas a definite
-                     box to fill (Canvas.js observes its parentElement's size). -->
                 <div class="mob-canvas-placeholder">
                     <canvas id="editor-canvas-mobile"></canvas>
                 </div>
@@ -501,5 +490,60 @@
     <!-- Scripts deferred so they don't block loading -->
     <script type="module" defer src="frontend/desktop/layout.js"></script>
     <script type="module" defer src="frontend/mobile/layout.js"></script>
+
+    <!-- FIX: Added small global connector to hook the HTML buttons to the App -->
+    <script>
+        // A simple UI Manager mapping for static layout interactions (Tabs, Ribbons)
+        document.addEventListener("DOMContentLoaded", () => {
+            
+            // Bottom Panel Tab Switching logic
+            const bpTabs = document.querySelectorAll('.bp-tab');
+            bpTabs.forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    bpTabs.forEach(t => t.classList.remove('active'));
+                    e.target.classList.add('active');
+                });
+            });
+
+            // Workspace Tab Switching logic
+            const wsTabs = document.querySelectorAll('.workspace-tabs .tab');
+            wsTabs.forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('disabled-phase')) return;
+                    wsTabs.forEach(t => t.classList.remove('active'));
+                    e.target.classList.add('active');
+                });
+            });
+
+            // Ribbon tool active state logic
+            const ribbonBtns = document.querySelectorAll('.ribbon-btn');
+            ribbonBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const group = e.target.closest('.ribbon-group');
+                    group.querySelectorAll('.ribbon-btn').forEach(b => b.classList.remove('active'));
+                    e.target.closest('.ribbon-btn').classList.add('active');
+                });
+            });
+
+            // -------------------------------------------------------------
+            // FIX: Wire the top-nav / mobile Undo/Redo buttons to the App
+            // -------------------------------------------------------------
+            // We wait slightly to ensure frontend/desktop/layout.js has initialized 'window.appInstance'
+            setTimeout(() => {
+                const btnDeskUndo = document.getElementById('desktop-undo');
+                const btnDeskRedo = document.getElementById('desktop-redo');
+                const btnMobUndo = document.getElementById('mob-undo');
+                const btnMobRedo = document.getElementById('mob-redo');
+
+                const doUndo = () => { if (window.appInstance) window.appInstance.undo(); };
+                const doRedo = () => { if (window.appInstance) window.appInstance.redo(); };
+
+                if (btnDeskUndo) btnDeskUndo.addEventListener('click', doUndo);
+                if (btnDeskRedo) btnDeskRedo.addEventListener('click', doRedo);
+                if (btnMobUndo) btnMobUndo.addEventListener('click', doUndo);
+                if (btnMobRedo) btnMobRedo.addEventListener('click', doRedo);
+            }, 500);
+        });
+    </script>
 </body>
 </html>

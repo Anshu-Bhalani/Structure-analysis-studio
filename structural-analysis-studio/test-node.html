@@ -206,9 +206,10 @@
                 }
             }
 
-            if (!clickedNodeId) {
+                        if (!clickedNodeId) {
                 clickedNodeId = getOccupyingNodeId(engX, engY);
-                if (!clickedNodeId) {
+                // FIX: Only auto-create a node if we are in SELECT mode
+                if (!clickedNodeId && appMode === 'SELECT') {
                     const newNode = new Node("N" + nodeCounter++, engX, engY);
                     model.addNode(newNode);
                     clickedNodeId = newNode.id;
@@ -219,7 +220,16 @@
                 selectNode(clickedNodeId);
             } 
             else if (appMode === 'DRAW_ELEMENT') {
+                // FIX: If they click empty space, cancel the drawing action
+                if (!clickedNodeId) {
+                    drawStartNode = null;
+                    statusText.innerText = `Drawing cancelled. Click an existing node to start.`;
+                    render();
+                    return; 
+                }
+
                 if (!drawStartNode) {
+
                     drawStartNode = model.findNodeById(clickedNodeId);
                     statusText.innerText = `Drawing ${currentElementType.toUpperCase()} from ${drawStartNode.id}. Click end node.`;
                     pointerPos.x = pixelX; pointerPos.y = pixelY;

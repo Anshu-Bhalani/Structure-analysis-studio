@@ -73,47 +73,10 @@
         </header>
 
         <!-- TOOLBAR / RIBBON -->
-        <div class="ribbon">
-            <div class="ribbon-group">
-                <div class="ribbon-items">
-                    <button class="ribbon-btn active"><span>↖</span>Select</button>
-                    <button class="ribbon-btn"><span>✥</span>Move</button>
-                    <button class="ribbon-btn"><span>↻</span>Rotate</button>
-                    <button class="ribbon-btn"><span>🗑</span>Delete</button>
-                </div>
-                <div class="group-label">Edit</div>
-            </div>
-            <div class="ribbon-group">
-                <div class="ribbon-items">
-                    <button class="ribbon-btn"><span>•</span>Node</button>
-                    <button class="ribbon-btn"><span>―</span>Beam</button>
-                    <button class="ribbon-btn"><span>-</span>Bar</button>
-                    <button class="ribbon-btn"><span>〰</span>Spring</button>
-                    <button class="ribbon-btn"><span>▵</span>Support</button>
-                </div>
-                <div class="group-label">Elements</div>
-            </div>
-            <div class="ribbon-group">
-                <div class="ribbon-items">
-                    <button class="ribbon-btn"><span>↓</span>Load</button>
-                    <button class="ribbon-btn"><span>↺</span>Moment</button>
-                    <button class="ribbon-btn"><span>↓↓↓</span>UDL</button>
-                    <button class="ribbon-btn"><span>↓</span>Point Load</button>
-                    <button class="ribbon-btn"><span>◿</span>Trapezoidal</button>
-                    <button class="ribbon-btn"><span>📄</span>Load Case</button>
-                </div>
-                <div class="group-label">Loads</div>
-            </div>
-            <div class="ribbon-group">
-                <div class="ribbon-items">
-                    <button class="ribbon-btn"><span>◨</span>Split</button>
-                    <button class="ribbon-btn"><span>⌗</span>Snap</button>
-                    <button class="ribbon-btn"><span>T</span>Labels</button>
-                    <button class="ribbon-btn"><span>⟷</span>Dimensions</button>
-                </div>
-                <div class="group-label">View</div>
-            </div>
-        </div>
+        <!-- Phase 4: this used to be a static, unwired button mockup. It's
+             now a mount point — frontend/desktop/layout.js instantiates the
+             real Toolbar.js component here and wires it to a live App(...). -->
+        <div class="ribbon" id="toolbar-mount"></div>
 
         <!-- MAIN IDE LAYOUT -->
         <div class="ide-layout">
@@ -215,82 +178,11 @@
                     </div>
                     <select class="view-plane"><option>XY</option></select>
                     
-                    <!-- SVG Recreation of the Structural Beam Model -->
-                    <svg class="model-svg" viewBox="0 0 1000 400" width="100%" height="100%">
-                        <defs>
-                            <marker id="arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                                <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
-                            </marker>
-                            <marker id="arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                                <path d="M 0 0 L 10 5 L 0 10 z" fill="#22c55e" />
-                            </marker>
-                            <marker id="arrow-dim" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                                <path d="M 0 0 L 10 5 L 0 10 z" fill="#555" />
-                            </marker>
-                        </defs>
-                        <!-- Coordinate System -->
-                        <g transform="translate(40, 360)">
-                            <line x1="0" y1="0" x2="40" y2="0" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow-red)"/>
-                            <line x1="0" y1="0" x2="0" y2="-40" stroke="#22c55e" stroke-width="2" marker-end="url(#arrow-green)"/>
-                            <text x="45" y="5" fill="#ef4444" font-size="14">X</text>
-                            <text x="-5" y="-45" fill="#22c55e" font-size="14">Y</text>
-                        </g>
-                        <!-- Dimensions -->
-                        <g stroke="#555" stroke-width="1" class="dimensions">
-                            <line x1="150" y1="180" x2="150" y2="240"/>
-                            <line x1="325" y1="180" x2="325" y2="240"/>
-                            <line x1="500" y1="180" x2="500" y2="240"/>
-                            <line x1="675" y1="180" x2="675" y2="240"/>
-                            <line x1="850" y1="180" x2="850" y2="240"/>
-                            <line x1="150" y1="200" x2="850" y2="200" marker-start="url(#arrow-dim)" marker-end="url(#arrow-dim)"/>
-                            <line x1="150" y1="230" x2="850" y2="230" marker-start="url(#arrow-dim)" marker-end="url(#arrow-dim)"/>
-                            <text x="237" y="195" fill="#aaa" font-size="12" text-anchor="middle">3.000 m</text>
-                            <text x="412" y="195" fill="#aaa" font-size="12" text-anchor="middle">3.000 m</text>
-                            <text x="587" y="195" fill="#aaa" font-size="12" text-anchor="middle">3.000 m</text>
-                            <text x="762" y="195" fill="#aaa" font-size="12" text-anchor="middle">3.000 m</text>
-                            <text x="500" y="225" fill="#aaa" font-size="12" text-anchor="middle">12.000 m</text>
-                        </g>
-                        <!-- Elements -->
-                        <line x1="150" y1="150" x2="850" y2="150" stroke="#eab308" stroke-width="3"/>
-                        <text x="237" y="170" fill="#3b82f6" font-size="14" text-anchor="middle">E1</text>
-                        <text x="412" y="170" fill="#3b82f6" font-size="14" text-anchor="middle">E2</text>
-                        <text x="587" y="170" fill="#3b82f6" font-size="14" text-anchor="middle">E3</text>
-                        <text x="762" y="170" fill="#3b82f6" font-size="14" text-anchor="middle">E4</text>
-                        <!-- Supports -->
-                        <g transform="translate(150, 150)" stroke="#22c55e" fill="none" stroke-width="2">
-                            <polygon points="0,0 -15,20 15,20"/>
-                            <line x1="-20" y1="20" x2="20" y2="20"/>
-                            <line x1="-15" y1="20" x2="-20" y2="25"/><line x1="-5" y1="20" x2="-10" y2="25"/><line x1="5" y1="20" x2="0" y2="25"/><line x1="15" y1="20" x2="10" y2="25"/>
-                        </g>
-                        <g transform="translate(850, 150)" stroke="#22c55e" fill="none" stroke-width="2">
-                            <polygon points="0,0 -15,15 15,15"/>
-                            <circle cx="-8" cy="18" r="3"/><circle cx="8" cy="18" r="3"/>
-                            <line x1="-20" y1="21" x2="20" y2="21"/>
-                            <line x1="-15" y1="21" x2="-20" y2="26"/><line x1="-5" y1="21" x2="-10" y2="26"/><line x1="5" y1="21" x2="0" y2="26"/><line x1="15" y1="21" x2="10" y2="26"/>
-                        </g>
-                        <!-- Loads -->
-                        <g stroke="#ef4444" fill="#ef4444">
-                            <line x1="325" y1="60" x2="325" y2="135" stroke-width="2"/>
-                            <polygon points="325,145 320,135 330,135"/>
-                            <text x="325" y="50" font-size="14" text-anchor="middle">10 kN</text>
-                            
-                            <line x1="500" y1="60" x2="500" y2="135" stroke-width="2"/>
-                            <polygon points="500,145 495,135 505,135"/>
-                            <text x="500" y="50" font-size="14" text-anchor="middle">20 kN</text>
-                            
-                            <line x1="675" y1="60" x2="675" y2="135" stroke-width="2"/>
-                            <polygon points="675,145 670,135 680,135"/>
-                            <text x="675" y="50" font-size="14" text-anchor="middle">10 kN</text>
-                        </g>
-                        <!-- Nodes -->
-                        <g fill="#fff">
-                            <circle cx="150" cy="150" r="5"/><text x="140" y="135" font-size="14">N1</text>
-                            <circle cx="325" cy="150" r="5" fill="#3b82f6"/><text x="335" y="135" font-size="14">N2</text><text x="325" y="170" font-size="14" fill="#aaa">2</text>
-                            <circle cx="500" cy="150" r="5" fill="#3b82f6"/><text x="510" y="135" font-size="14">N3</text><text x="500" y="170" font-size="14" fill="#aaa">3</text>
-                            <circle cx="675" cy="150" r="5" fill="#3b82f6"/><text x="685" y="135" font-size="14">N4</text><text x="675" y="170" font-size="14" fill="#aaa">4</text>
-                            <circle cx="850" cy="150" r="5"/><text x="840" y="135" font-size="14">N5</text>
-                        </g>
-                    </svg>
+                    <!-- Phase 4: this used to be a static SVG "recreation" of a
+                         beam model. It's now a real canvas — frontend/desktop/layout.js
+                         instantiates App(...) against it, so this is a live,
+                         editable geometry editor rather than a picture of one. -->
+                    <canvas id="editor-canvas"></canvas>
                 </div>
 
                 <!-- BOTTOM PANEL -->
@@ -491,29 +383,20 @@
                     <button class="active"><span>↖</span>Select</button>
                     <button><span>•</span>Node</button>
                     <button><span>/</span>Beam</button>
-                    <button><span>▵</span>Support</button>
-                    <button><span>↓</span>Load</button>
-                    <button><span>↺</span>Moment</button>
+                    <button disabled title="Coming soon — boundary condition tools aren't built yet"><span>▵</span>Support</button>
+                    <button disabled title="Coming soon — load tools aren't built yet"><span>↓</span>Load</button>
+                    <button disabled title="Coming soon — load tools aren't built yet"><span>↺</span>Moment</button>
                     <button><span>🗑</span>Delete</button>
                     <button><span>⋯</span>More</button>
                 </div>
+                <!-- Phase 4: this used to be a static SVG placeholder. It's now
+                     a real canvas — frontend/mobile/layout.js instantiates
+                     App(...) + TouchController against it. The wrapper div
+                     keeps its original .mob-canvas-placeholder class so the
+                     existing flex:1 CSS still gives the canvas a definite
+                     box to fill (Canvas.js observes its parentElement's size). -->
                 <div class="mob-canvas-placeholder">
-                    <svg viewBox="0 0 300 200" width="100%" height="100%">
-                        <line x1="50" y1="100" x2="250" y2="100" stroke="#eab308" stroke-width="4"/>
-                        <circle cx="50" cy="100" r="4" fill="#fff"/>
-                        <circle cx="150" cy="100" r="4" fill="#3b82f6"/>
-                        <circle cx="250" cy="100" r="4" fill="#fff"/>
-                        <g fill="#ef4444" stroke="#ef4444">
-                            <line x1="100" y1="50" x2="100" y2="90" stroke-width="2"/>
-                            <polygon points="100,100 95,90 105,90"/>
-                            <line x1="150" y1="50" x2="150" y2="90" stroke-width="2"/>
-                            <polygon points="150,100 145,90 155,90"/>
-                            <line x1="200" y1="50" x2="200" y2="90" stroke-width="2"/>
-                            <polygon points="200,100 195,90 205,90"/>
-                        </g>
-                        <line x1="50" y1="130" x2="250" y2="130" stroke="#555" stroke-dasharray="2,2"/>
-                        <text x="150" y="145" fill="#aaa" font-size="12" text-anchor="middle">6.00 m</text>
-                    </svg>
+                    <canvas id="editor-canvas-mobile"></canvas>
                 </div>
                 <div class="mob-floating-info">
                     <h4>Model Info</h4>

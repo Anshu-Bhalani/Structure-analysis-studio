@@ -83,8 +83,15 @@
 }
 .mob-vert-toolbar button span { font-size: 16px; }
 .mob-vert-toolbar button.active { color: var(--accent-blue); background: var(--accent-blue-transparent); }
+.mob-vert-toolbar button:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .mob-canvas-placeholder { flex: 1; display: flex; align-items: center; justify-content: center; }
+
+/* --- PHASE 4: MOBILE EDITOR CANVAS --- */
+/* Fills the .mob-canvas-placeholder box (flex:1 sizing lives on that
+   wrapper so Canvas.js's ResizeObserver, which watches the canvas's
+   parentElement, gets a definite box rather than the whole .mob-canvas-area). */
+#editor-canvas-mobile { display: block; width: 100%; height: 100%; touch-action: none; }
 
 .mob-floating-info {
     margin: 16px; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 16px;

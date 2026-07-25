@@ -23,7 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const screens = document.querySelectorAll('.mob-screen');
 
     const activateScreen = (targetId) => {
-        navButtons.forEach((b) => b.classList.toggle('active', b.getAttribute('data-target') === targetId));
+        navButtons.forEach((b) => {
+            b.classList.toggle('active', b.getAttribute('data-target') === targetId);
+        });
         screens.forEach((screen) => {
             screen.classList.toggle('active', screen.id === targetId);
         });
@@ -57,7 +59,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (overlay) {
         overlay.addEventListener('click', () => {
             closeDrawer();
-            document.querySelectorAll('.mob-bottom-sheet').forEach((sheet) => sheet.classList.remove('open'));
+            document.querySelectorAll('.mob-bottom-sheet').forEach((sheet) => {
+                sheet.classList.remove('open');
+            });
         });
     }
 
@@ -86,11 +90,11 @@ document.addEventListener('DOMContentLoaded', () => {
         () => app.setTool(TOOLS.SELECT),               // Select
         () => app.setTool(TOOLS.DRAW_NODE),            // Node
         () => app.setElementTool(ELEMENT_TYPES.BEAM),  // Beam
-        null,                                          // Support (not implemented)
-        null,                                          // Load (not implemented)
-        null,                                          // Moment (not implemented)
+        null,                                          // Support (not implemented yet)
+        null,                                          // Load (not implemented yet)
+        null,                                          // Moment (not implemented yet)
         () => app.setTool(TOOLS.DELETE),               // Delete
-        () => app.setTool(TOOLS.MOVE),                 // More -> reuse as Move for now
+        () => app.setTool(TOOLS.MOVE),                 // More -> use Move for now
     ];
 
     vertToolbarButtons.forEach((btn, index) => {
@@ -116,7 +120,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mobUndo) mobUndo.addEventListener('click', () => app.undo());
     if (mobRedo) mobRedo.addEventListener('click', () => app.redo());
 
-    setInterval(syncHistoryButtons, 250);
+    const historySyncTimer = setInterval(syncHistoryButtons, 250);
+    window.addEventListener('beforeunload', () => clearInterval(historySyncTimer));
     syncHistoryButtons();
 
     // Default screen

@@ -1,10 +1,3 @@
-/**
- * ToolManager.js
- * ------------------------------------------------------------------
- * Owns the current active tool and its interaction behavior.
- * ------------------------------------------------------------------
- */
-
 import { Node } from '../modeling/Node.js';
 import { Element } from '../modeling/Element.js';
 import { TOOLS } from '../state/State.js';
@@ -37,7 +30,6 @@ function updateDrag(app, drag, startWorld, currentWorld) {
 
         const raw = { x: move.fromX + dx, y: move.fromY + dy };
         
-        // Pass snapRadius through options
         const snapped = snapManager.snap(raw.x, raw.y, model, canvas.camera, { 
             enabled: state.snapEnabled, 
             excludeNodeId: move.nodeId,
@@ -54,8 +46,8 @@ function updateDrag(app, drag, startWorld, currentWorld) {
 function commitDrag(app, drag) {
     const moved = drag.moves.filter((m) => m.toX !== m.fromX || m.toY !== m.fromY);
     if (moved.length > 0) {
-        // Direct command pushing for grouped movements
-        app.history.push(new MoveNodesCommand(app.model, moved));
+        app.history.execute(new MoveNodesCommand(app.model, moved));
+        app._syncUIButtons(); // Push UI update
     }
 }
 
@@ -77,11 +69,18 @@ class SelectTool extends BaseTool {
     }
 
     onPointerDown(world, screen, evt) {
-        const { state, model, canvas } = this.app;
+        const { state, model, canvas, snapManager } = this.app;
         const multi = !!(evt.shiftKey || evt.ctrlKey || evt.metaKey);
-        const hit = this.app.hitTest.hit(world.x, world.y, model, canvas.camera);
+        
+        let hit = this.app.hitTest.hit(world.x, world.y, model, canvas.camera);
+        const snapped = snapManager.snap(world.x, world.y, model, canvas.camera, { enabled: state.snapEnabled, snapRadius: state.snapRadius });
+        
+        // Fix: If snap manager found a node, trust it over HitTest
+        if (snapped.type === 'node' && (!hit.object || hit.type !== 'node')) {
+            hit = { type: 'node', object: model.getNode(snapped.id) };
+        }
 
-        if (hit.type === 'node' && state.selection.isNodeSelected(hit.object.id) && !multi) {
+        if (hit.type === 'node' && hit.object && state.selection.isNodeSelected(hit.object.id) && !multi) {
             this.dragStartWorld = world;
             this.drag = beginDrag(this.app, state.selection.nodes);
             return;
@@ -89,9 +88,9 @@ class SelectTool extends BaseTool {
 
         state.selection.pick(screen.x, screen.y, model, canvas.camera, multi);
 
-        if (hit.type === null) {
+        if (hit.type === null || (snapped.type !== 'node' && hit.type === null)) {
             state.selection.startBoxSelection(screen.x, screen.y);
-        } else if (hit.type === 'node' && state.selection.isNodeSelected(hit.object.id)) {
+        } else if (hit.type === 'node' && hit.object && state.selection.isNodeSelected(hit.object.id)) {
             this.dragStartWorld = world;
             this.drag = beginDrag(this.app, state.selection.nodes);
         }
@@ -143,9 +142,15 @@ class NodeTool extends BaseTool {
             snapRadius: state.snapRadius
         });
 
+        // Fix: Do not create duplicate node on top of an existing one. Just select it.
+        if (snapped.type === 'node') {
+            state.selection.clear();
+            state.selection.nodes.add(snapped.id);
+            canvas.requestRedraw();
+            return;
+        }
+
         const node = new Node(this.app.generateNodeId(), snapped.x, snapped.y);
-        
-        // Execute command correctly via app wrapper
         this.app.executeCommand(new CreateNodeCommand(model, node));
 
         state.selection.clear();
@@ -160,11 +165,26 @@ class ElementTool extends BaseTool {
     onDeactivate() { this.firstNodeId = null; }
 
     onPointerDown(world) {
-        const { model, state, canvas } = this.app;
-        let targetNode = this.app.hitTest.hitNode(world.x, world.y, model, canvas.camera);
+        const { model, state, canvas, snapManager } = this.app;
+        
+        const snapped = snapManager.snap(world.x, world.y, model, canvas.camera, { 
+            enabled: state.snapEnabled, 
+            snapRadius: state.snapRadius 
+        });
 
-        // FIX: Cancel beam drawing if clicking empty space
+        let targetNode = null;
+
+        // Fix: Trust SnapManager over HitTest to ensure UI Indicator matches click reality
+        if (snapped.type === 'node') {
+            targetNode = model.getNode(snapped.id);
+        } else if (snapped.type === 'grid') {
+            // Fix: Re-allow creating elements to Grid intersections!
+            targetNode = new Node(this.app.generateNodeId(), snapped.x, snapped.y);
+            this.app.executeCommand(new CreateNodeCommand(model, targetNode));
+        }
+
         if (!targetNode) {
+            // User clicked completely free space (no snap). Cancel drawing.
             this.firstNodeId = null;
             state.selection.clear();
             canvas.requestRedraw();
@@ -181,7 +201,6 @@ class ElementTool extends BaseTool {
                 state.drawElementType
             );
             
-            // Execute command correctly via app wrapper
             this.app.executeCommand(new CreateBeamCommand(model, element));
             this.firstNodeId = targetNode.id;
         }
@@ -198,8 +217,18 @@ class MoveTool extends BaseTool {
     onDeactivate() { this.drag = null; }
 
     onPointerDown(world) {
-        const { state, model, canvas } = this.app;
-        const node = this.app.hitTest.hitNode(world.x, world.y, model, canvas.camera);
+        const { state, model, canvas, snapManager } = this.app;
+        
+        const snapped = snapManager.snap(world.x, world.y, model, canvas.camera, { enabled: state.snapEnabled, snapRadius: state.snapRadius });
+        let node = null;
+        
+        // Fix: Trust SnapManager first
+        if (snapped.type === 'node') {
+            node = model.getNode(snapped.id);
+        } else {
+            node = this.app.hitTest.hitNode(world.x, world.y, model, canvas.camera);
+        }
+        
         if (!node) return;
 
         if (!state.selection.isNodeSelected(node.id)) {
@@ -224,10 +253,15 @@ class MoveTool extends BaseTool {
 
 class DeleteTool extends BaseTool {
     onPointerDown(world) {
-        const { model, canvas } = this.app;
-        const hit = this.app.hitTest.hit(world.x, world.y, model, canvas.camera);
+        const { model, canvas, snapManager, state } = this.app;
         
-        // Execute via app.executeCommand
+        let hit = this.app.hitTest.hit(world.x, world.y, model, canvas.camera);
+        const snapped = snapManager.snap(world.x, world.y, model, canvas.camera, { enabled: state.snapEnabled, snapRadius: state.snapRadius });
+        
+        if (snapped.type === 'node' && (!hit.object || hit.type !== 'node')) {
+            hit = { type: 'node', object: model.getNode(snapped.id) };
+        }
+        
         if (hit.type === 'node') {
             this.app.executeCommand(new DeleteSelectionCommand(model, [hit.object.id], []));
         } else if (hit.type === 'element') {

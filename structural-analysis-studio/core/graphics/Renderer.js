@@ -1,10 +1,3 @@
-/**
- * Renderer.js
- * ------------------------------------------------------------------
- * Composition point for drawing every engineering object.
- * ------------------------------------------------------------------
- */
-
 import { NodeRenderer } from './renderers/NodeRenderer.js';
 import { ElementRenderer } from './renderers/ElementRenderer.js';
 import { SupportRenderer } from './renderers/SupportRenderer.js';
@@ -47,9 +40,11 @@ export class Renderer {
 
     _drawSnapIndicator(ctx, model, camera, state, toolManager, snapManager) {
         if (!toolManager || !snapManager) return;
+        
+        // Safety guard
+        if (typeof state.mouse.worldX !== 'number') return;
 
         const activeName = toolManager.getActiveName();
-        // Show snap indicators while placing nodes, elements, or dragging
         if (activeName !== TOOLS.DRAW_NODE && activeName !== TOOLS.DRAW_ELEMENT && activeName !== TOOLS.MOVE && activeName !== TOOLS.SELECT) return;
 
         const snapped = snapManager.snap(state.mouse.worldX, state.mouse.worldY, model, camera, { 
@@ -57,7 +52,6 @@ export class Renderer {
             snapRadius: state.snapRadius 
         });
 
-        // Disappear if not snapped to anything
         if (!snapped.snapped) return;
 
         const pos = camera.worldToScreen(snapped.x, snapped.y);
@@ -66,13 +60,11 @@ export class Renderer {
         ctx.beginPath();
         
         if (snapped.type === "node") {
-            // Draw Highlighted Circle for Node Snap
             ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2);
             ctx.strokeStyle = 'rgba(16, 185, 129, 0.9)'; // Green
             ctx.lineWidth = 2;
             ctx.stroke();
         } else if (snapped.type === "grid") {
-            // Draw Highlighted Square for Grid Snap
             const size = 10;
             ctx.rect(pos.x - size/2, pos.y - size/2, size, size);
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'; // White

@@ -1,9 +1,33 @@
+/**
+ * Commands.js
+ * ------------------------------------------------------------------
+ * Command-pattern undo/redo for the Geometry Editor.
+ *
+ * Each user-facing edit (create a node, delete a node, move a node,
+ * create a beam, delete a beam/selection) is represented as a Command
+ * object with symmetrical execute()/undo() methods. CommandHistory
+ * keeps the undo/redo stacks and is the only thing App/ToolManager
+ * needs to talk to.
+ *
+ * NOTE: Model.deleteNode() (core/modeling/Model.js) cascades to remove
+ * connected Elements and Supports, but it does NOT clean up Loads that
+ * target the deleted node (existing behavior in a file this phase is
+ * not allowed to touch). The delete commands below compensate for that
+ * explicitly so nothing is silently orphaned and undo can restore it.
+ * ------------------------------------------------------------------
+ */
+
 export class Command {
     execute() { throw new Error('execute() must be implemented by subclass'); }
     undo() { throw new Error('undo() must be implemented by subclass'); }
 }
 
+// ==========================================
+// Node Commands
+// ==========================================
+
 export class CreateNodeCommand extends Command {
+    /** @param {import('../modeling/Model.js').Model} model */
     constructor(model, node) {
         super();
         this.model = model;
@@ -23,6 +47,7 @@ export class DeleteNodeCommand extends Command {
         this._supports = [];
         this._loads = [];
     }
+
     execute() {
         const node = this.model.getNode(this.nodeId);
         if (!node) return;
@@ -33,12 +58,17 @@ export class DeleteNodeCommand extends Command {
             const b = el.endNode?.id || el.endNode;
             return a === this.nodeId || b === this.nodeId;
         });
-        this._supports = this.model.getAllSupports().filter((s) => (s.node?.id || s.node) === this.nodeId);
-        this._loads = this.model.getAllLoads().filter((l) => l.targetType === 'node' && (l.target?.id || l.target) === this.nodeId);
+        this._supports = this.model.getAllSupports().filter(
+            (s) => (s.node?.id || s.node) === this.nodeId
+        );
+        this._loads = this.model.getAllLoads().filter(
+            (l) => l.targetType === 'node' && (l.target?.id || l.target) === this.nodeId
+        );
 
-        this.model.deleteNode(this.nodeId, true);
-        this._loads.forEach((l) => this.model.removeLoad(l.id));
+        this.model.deleteNode(this.nodeId, true); // cascades elements + supports
+        this._loads.forEach((l) => this.model.removeLoad(l.id)); // Model doesn't cascade loads
     }
+
     undo() {
         if (!this._node) return;
         this.model.addNode(this._node);
@@ -68,6 +98,11 @@ export class MoveNodeCommand extends Command {
     }
 }
 
+/**
+ * Batches a drag of one or more nodes (e.g. box-selected nodes dragged
+ * together) into a single undo step.
+ * @param {{nodeId: string, fromX: number, fromY: number, toX: number, toY: number}[]} moves
+ */
 export class MoveNodesCommand extends Command {
     constructor(model, moves) {
         super();
@@ -87,6 +122,10 @@ export class MoveNodesCommand extends Command {
         }
     }
 }
+
+// ==========================================
+// Element ("Beam") Commands
+// ==========================================
 
 export class CreateBeamCommand extends Command {
     constructor(model, element) {
@@ -114,18 +153,26 @@ export class DeleteBeamCommand extends Command {
     }
 }
 
+// ==========================================
+// Compound: Delete Selection (nodes + elements) as ONE undo step
+// ==========================================
+
 export class DeleteSelectionCommand extends Command {
     constructor(model, nodeIds = [], elementIds = []) {
         super();
         this.model = model;
         this.nodeIds = [...nodeIds];
         this.elementIds = [...elementIds];
+
         this._removedNodes = [];
         this._removedElements = [];
         this._removedSupports = [];
         this._removedLoads = [];
     }
+
     execute() {
+        // Any element touching a node we're about to delete must go too,
+        // even if it wasn't explicitly selected.
         const elementIdsToRemove = new Set(this.elementIds);
         for (const el of this.model.getAllElements()) {
             const a = el.startNode?.id || el.startNode;
@@ -134,6 +181,7 @@ export class DeleteSelectionCommand extends Command {
                 elementIdsToRemove.add(el.id);
             }
         }
+
         for (const elementId of elementIdsToRemove) {
             const el = this.model.findElementById(elementId);
             if (el) {
@@ -141,6 +189,7 @@ export class DeleteSelectionCommand extends Command {
                 this.model.deleteElement(elementId);
             }
         }
+
         for (const nodeId of this.nodeIds) {
             const node = this.model.getNode(nodeId);
             if (!node) continue;
@@ -154,10 +203,11 @@ export class DeleteSelectionCommand extends Command {
             loadsOnNode.forEach((l) => this._removedLoads.push(l));
 
             this._removedNodes.push(node);
-            this.model.deleteNode(nodeId, true); 
-            loadsOnNode.forEach((l) => this.model.removeLoad(l.id)); 
+            this.model.deleteNode(nodeId, true); // cascades elements + supports
+            loadsOnNode.forEach((l) => this.model.removeLoad(l.id)); // Model doesn't cascade loads
         }
     }
+
     undo() {
         this._removedNodes.forEach((n) => this.model.addNode(n));
         this._removedElements.forEach((e) => this.model.addElement(e));
@@ -166,6 +216,10 @@ export class DeleteSelectionCommand extends Command {
     }
 }
 
+// ==========================================
+// History Manager
+// ==========================================
+
 export class CommandHistory {
     constructor(maxHistory = 100) {
         this.undoStack = [];
@@ -173,16 +227,22 @@ export class CommandHistory {
         this.maxHistory = maxHistory;
     }
 
+    /** Applies a command's execute() and records it. */
     execute(command) {
         command.execute();
         this.push(command);
         return command;
     }
 
+    /**
+     * Records an already-applied command without re-running execute().
+     * Used for live-drag interactions where the mutation happened frame
+     * by frame and only needs to be captured as one undo step at the end.
+     */
     push(command) {
         this.undoStack.push(command);
         if (this.undoStack.length > this.maxHistory) this.undoStack.shift();
-        this.redoStack = []; // Empties redo stack automatically on new command creation
+        this.redoStack = [];
     }
 
     undo() {
@@ -203,5 +263,9 @@ export class CommandHistory {
 
     canUndo() { return this.undoStack.length > 0; }
     canRedo() { return this.redoStack.length > 0; }
-    clear() { this.undoStack = []; this.redoStack = []; }
+
+    clear() {
+        this.undoStack = [];
+        this.redoStack = [];
+    }
 }

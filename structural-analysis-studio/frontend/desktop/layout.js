@@ -1,80 +1,90 @@
-// A simple UI Manager mapping for layout interactions
+// Phase 4 desktop bootstrap
 import { App } from '../../core/app/app.js';
 import { TOOLS } from '../../core/state/State.js';
 import { ELEMENT_TYPES } from '../../core/modeling/Element.js';
 import { Toolbar } from './components/Toolbar.js';
 
-document.addEventListener("DOMContentLoaded", () => {
-    
-    // Bottom Panel Tab Switching logic
-    const bpTabs = document.querySelectorAll('.bp-tab');
-    bpTabs.forEach(tab => {
-        tab.addEventListener('click', (e) => {
-            bpTabs.forEach(t => t.classList.remove('active'));
-            e.target.classList.add('active');
-            // Normally this would trigger BottomPanel.js state updates
-        });
-    });
+document.addEventListener('DOMContentLoaded', () => {
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    if (isMobile) return;
 
-    // Workspace Tab Switching logic
-    const wsTabs = document.querySelectorAll('.workspace-tabs .tab');
-    wsTabs.forEach(tab => {
-        tab.addEventListener('click', (e) => {
-            wsTabs.forEach(t => t.classList.remove('active'));
-            e.target.classList.add('active');
-            // Normally this would trigger UIManager.js canvas swap
-        });
-    });
-
-    // ==========================================
-    // Phase 4: Real Geometry Editor bootstrap
-    // ------------------------------------------
-    // This replaces the old static ribbon mockup with a live Toolbar.js
-    // instance wired to a real App(...) running against the real
-    // #editor-canvas element. Nothing here touches the solver/analysis/
-    // modeling internals — it only connects UI events to the public
-    // App API built in Phase 4 (setTool, undo/redo, zoom, fitView, ...).
-    // ==========================================
     const canvasEl = document.getElementById('editor-canvas');
     const toolbarMount = document.getElementById('toolbar-mount');
-    if (!canvasEl || !toolbarMount) return; // desktop shell isn't present on this viewport
+    if (!canvasEl || !toolbarMount) return;
 
     const app = new App(canvasEl);
-    window.editorApp = app; // handy for manual verification from the browser console
+    window.editorApp = app;
+    window.appInstance = app;
 
     const toolbar = new Toolbar(toolbarMount, {
         onToolChange: (toolId) => {
             switch (toolId) {
-                case 'select': app.setTool(TOOLS.SELECT); break;
-                case 'move': app.setTool(TOOLS.MOVE); break;
-                case 'pan': app.setTool(TOOLS.PAN); break;
-                case 'addNode': app.setTool(TOOLS.DRAW_NODE); break;
-                case 'addBeam': app.setElementTool(ELEMENT_TYPES.BEAM); break;
-                case 'addBar': app.setElementTool(ELEMENT_TYPES.BAR); break;
-                case 'addSpring': app.setElementTool(ELEMENT_TYPES.SPRING); break;
-                case 'delete': app.setTool(TOOLS.DELETE); break;
-                // addSupport / addLoad buttons are disabled in the Toolbar UI
-                // (see Toolbar.js) until that functionality actually exists.
-                default: console.warn(`No App action wired for tool "${toolId}" yet.`);
+                case 'select':
+                    app.setTool(TOOLS.SELECT);
+                    break;
+                case 'move':
+                    app.setTool(TOOLS.MOVE);
+                    break;
+                case 'pan':
+                    app.setTool(TOOLS.PAN);
+                    break;
+                case 'addNode':
+                    app.setTool(TOOLS.DRAW_NODE);
+                    break;
+                case 'addBeam':
+                    app.setElementTool(ELEMENT_TYPES.BEAM);
+                    break;
+                case 'addBar':
+                    app.setElementTool(ELEMENT_TYPES.BAR);
+                    break;
+                case 'addSpring':
+                    app.setElementTool(ELEMENT_TYPES.SPRING);
+                    break;
+                case 'delete':
+                    app.setTool(TOOLS.DELETE);
+                    break;
+                case 'addSupport':
+                    console.warn('Support tool not implemented yet.');
+                    break;
+                case 'addLoad':
+                    console.warn('Load tool not implemented yet.');
+                    break;
+                default:
+                    console.warn(`No App action wired for tool "${toolId}" yet.`);
             }
         },
+
         onToggleSnap: (checked) => app.setSnapEnabled(checked),
         onToggleGrid: (checked) => app.setGridEnabled(checked),
+
         onUndo: () => app.undo(),
         onRedo: () => app.redo(),
+
         onZoomIn: () => app.zoomIn(),
         onZoomOut: () => app.zoomOut(),
         onFitView: () => app.fitView(),
-        // onRunAnalysis / onToggleLearning / onViewOptionChange are
-        // intentionally left unset: those Toolbar controls are disabled
-        // until the Phase 5 solver exists, so they have nothing to call yet.
+        onResetView: () => app.resetView(),
+
+        onRunAnalysis: () => alert('Phase 5 only'),
+        onToggleLearning: () => {},
+        onViewOptionChange: () => {},
     });
 
-    // Keep the Undo/Redo buttons' enabled state honest. Node/beam creation
-    // and drags push straight onto app.history from ToolManager, so a light
-    // poll is the simplest way to reflect that without threading a change
-    // event through Commands.js/ToolManager for this Phase-4 UI concern.
-    setInterval(() => {
-        toolbar.setHistoryState(app.canUndo(), app.canRedo());
-    }, 250);
+    app.attachToolbar(toolbar);
+
+    const desktopUndo = document.getElementById('desktop-undo');
+    const desktopRedo = document.getElementById('desktop-redo');
+
+    const syncTopButtons = () => {
+        if (desktopUndo) desktopUndo.disabled = !app.canUndo();
+        if (desktopRedo) desktopRedo.disabled = !app.canRedo();
+    };
+
+    if (desktopUndo) desktopUndo.addEventListener('click', () => app.undo());
+    if (desktopRedo) desktopRedo.addEventListener('click', () => app.redo());
+
+    setInterval(syncTopButtons, 250);
+    syncTopButtons();
+
+    app.canvas.fitModelToScreen(app.model, 60);
 });

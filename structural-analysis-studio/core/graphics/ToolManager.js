@@ -205,16 +205,16 @@ class ElementTool extends BaseTool {
     onDeactivate() { this.firstNodeId = null; }
 
     onPointerDown(world) {
-        const { model, state, canvas, snapManager, history } = this.app;
+        const { model, state, canvas, history } = this.app;
 
         let targetNode = this.app.hitTest.hitNode(world.x, world.y, model, canvas.camera);
 
+        // FIX: If they click empty space, cancel the drawing action and do NOT create a node.
         if (!targetNode) {
-            const snapped = state.snapEnabled
-                ? snapManager.snap(world.x, world.y, model, canvas.camera)
-                : { x: world.x, y: world.y };
-            targetNode = new Node(this.app.generateNodeId(), snapped.x, snapped.y);
-            history.execute(new CreateNodeCommand(model, targetNode));
+            this.firstNodeId = null;
+            state.selection.clear();
+            canvas.requestRedraw();
+            return;
         }
 
         if (!this.firstNodeId) {

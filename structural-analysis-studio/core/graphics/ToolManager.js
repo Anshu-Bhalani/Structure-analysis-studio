@@ -258,8 +258,8 @@ class NodeTool extends BaseTool {
 
 // ==========================================
 // Element Tool — click Node A, click Node B -> create element
-// (generic: spring/bar/beam all use this, differing only by
-// state.drawElementType)
+// IMPORTANT: This version does NOT auto-create nodes on empty space.
+// It only creates beams/bars/frames/springs between existing nodes.
 // ==========================================
 
 class ElementTool extends BaseTool {
@@ -271,30 +271,36 @@ class ElementTool extends BaseTool {
         this.firstNodeId = null;
     }
 
-    _resolveNodeAt(world) {
+    _pickExistingNodeAt(world) {
         const { model, state, canvas, snapManager } = this.app;
 
+        // Prefer exact node hit.
         const hitNode = this.app.hitTest.hitNode(world.x, world.y, model, canvas.camera);
         if (hitNode) return hitNode;
 
-        const snapped = state.snapEnabled
-            ? snapManager.snap(world.x, world.y, model, canvas.camera)
-            : { x: world.x, y: world.y, snappedTo: null };
-
-        if (snapped.snappedTo?.type === 'node') {
-            return model.getNode(snapped.snappedTo.id);
+        // Then snap-to-node if enabled.
+        if (state.snapEnabled) {
+            const snapped = snapManager.snap(world.x, world.y, model, canvas.camera);
+            if (snapped.snappedTo?.type === 'node') {
+                return model.getNode(snapped.snappedTo.id) || null;
+            }
         }
 
-        const node = new Node(this.app.generateNodeId(), snapped.x, snapped.y);
-        this.app.executeCommand(new CreateNodeCommand(model, node));
-        return node;
+        // No existing node at this point.
+        return null;
     }
 
     onPointerDown(world) {
         const { model, state, canvas } = this.app;
 
-        const targetNode = this._resolveNodeAt(world);
-        if (!targetNode) return;
+        const targetNode = this._pickExistingNodeAt(world);
+
+        // No node under cursor => do nothing.
+        // This is the requested behavior: beam creation is only possible
+        // between already-existing nodes.
+        if (!targetNode) {
+            return;
+        }
 
         if (!this.firstNodeId) {
             this.firstNodeId = targetNode.id;

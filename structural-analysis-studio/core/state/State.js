@@ -3,20 +3,25 @@
  * ------------------------------------------------------------------
  * Centralized state management for the Geometry Editor.
  * Responsibilities:
- * - Track the active interaction tool (Select, Draw, Loads, etc.)
+ * - Track the active interaction tool (Select, Draw, Move, Delete, Pan...)
  * - Maintain reference to the current Selection and Hover states
  * - Store global editor settings (Snap, Grid visibility)
  * - Track mouse coordinates in both Screen and World space
- * - Provide the foundation for the Undo/Redo history stack
+ * - Hold the Undo/Redo command history
  * ------------------------------------------------------------------
  */
 
 import { Selection } from '../graphics/Selection.js';
+import { CommandHistory } from '../graphics/Commands.js';
+import { ELEMENT_TYPES } from '../modeling/Element.js';
 
 export const TOOLS = {
     SELECT: 'select',
     DRAW_NODE: 'draw_node',
     DRAW_ELEMENT: 'draw_element',
+    MOVE: 'move',
+    PAN: 'pan',
+    DELETE: 'delete',
     ADD_SUPPORT: 'add_support',
     ADD_LOAD: 'add_load'
 };
@@ -26,16 +31,21 @@ export class State {
         // --- Interaction State ---
         this.currentTool = TOOLS.SELECT;
         this.drawingMode = 'continuous'; // 'continuous' (chaining elements) or 'single'
-        
+
+        // Which element type the generic DRAW_ELEMENT tool creates
+        // (Beam/Bar/Spring/etc). Set via setDrawElementType() from the
+        // Toolbar's "+ Beam" / "+ Bar" / "+ Spring" buttons.
+        this.drawElementType = ELEMENT_TYPES.BEAM;
+
         // --- Selection & Hover ---
         this.selection = new Selection();
         this.hoveredObject = null; // { id: string, type: 'node' | 'element' } | null
-        
+
         // --- Environment Settings ---
         this.snapEnabled = true;
         this.snapDistance = 0.5; // World units
         this.gridEnabled = true;
-        
+
         // --- Mouse Tracking ---
         this.mouse = {
             screenX: 0,
@@ -46,10 +56,10 @@ export class State {
         };
 
         // --- History (Undo/Redo) ---
-        // Stores serialized JSON snapshots of the Model
-        this.undoStack = [];
-        this.redoStack = [];
-        this.maxHistory = 50;
+        // Command-pattern history (see core/graphics/Commands.js). Each
+        // entry knows how to apply and reverse itself, which is more
+        // precise than diffing whole-model JSON snapshots.
+        this.history = new CommandHistory();
     }
 
     // ==========================================
@@ -63,6 +73,14 @@ export class State {
         }
         this.currentTool = tool;
         this.selection.clear(); // Usually, changing tools clears selection
+    }
+
+    setDrawElementType(type) {
+        if (!Object.values(ELEMENT_TYPES).includes(type)) {
+            console.warn(`Unknown element type: ${type}`);
+            return;
+        }
+        this.drawElementType = type;
     }
 
     setHover(id, type) {
@@ -83,52 +101,10 @@ export class State {
     // ==========================================
     // History Management (Undo/Redo)
     // ==========================================
+    // Thin convenience pass-throughs so callers (Toolbar, keyboard
+    // shortcuts) can query button-enabled state without reaching into
+    // state.history directly.
 
-    /**
-     * Captures the current model state and pushes it to the undo stack.
-     * @param {import('../modeling/Model.js').Model} model 
-     */
-    saveSnapshot(model) {
-        if (!model) return;
-        
-        // Clear redo stack whenever a new action is performed
-        this.redoStack = [];
-        
-        const snapshot = JSON.stringify(model.toJSON());
-        this.undoStack.push(snapshot);
-        
-        if (this.undoStack.length > this.maxHistory) {
-            this.undoStack.shift(); // Remove oldest state
-        }
-    }
-
-    /**
-     * Pops the last state from the undo stack and returns it.
-     * Pushes the current state to the redo stack.
-     */
-    undo(currentModel) {
-        if (this.undoStack.length === 0) return null;
-        
-        // Save current state to redo
-        this.redoStack.push(JSON.stringify(currentModel.toJSON()));
-        
-        // Return previous state
-        const previousStateJSON = this.undoStack.pop();
-        return JSON.parse(previousStateJSON);
-    }
-
-    /**
-     * Pops the last undone state from the redo stack and returns it.
-     * Pushes the current state back to the undo stack.
-     */
-    redo(currentModel) {
-        if (this.redoStack.length === 0) return null;
-        
-        // Save current state to undo
-        this.undoStack.push(JSON.stringify(currentModel.toJSON()));
-        
-        // Return next state
-        const nextStateJSON = this.redoStack.pop();
-        return JSON.parse(nextStateJSON);
-    }
+    canUndo() { return this.history.canUndo(); }
+    canRedo() { return this.history.canRedo(); }
 }

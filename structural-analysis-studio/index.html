@@ -493,57 +493,65 @@
 
     <!-- FIX: Added small global connector to hook the HTML buttons to the App -->
     <script>
-        // A simple UI Manager mapping for static layout interactions (Tabs, Ribbons)
-        document.addEventListener("DOMContentLoaded", () => {
-            
-            // Bottom Panel Tab Switching logic
-            const bpTabs = document.querySelectorAll('.bp-tab');
-            bpTabs.forEach(tab => {
-                tab.addEventListener('click', (e) => {
-                    bpTabs.forEach(t => t.classList.remove('active'));
-                    e.target.classList.add('active');
-                });
-            });
+  document.addEventListener("DOMContentLoaded", () => {
+    // Bottom Panel Tab Switching logic
+    const bpTabs = document.querySelectorAll('.bp-tab');
+    bpTabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        bpTabs.forEach(t => t.classList.remove('active'));
+        e.target.classList.add('active');
+      });
+    });
 
-            // Workspace Tab Switching logic
-            const wsTabs = document.querySelectorAll('.workspace-tabs .tab');
-            wsTabs.forEach(tab => {
-                tab.addEventListener('click', (e) => {
-                    if (e.target.classList.contains('disabled-phase')) return;
-                    wsTabs.forEach(t => t.classList.remove('active'));
-                    e.target.classList.add('active');
-                });
-            });
+    // Workspace Tab Switching logic
+    const wsTabs = document.querySelectorAll('.workspace-tabs .tab');
+    wsTabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        if (e.target.classList.contains('disabled-phase')) return;
+        wsTabs.forEach(t => t.classList.remove('active'));
+        e.target.classList.add('active');
+      });
+    });
 
-            // Ribbon tool active state logic
-            const ribbonBtns = document.querySelectorAll('.ribbon-btn');
-            ribbonBtns.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const group = e.target.closest('.ribbon-group');
-                    group.querySelectorAll('.ribbon-btn').forEach(b => b.classList.remove('active'));
-                    e.target.closest('.ribbon-btn').classList.add('active');
-                });
-            });
+    // Ribbon active state logic
+    const ribbonBtns = document.querySelectorAll('.ribbon-btn');
+    ribbonBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const group = e.target.closest('.ribbon-group');
+        if (!group) return;
+        group.querySelectorAll('.ribbon-btn').forEach(b => b.classList.remove('active'));
+        e.target.closest('.ribbon-btn')?.classList.add('active');
+      });
+    });
 
-            // -------------------------------------------------------------
-            // FIX: Wire the top-nav / mobile Undo/Redo buttons to the App
-            // -------------------------------------------------------------
-            // We wait slightly to ensure frontend/desktop/layout.js has initialized 'window.appInstance'
-            setTimeout(() => {
-                const btnDeskUndo = document.getElementById('desktop-undo');
-                const btnDeskRedo = document.getElementById('desktop-redo');
-                const btnMobUndo = document.getElementById('mob-undo');
-                const btnMobRedo = document.getElementById('mob-redo');
+    // Wire Undo / Redo buttons to whichever App instance is active.
+    // desktop/layout.js and mobile/layout.js expose it as window.appInstance.
+    const bindUndoRedo = () => {
+      const app = window.appInstance || window.editorApp || window.editorAppMobile;
+      if (!app) {
+        setTimeout(bindUndoRedo, 100);
+        return;
+      }
 
-                const doUndo = () => { if (window.appInstance) window.appInstance.undo(); };
-                const doRedo = () => { if (window.appInstance) window.appInstance.redo(); };
+      const btnDeskUndo = document.getElementById('desktop-undo');
+      const btnDeskRedo = document.getElementById('desktop-redo');
+      const btnMobUndo = document.getElementById('mob-undo');
+      const btnMobRedo = document.getElementById('mob-redo');
 
-                if (btnDeskUndo) btnDeskUndo.addEventListener('click', doUndo);
-                if (btnDeskRedo) btnDeskRedo.addEventListener('click', doRedo);
-                if (btnMobUndo) btnMobUndo.addEventListener('click', doUndo);
-                if (btnMobRedo) btnMobRedo.addEventListener('click', doRedo);
-            }, 500);
-        });
-    </script>
+      const bindOnce = (btn, handler) => {
+        if (!btn || btn.dataset.bound === '1') return;
+        btn.addEventListener('click', handler);
+        btn.dataset.bound = '1';
+      };
+
+      bindOnce(btnDeskUndo, () => app.undo?.());
+      bindOnce(btnDeskRedo, () => app.redo?.());
+      bindOnce(btnMobUndo, () => app.undo?.());
+      bindOnce(btnMobRedo, () => app.redo?.());
+    };
+
+    bindUndoRedo();
+  });
+</script>
 </body>
 </html>

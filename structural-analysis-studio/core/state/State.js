@@ -1,16 +1,3 @@
-/**
- * State.js
- * ------------------------------------------------------------------
- * Centralized state management for the Geometry Editor.
- * Responsibilities:
- * - Track the active interaction tool (Select, Draw, Move, Delete, Pan...)
- * - Maintain reference to the current Selection and Hover states
- * - Store global editor settings (Snap, Grid visibility)
- * - Track mouse coordinates in both Screen and World space
- * - Hold the Undo/Redo command history
- * ------------------------------------------------------------------
- */
-
 import { Selection } from '../graphics/Selection.js';
 import { CommandHistory } from '../graphics/Commands.js';
 import { ELEMENT_TYPES } from '../modeling/Element.js';
@@ -28,25 +15,18 @@ export const TOOLS = {
 
 export class State {
     constructor() {
-        // --- Interaction State ---
         this.currentTool = TOOLS.SELECT;
-        this.drawingMode = 'continuous'; // 'continuous' (chaining elements) or 'single'
-
-        // Which element type the generic DRAW_ELEMENT tool creates
-        // (Beam/Bar/Spring/etc). Set via setDrawElementType() from the
-        // Toolbar's "+ Beam" / "+ Bar" / "+ Spring" buttons.
+        this.drawingMode = 'continuous'; 
         this.drawElementType = ELEMENT_TYPES.BEAM;
 
-        // --- Selection & Hover ---
         this.selection = new Selection();
-        this.hoveredObject = null; // { id: string, type: 'node' | 'element' } | null
+        this.hoveredObject = null;
 
-        // --- Environment Settings ---
+        // --- Snap Configuration ---
         this.snapEnabled = true;
-        this.snapDistance = 0.5; // World units
+        this.snapRadius = 12; // pixels
         this.gridEnabled = true;
 
-        // --- Mouse Tracking ---
         this.mouse = {
             screenX: 0,
             screenY: 0,
@@ -55,40 +35,22 @@ export class State {
             isDown: false
         };
 
-        // --- History (Undo/Redo) ---
-        // Command-pattern history (see core/graphics/Commands.js). Each
-        // entry knows how to apply and reverse itself, which is more
-        // precise than diffing whole-model JSON snapshots.
         this.history = new CommandHistory();
     }
 
-    // ==========================================
-    // Tool & Mode Management
-    // ==========================================
-
     setTool(tool) {
-        if (!Object.values(TOOLS).includes(tool)) {
-            console.warn(`Unknown tool: ${tool}`);
-            return;
-        }
+        if (!Object.values(TOOLS).includes(tool)) return;
         this.currentTool = tool;
-        this.selection.clear(); // Usually, changing tools clears selection
+        this.selection.clear();
     }
 
     setDrawElementType(type) {
-        if (!Object.values(ELEMENT_TYPES).includes(type)) {
-            console.warn(`Unknown element type: ${type}`);
-            return;
-        }
+        if (!Object.values(ELEMENT_TYPES).includes(type)) return;
         this.drawElementType = type;
     }
 
     setHover(id, type) {
-        if (!id) {
-            this.hoveredObject = null;
-        } else {
-            this.hoveredObject = { id, type };
-        }
+        this.hoveredObject = id ? { id, type } : null;
     }
 
     updateMouse(screenX, screenY, worldX, worldY) {
@@ -97,13 +59,6 @@ export class State {
         this.mouse.worldX = worldX;
         this.mouse.worldY = worldY;
     }
-
-    // ==========================================
-    // History Management (Undo/Redo)
-    // ==========================================
-    // Thin convenience pass-throughs so callers (Toolbar, keyboard
-    // shortcuts) can query button-enabled state without reaching into
-    // state.history directly.
 
     canUndo() { return this.history.canUndo(); }
     canRedo() { return this.history.canRedo(); }

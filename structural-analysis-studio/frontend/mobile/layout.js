@@ -1,118 +1,127 @@
+// Phase 4 mobile bootstrap
 import { App } from '../../core/app/app.js';
 import { TOOLS } from '../../core/state/State.js';
 import { ELEMENT_TYPES } from '../../core/modeling/Element.js';
 import { TouchController } from './components/TouchController.js';
 
-document.addEventListener("DOMContentLoaded", () => {
-    // Only execute if mobile view is present
-    const mobileApp = document.getElementById('mobile-view');
-    if (!mobileApp) return;
+document.addEventListener('DOMContentLoaded', () => {
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    if (!isMobile) return;
 
-    // --- Bottom Navigation Routing ---
-    const navButtons = document.querySelectorAll('.mob-bottom-nav button');
+    const mobileRoot = document.getElementById('mobile-view');
+    const canvasEl = document.getElementById('editor-canvas-mobile');
+    if (!mobileRoot || !canvasEl) return;
+
+    const app = new App(canvasEl);
+    window.editorAppMobile = app;
+    window.appInstance = app;
+
+    new TouchController(app, document.body);
+
+    // Bottom nav screen switching
+    const navButtons = document.querySelectorAll('.mob-bottom-nav button[data-target]');
     const screens = document.querySelectorAll('.mob-screen');
 
-    navButtons.forEach(btn => {
+    const activateScreen = (targetId) => {
+        navButtons.forEach((b) => b.classList.toggle('active', b.getAttribute('data-target') === targetId));
+        screens.forEach((screen) => {
+            screen.classList.toggle('active', screen.id === targetId);
+        });
+    };
+
+    navButtons.forEach((btn) => {
         btn.addEventListener('click', () => {
             const targetId = btn.getAttribute('data-target');
             if (!targetId) return;
-
-            // Update Nav State
-            navButtons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-
-            // Switch Screen
-            screens.forEach(screen => {
-                screen.classList.remove('active');
-                if (screen.id === targetId) {
-                    screen.classList.add('active');
-                }
-            });
+            activateScreen(targetId);
         });
     });
 
-    // --- Sidebar (Drawer) Logic ---
+    // Sidebar / drawer logic
     const menuToggle = document.querySelector('.menu-toggle');
     const sidebar = document.getElementById('mob-sidebar');
     const overlay = document.getElementById('mob-overlay');
 
-    function toggleMenu() {
+    const closeDrawer = () => {
+        if (sidebar) sidebar.classList.remove('open');
+        if (overlay) overlay.classList.remove('show');
+    };
+
+    const toggleDrawer = () => {
+        if (!sidebar || !overlay) return;
         sidebar.classList.toggle('open');
         overlay.classList.toggle('show');
+    };
+
+    if (menuToggle) menuToggle.addEventListener('click', toggleDrawer);
+    if (overlay) {
+        overlay.addEventListener('click', () => {
+            closeDrawer();
+            document.querySelectorAll('.mob-bottom-sheet').forEach((sheet) => sheet.classList.remove('open'));
+        });
     }
 
-    if(menuToggle) menuToggle.addEventListener('click', toggleMenu);
-    if(overlay) overlay.addEventListener('click', () => {
-        sidebar.classList.remove('open');
-        overlay.classList.remove('show');
-        
-        // Also close any open bottom sheets when clicking overlay
-        document.querySelectorAll('.mob-bottom-sheet').forEach(sheet => {
-            sheet.classList.remove('open');
-        });
-    });
-
-    // --- Bottom Sheet Logic ---
-    window.toggleBottomSheet = function(sheetId) {
+    // Bottom sheet helper
+    window.toggleBottomSheet = function (sheetId) {
         const sheet = document.getElementById(sheetId);
-        if (sheet) {
-            sheet.classList.toggle('open');
-            if (sheet.classList.contains('open')) {
-                overlay.classList.add('show');
-            } else {
-                overlay.classList.remove('show');
-            }
+        if (!sheet) return;
+
+        sheet.classList.toggle('open');
+        if (overlay) {
+            overlay.classList.toggle('show', sheet.classList.contains('open'));
         }
     };
 
-    const closeSheetBtns = document.querySelectorAll('.close-sheet');
-    closeSheetBtns.forEach(btn => {
+    document.querySelectorAll('.close-sheet').forEach((btn) => {
         btn.addEventListener('click', () => {
             const sheet = btn.closest('.mob-bottom-sheet');
-            sheet.classList.remove('open');
-            overlay.classList.remove('show');
+            if (sheet) sheet.classList.remove('open');
+            if (overlay) overlay.classList.remove('show');
         });
     });
 
-    // ==========================================
-    // Phase 4: Real Geometry Editor bootstrap (mobile)
-    // ------------------------------------------
-    // Wires the same App(...) engine used on desktop to the mobile
-    // #editor-canvas-mobile element, and — the actual blocker being fixed
-    // here — imports and activates TouchController so touch pan/pinch-zoom/
-    // tap-select/long-press actually run. It previously existed as a file
-    // but was never imported anywhere.
-    // ==========================================
-    const canvasEl = document.getElementById('editor-canvas-mobile');
-    if (canvasEl) {
-        const app = new App(canvasEl);
-        new TouchController(app); // activates the touch gesture layer
-        window.editorAppMobile = app; // handy for manual verification from the browser console
+    // Mobile vertical toolbar
+    const vertToolbarButtons = document.querySelectorAll('.mob-vert-toolbar button');
+    const MOBILE_TOOL_ACTIONS = [
+        () => app.setTool(TOOLS.SELECT),               // Select
+        () => app.setTool(TOOLS.DRAW_NODE),            // Node
+        () => app.setElementTool(ELEMENT_TYPES.BEAM),  // Beam
+        null,                                          // Support (not implemented)
+        null,                                          // Load (not implemented)
+        null,                                          // Moment (not implemented)
+        () => app.setTool(TOOLS.DELETE),               // Delete
+        () => app.setTool(TOOLS.MOVE),                 // More -> reuse as Move for now
+    ];
 
-        // The vertical tool strip in the Modeling screen. Support/Load/Moment
-        // are marked disabled in index.html (phase-creep guard — those tools
-        // don't exist in ToolManager yet), so they're skipped here rather
-        // than wired to anything. "More" has no defined behavior yet either.
-        const vertToolbarButtons = document.querySelectorAll('.mob-vert-toolbar button');
-        const MOBILE_TOOL_ACTIONS = [
-            () => app.setTool(TOOLS.SELECT),                    // Select
-            () => app.setTool(TOOLS.DRAW_NODE),                 // Node
-            () => app.setElementTool(ELEMENT_TYPES.BEAM),       // Beam
-            null,                                                // Support (disabled)
-            null,                                                // Load (disabled)
-            null,                                                // Moment (disabled)
-            () => app.setTool(TOOLS.DELETE),                    // Delete
-            null,                                                // More (not implemented yet)
-        ];
+    vertToolbarButtons.forEach((btn, index) => {
+        const action = MOBILE_TOOL_ACTIONS[index];
+        if (!action || btn.disabled) return;
 
-        vertToolbarButtons.forEach((btn, index) => {
-            const action = MOBILE_TOOL_ACTIONS[index];
-            if (!action || btn.disabled) return;
-            btn.addEventListener('click', () => {
-                vertToolbarButtons.forEach((b) => b.classList.remove('active'));
-                btn.classList.add('active');
-                action();
-            });
+        btn.addEventListener('click', () => {
+            vertToolbarButtons.forEach((b) => b.classList.remove('active'));
+            btn.classList.add('active');
+            action();
         });
-    }
+    });
+
+    // Undo / Redo buttons
+    const mobUndo = document.getElementById('mob-undo');
+    const mobRedo = document.getElementById('mob-redo');
+
+    const syncHistoryButtons = () => {
+        if (mobUndo) mobUndo.disabled = !app.canUndo();
+        if (mobRedo) mobRedo.disabled = !app.canRedo();
+    };
+
+    if (mobUndo) mobUndo.addEventListener('click', () => app.undo());
+    if (mobRedo) mobRedo.addEventListener('click', () => app.redo());
+
+    setInterval(syncHistoryButtons, 250);
+    syncHistoryButtons();
+
+    // Default screen
+    const initialScreen = document.querySelector('.mob-bottom-nav button.active')?.getAttribute('data-target') || 'screen-home';
+    activateScreen(initialScreen);
+
+    app.canvas.fitModelToScreen(app.model, 60);
 });

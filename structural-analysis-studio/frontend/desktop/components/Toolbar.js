@@ -9,13 +9,15 @@
 
 const TOOLS = [
   { id: "select", label: "Select", hint: "Select and drag (V)" },
-  { id: "pan", label: "Pan", hint: "Pan the view (hold Alt also pans)" },
+  { id: "move", label: "Move", hint: "Drag nodes to reposition them" },
+  { id: "pan", label: "Pan", hint: "Pan the view (hold Space also pans)" },
   { id: "addNode", label: "+ Node", hint: "Click canvas to place a node" },
   { id: "addSpring", label: "+ Spring", hint: "Click two nodes to connect a spring" },
   { id: "addBar", label: "+ Bar", hint: "Click two nodes to connect a truss bar" },
   { id: "addBeam", label: "+ Beam", hint: "Click two nodes to connect a beam" },
   { id: "addSupport", label: "+ Support", hint: "Click a node to add a support" },
   { id: "addLoad", label: "+ Load", hint: "Click a node to add a nodal load" },
+  { id: "delete", label: "Delete", hint: "Click a node or element to delete it" },
 ];
 
 const VIEW_TOGGLES = [
@@ -39,6 +41,8 @@ export class Toolbar {
     this.containerEl.innerHTML = "";
     this.containerEl.appendChild(this._fileGroup());
     this.containerEl.appendChild(this._toolGroup());
+    this.containerEl.appendChild(this._snapGroup());
+    this.containerEl.appendChild(this._historyGroup());
     this.containerEl.appendChild(this._analysisGroup());
     this.containerEl.appendChild(this._viewGroup());
     this.containerEl.appendChild(this._rightGroup());
@@ -104,6 +108,44 @@ export class Toolbar {
     });
     g.appendChild(learningBtn);
     return g;
+  }
+
+  /** Snap-to-grid / snap-to-node toggles. Both default on, matching State.js's defaults. */
+  _snapGroup() {
+    const g = this._group("snap-group");
+    g.appendChild(this._togglePill("Snap", true, (checked) => this.callbacks.onToggleSnap?.(checked)));
+    g.appendChild(this._togglePill("Grid", true, (checked) => this.callbacks.onToggleGrid?.(checked)));
+    return g;
+  }
+
+  /** Undo/Redo. Buttons start disabled since a fresh editor has nothing to undo yet. */
+  _historyGroup() {
+    const g = this._group("history-group");
+    this.undoBtn = this._btn("↩ Undo", "Undo last action (Ctrl+Z)", () => this.callbacks.onUndo?.());
+    this.redoBtn = this._btn("↪ Redo", "Redo last undone action (Ctrl+Y)", () => this.callbacks.onRedo?.());
+    this.undoBtn.disabled = true;
+    this.redoBtn.disabled = true;
+    g.appendChild(this.undoBtn);
+    g.appendChild(this.redoBtn);
+    return g;
+  }
+
+  /** Call after any model-mutating action so the Undo/Redo buttons reflect what's actually available. */
+  setHistoryState(canUndo, canRedo) {
+    if (this.undoBtn) this.undoBtn.disabled = !canUndo;
+    if (this.redoBtn) this.redoBtn.disabled = !canRedo;
+  }
+
+  _togglePill(label, defaultChecked, onChange) {
+    const wrapper = document.createElement("label");
+    wrapper.className = "checkbox-pill";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = defaultChecked;
+    input.onchange = () => onChange(input.checked);
+    wrapper.appendChild(input);
+    wrapper.append(label);
+    return wrapper;
   }
 
   _viewGroup() {

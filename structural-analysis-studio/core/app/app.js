@@ -1,10 +1,3 @@
-/**
- * app.js
- * ------------------------------------------------------------------
- * Application controller for the Geometry Editor (Phase 4).
- * ------------------------------------------------------------------
- */
-
 import { Canvas } from '../graphics/Canvas.js';
 import { Grid } from '../graphics/Grid.js';
 import { Renderer } from '../graphics/Renderer.js';
@@ -80,13 +73,13 @@ export class App {
     setGridEnabled(enabled) { this.grid.visible = enabled; this.state.gridEnabled = enabled; this.canvas.requestRedraw(); }
 
     // ==========================================
-    // Command Execution (Undo / Redo / Commands)
+    // Command Execution (Undo / Redo Sync Fix)
     // ==========================================
 
-    /** Executes a Command object, clears the Redo stack, and adds to Undo stack */
     executeCommand(command) {
         this.history.execute(command);
         this.canvas.requestRedraw();
+        this._syncUIButtons();
     }
 
     undo() {
@@ -95,6 +88,7 @@ export class App {
             this.state.selection.clear();
             this.canvas.requestRedraw();
         }
+        this._syncUIButtons();
         return applied;
     }
 
@@ -104,7 +98,22 @@ export class App {
             this.state.selection.clear();
             this.canvas.requestRedraw();
         }
+        this._syncUIButtons();
         return applied;
+    }
+
+    /** Forcibly tells the DOM to update Undo/Redo button states */
+    _syncUIButtons() {
+        const canUndo = this.canUndo();
+        const canRedo = this.canRedo();
+        
+        // Find any buttons containing the text Undo/Redo or corresponding icons and update their disabled state
+        document.querySelectorAll('button').forEach(btn => {
+            const text = (btn.textContent || '').toLowerCase();
+            const title = (btn.title || '').toLowerCase();
+            if (text.includes('undo') || title.includes('undo')) btn.disabled = !canUndo;
+            if (text.includes('redo') || title.includes('redo')) btn.disabled = !canRedo;
+        });
     }
 
     canUndo() { return this.history.canUndo(); }
@@ -114,8 +123,6 @@ export class App {
         if (this.state.selection.isEmpty()) return;
         const nodeIds = [...this.state.selection.nodes];
         const elementIds = [...this.state.selection.elements];
-        
-        // Pass through exposed executeCommand pattern
         this.executeCommand(new DeleteSelectionCommand(this.model, nodeIds, elementIds));
         this.state.selection.clear();
     }

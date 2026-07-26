@@ -214,3 +214,17 @@ html, body {
     z-index: 250; display: none;
 }
 .mob-overlay.show { display: block; }
+
+/* ------------------------------------------------------------------
+   Migrated verbatim from index.html's inline <style> block
+   ("Bulletproof Responsive View Switcher"). The #mobile-view rules
+   from that block live here since they target the mobile view
+   element; the matching #desktop-view rule was moved to
+   frontend/desktop/css/main.css, and the shared html/body reset from
+   the same block was moved to frontend/shared/theme/theme.css.
+   ------------------------------------------------------------------ */
+#mobile-view { display: none !important; }
+
+@media (max-width: 768px) {
+    #mobile-view { display: flex !important; flex-direction: column; width: 100%; height: 100%; }
+}

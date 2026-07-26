@@ -21,55 +21,53 @@
     <div id="desktop-view-container"></div>
     <div id="mobile-view-container"></div>
 
-    <!-- 
-      Notice: We removed the <script src="..."> tags from here. 
-      They are now dynamically loaded AFTER the HTML is injected below. 
-    -->
-
     <script>
+        // Helper function to load modules and explicitly WAIT until they are ready
+        function loadModule(src) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.type = 'module';
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.body.appendChild(script);
+            });
+        }
+
         async function bootstrapApplication() {
             try {
-                // 1. Fetch and inject the HTML layouts FIRST
+                // 1. Fetch HTML components concurrently (Pauses execution until done)
                 const [desktopRes, mobileRes] = await Promise.all([
                     fetch('frontend/desktop/layout.html'),
                     fetch('frontend/mobile/layout.html')
                 ]);
 
+                // 2. Inject HTML into the DOM so the Canvas actually exists
                 document.getElementById('desktop-view-container').innerHTML = await desktopRes.text();
                 document.getElementById('mobile-view-container').innerHTML = await mobileRes.text();
 
-                // 2. Initialize the basic UI interactions
+                // 3. Initialize the inline UI interactions (Tabs, Ribbon)
                 initInteractions();
 
-                // 3. LOAD CORE JAVASCRIPT SECOND
-                // This ensures the DOM (canvases, buttons) exists before the scripts run.
-                const scripts = [
-                    'frontend/desktop/layout.js',
-                    'frontend/mobile/layout.js',
-                    'core/app/app.js' // Added core app logic just in case it's your main entry point
-                ];
+                // 4. Load the JavaScript modules strictly AFTER HTML is injected
+                // We use await to guarantee they finish evaluating before moving on.
+                await loadModule('frontend/desktop/layout.js');
+                await loadModule('frontend/mobile/layout.js');
 
-                for (const src of scripts) {
-                    const script = document.createElement('script');
-                    script.type = 'module';
-                    script.src = src;
-                    document.body.appendChild(script);
-                }
-
-                // 4. Force DOM events to fire for scripts that listen to them
-                // We add a slight delay to ensure scripts are parsed
-                setTimeout(() => {
-                    document.dispatchEvent(new Event('DOMContentLoaded', { bubbles: true, cancelable: true }));
-                    window.dispatchEvent(new Event('load'));
-                }, 200);
+                // 5. Fire DOMContentLoaded synthetically
+                // Because we fetched HTML asynchronously, the browser's native event 
+                // already fired on an empty page. This tells layout.js to wake up 
+                // and bind the Node/Beam tools to the newly loaded canvas.
+                document.dispatchEvent(new Event('DOMContentLoaded', { bubbles: true, cancelable: true }));
+                window.dispatchEvent(new Event('load'));
 
             } catch (error) {
-                console.error("Error loading layout components:", error);
+                console.error("Error booting application:", error);
             }
         }
 
         function initInteractions() {
-            // Bottom Panel Tab Switching logic
+            // Bottom Panel Tab Switching
             const bpTabs = document.querySelectorAll('.bp-tab');
             bpTabs.forEach(tab => {
                 tab.addEventListener('click', (e) => {
@@ -78,7 +76,7 @@
                 });
             });
 
-            // Workspace Tab Switching logic
+            // Workspace Tab Switching
             const wsTabs = document.querySelectorAll('.workspace-tabs .tab');
             wsTabs.forEach(tab => {
                 tab.addEventListener('click', (e) => {
@@ -88,7 +86,7 @@
                 });
             });
 
-            // Ribbon active state logic
+            // Ribbon Active States
             const ribbonBtns = document.querySelectorAll('.ribbon-btn');
             ribbonBtns.forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -100,7 +98,7 @@
             });
         }
 
-        // Start booting the app immediately
+        // Start the boot sequence immediately
         bootstrapApplication();
     </script>
 </body>

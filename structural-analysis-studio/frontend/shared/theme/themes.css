@@ -37,3 +37,20 @@ body {
     flex-direction: column;
     overflow: hidden;
 }
+
+/* Bulletproof Responsive View Switcher */
+html, body { margin: 0; padding: 0; height: 100%; width: 100%; }
+
+#mobile-view { display: none !important; }
+
+#desktop-view { 
+    display: flex !important; 
+    flex-direction: column; 
+    width: 100%;
+    height: 100%; 
+}
+
+@media (max-width: 768px) {
+    #desktop-view { display: none !important; }
+    #mobile-view { display: flex !important; flex-direction: column; width: 100%; height: 100%; }
+}

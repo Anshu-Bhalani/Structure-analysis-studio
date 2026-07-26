@@ -4,41 +4,65 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Structural Analysis Studio</title>
-
+    
     <!-- Preload for fast loading -->
     <link rel="preload" href="frontend/shared/theme/theme.css" as="style">
     <link rel="preload" href="frontend/desktop/css/main.css" as="style">
     <link rel="preload" href="frontend/mobile/css/main.css" as="style">
-
+    
     <!-- Core Themes -->
     <link rel="stylesheet" href="frontend/shared/theme/theme.css">
     <link rel="stylesheet" href="frontend/desktop/css/main.css">
     <link rel="stylesheet" href="frontend/mobile/css/main.css">
 </head>
 <body>
-    <div id="desktop-view"></div>
-    <div id="mobile-view"></div>
 
-    <script type="module">
-        const loadFragment = async (mountId, url) => {
-            const mount = document.getElementById(mountId);
-            if (!mount) return;
+    <!-- Desktop and mobile view components, loaded from external HTML files.
+         These loaders run as module scripts (document order, before
+         DOMContentLoaded) so the markup they inject is in the DOM before
+         frontend/desktop/layout.js and frontend/mobile/layout.js query it,
+         exactly as when this markup was inlined here directly. -->
+    <script type="module" src="frontend/desktop/layout-loader.js"></script>
+    <script type="module" src="frontend/mobile/layout-loader.js"></script>
 
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`Failed to load ${url}: ${response.status}`);
-            }
+    <!-- Scripts deferred so they don't block loading -->
+    <script type="module" defer src="frontend/desktop/layout.js"></script>
+    <script type="module" defer src="frontend/mobile/layout.js"></script>
 
-            mount.innerHTML = await response.text();
-        };
+    <!-- FIX: Added small global connector to hook the HTML buttons to the App -->
+    <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    // Bottom Panel Tab Switching logic
+    const bpTabs = document.querySelectorAll('.bp-tab');
+    bpTabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        bpTabs.forEach(t => t.classList.remove('active'));
+        e.target.classList.add('active');
+      });
+    });
 
-        await Promise.all([
-            loadFragment('desktop-view', './frontend/desktop/layout.html'),
-            loadFragment('mobile-view', './frontend/mobile/layout.html')
-        ]);
+    // Workspace Tab Switching logic
+    const wsTabs = document.querySelectorAll('.workspace-tabs .tab');
+    wsTabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        if (e.target.classList.contains('disabled-phase')) return;
+        wsTabs.forEach(t => t.classList.remove('active'));
+        e.target.classList.add('active');
+      });
+    });
 
-        await import('./frontend/desktop/layout.js');
-        await import('./frontend/mobile/layout.js');
-    </script>
+    // Ribbon active state logic
+    const ribbonBtns = document.querySelectorAll('.ribbon-btn');
+    ribbonBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const group = e.target.closest('.ribbon-group');
+        if (!group) return;
+        group.querySelectorAll('.ribbon-btn').forEach(b => b.classList.remove('active'));
+        e.target.closest('.ribbon-btn')?.classList.add('active');
+      });
+    });
+
+    
+</script>
 </body>
 </html>

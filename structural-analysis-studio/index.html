@@ -21,26 +21,48 @@
     <div id="desktop-view-container"></div>
     <div id="mobile-view-container"></div>
 
-    <!-- Scripts deferred so they don't block loading -->
-    <script type="module" defer src="frontend/desktop/layout.js"></script>
-    <script type="module" defer src="frontend/mobile/layout.js"></script>
+    <!-- 
+      Notice: We removed the <script src="..."> tags from here. 
+      They are now dynamically loaded AFTER the HTML is injected below. 
+    -->
 
-    <!-- Component Loader & FIX: Global connector -->
     <script>
-        async function loadLayoutComponents() {
+        async function bootstrapApplication() {
             try {
-                // Fetch components concurrently
+                // 1. Fetch and inject the HTML layouts FIRST
                 const [desktopRes, mobileRes] = await Promise.all([
                     fetch('frontend/desktop/layout.html'),
                     fetch('frontend/mobile/layout.html')
                 ]);
 
-                // Inject HTML into the DOM
                 document.getElementById('desktop-view-container').innerHTML = await desktopRes.text();
                 document.getElementById('mobile-view-container').innerHTML = await mobileRes.text();
 
-                // Initialize interactions after DOM is loaded
+                // 2. Initialize the basic UI interactions
                 initInteractions();
+
+                // 3. LOAD CORE JAVASCRIPT SECOND
+                // This ensures the DOM (canvases, buttons) exists before the scripts run.
+                const scripts = [
+                    'frontend/desktop/layout.js',
+                    'frontend/mobile/layout.js',
+                    'core/app/app.js' // Added core app logic just in case it's your main entry point
+                ];
+
+                for (const src of scripts) {
+                    const script = document.createElement('script');
+                    script.type = 'module';
+                    script.src = src;
+                    document.body.appendChild(script);
+                }
+
+                // 4. Force DOM events to fire for scripts that listen to them
+                // We add a slight delay to ensure scripts are parsed
+                setTimeout(() => {
+                    document.dispatchEvent(new Event('DOMContentLoaded', { bubbles: true, cancelable: true }));
+                    window.dispatchEvent(new Event('load'));
+                }, 200);
+
             } catch (error) {
                 console.error("Error loading layout components:", error);
             }
@@ -78,8 +100,8 @@
             });
         }
 
-        // Trigger loading when primary DOM is ready
-        document.addEventListener("DOMContentLoaded", loadLayoutComponents);
+        // Start booting the app immediately
+        bootstrapApplication();
     </script>
 </body>
 </html>

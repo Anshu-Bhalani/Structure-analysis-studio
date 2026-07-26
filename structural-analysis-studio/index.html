@@ -4,134 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Structural Analysis Studio</title>
-    
+
     <!-- Preload for fast loading -->
-    <link rel="preload" href="frontend/shared/theme/themes.css" as="style">
+    <link rel="preload" href="frontend/shared/theme/theme.css" as="style">
     <link rel="preload" href="frontend/desktop/css/main.css" as="style">
     <link rel="preload" href="frontend/mobile/css/main.css" as="style">
-    
+
     <!-- Core Themes -->
-    <link rel="stylesheet" href="frontend/shared/theme/themes.css">
+    <link rel="stylesheet" href="frontend/shared/theme/theme.css">
     <link rel="stylesheet" href="frontend/desktop/css/main.css">
     <link rel="stylesheet" href="frontend/mobile/css/main.css">
-
-    <style>
-        /* Hidden by default, shows only if local file security blocks the load */
-        #server-error {
-            display: none;
-            height: 100vh;
-            background: #ef4444;
-            color: white;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-family: sans-serif;
-            text-align: center;
-            padding: 20px;
-        }
-    </style>
 </head>
 <body>
+    <div id="desktop-view"></div>
+    <div id="mobile-view"></div>
 
-    <!-- Server Check Error Screen -->
-    <div id="server-error">
-        <h2>⚠️ Local Server Required</h2>
-        <p>Your browser blocked the modular HTML files from loading.</p>
-        <p>Because the HTML is now split into multiple files, you cannot just double-click <b>index.html</b>.</p>
-        <p>You must run this project through a local web server (like <b>VS Code Live Server</b> or <b>Python http.server</b>).</p>
-    </div>
+    <script type="module">
+        const loadFragment = async (mountId, url) => {
+            const mount = document.getElementById(mountId);
+            if (!mount) return;
 
-    <!-- 
-      The bootloader fetches your layouts and injects them seamlessly,
-      preventing JavaScript race conditions and preserving your exact DOM structure.
-    -->
-    <script>
-        // 1. Polyfill to ensure late-loading JS files still trigger DOMContentLoaded
-        const originalAddEventListener = document.addEventListener;
-        document.addEventListener = function(type, listener, options) {
-            if (type === 'DOMContentLoaded' && document.readyState !== 'loading') {
-                setTimeout(listener, 1); // Fire immediately if already loaded
-            } else {
-                originalAddEventListener.call(document, type, listener, options);
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Failed to load ${url}: ${response.status}`);
             }
+
+            mount.innerHTML = await response.text();
         };
 
-        // 2. Main Boot Sequence
-        async function bootStudio() {
-            try {
-                // Fetch the split HTML layouts
-                const [desktopRes, mobileRes] = await Promise.all([
-                    fetch('frontend/desktop/layout.html'),
-                    fetch('frontend/mobile/layout.html')
-                ]);
+        await Promise.all([
+            loadFragment('desktop-view', './frontend/desktop/layout.html'),
+            loadFragment('mobile-view', './frontend/mobile/layout.html')
+        ]);
 
-                // If fetch fails (like via file:// protocol), this throws an error
-                if (!desktopRes.ok || !mobileRes.ok) throw new Error("Blocked by browser security");
-
-                const desktopHTML = await desktopRes.text();
-                const mobileHTML = await mobileRes.text();
-
-                // 3. Inject exactly into the body (No wrapper divs to break CSS or JS)
-                document.body.insertAdjacentHTML('afterbegin', mobileHTML);
-                document.body.insertAdjacentHTML('afterbegin', desktopHTML);
-
-                // 4. Bind the original inline UI events
-                initInlineUI();
-
-                // 5. Safely load the core functionality scripts
-                const scripts = [
-                    'frontend/desktop/layout.js',
-                    'frontend/mobile/layout.js'
-                ];
-
-                scripts.forEach(src => {
-                    const script = document.createElement('script');
-                    script.type = 'module';
-                    script.src = src;
-                    document.body.appendChild(script);
-                });
-
-                // Synthetically trigger the load event for the injected scripts
-                setTimeout(() => document.dispatchEvent(new Event('DOMContentLoaded')), 100);
-
-            } catch (error) {
-                console.error("Boot Sequence Failed:", error);
-                document.getElementById('server-error').style.display = 'flex';
-            }
-        }
-
-        // Original UI logic from the bottom of your previous file
-        function initInlineUI() {
-            const bpTabs = document.querySelectorAll('.bp-tab');
-            bpTabs.forEach(tab => {
-                tab.addEventListener('click', (e) => {
-                    bpTabs.forEach(t => t.classList.remove('active'));
-                    e.target.classList.add('active');
-                });
-            });
-
-            const wsTabs = document.querySelectorAll('.workspace-tabs .tab');
-            wsTabs.forEach(tab => {
-                tab.addEventListener('click', (e) => {
-                    if (e.target.classList.contains('disabled-phase')) return;
-                    wsTabs.forEach(t => t.classList.remove('active'));
-                    e.target.classList.add('active');
-                });
-            });
-
-            const ribbonBtns = document.querySelectorAll('.ribbon-btn');
-            ribbonBtns.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const group = e.target.closest('.ribbon-group');
-                    if (!group) return;
-                    group.querySelectorAll('.ribbon-btn').forEach(b => b.classList.remove('active'));
-                    e.target.closest('.ribbon-btn')?.classList.add('active');
-                });
-            });
-        }
-
-        // Boot the app
-        bootStudio();
+        await import('./frontend/desktop/layout.js');
+        await import('./frontend/mobile/layout.js');
     </script>
 </body>
 </html>

@@ -16,65 +16,39 @@
     <link rel="stylesheet" href="frontend/mobile/css/main.css">
 </head>
 <body>
-    
-    <!-- NO WRAPPER DIVS: The layout HTML will be injected directly into the body here, 
-         perfectly maintaining your original CSS flexbox and height calculations -->
 
+    <!-- SYNCHRONOUS HTML INJECTION -->
+    <!-- This forces the browser to pause, fetch the HTML, and inject it into the DOM -->
+    <!-- BEFORE moving on. This mathematically guarantees your canvas exists before JS runs. -->
     <script>
-        (async function bootApp() {
-            try {
-                // 1. Fetch HTML components concurrently
-                const [desktopRes, mobileRes] = await Promise.all([
-                    fetch('frontend/desktop/layout.html'),
-                    fetch('frontend/mobile/layout.html')
-                ]);
-
-                const desktopHTML = await desktopRes.text();
-                const mobileHTML = await mobileRes.text();
-
-                // 2. Inject HTML DIRECTLY into the body.
-                // This fixes the CSS height collapse that broke your canvas hit-testing!
-                document.body.insertAdjacentHTML('afterbegin', mobileHTML);
-                document.body.insertAdjacentHTML('afterbegin', desktopHTML);
-
-                // 3. Re-initialize the local UI logic
-                initUI();
-
-                // 4. FIX THE TIMING TRAP: Overwrite DOMContentLoaded.
-                // Since the HTML is fetched dynamically, the native event already fired. 
-                // This forces layout.js to run immediately instead of waiting forever.
-                const originalAddEventListener = document.addEventListener;
-                document.addEventListener = function(type, listener, options) {
-                    if (type === 'DOMContentLoaded') {
-                        setTimeout(listener, 1);
-                    } else {
-                        originalAddEventListener.call(document, type, listener, options);
-                    }
-                };
-
-                // 5. Dynamically load your application scripts exactly like the original
-                const scriptsToLoad = [
-                    'frontend/desktop/layout.js',
-                    'frontend/mobile/layout.js'
-                ];
-
-                scriptsToLoad.forEach(src => {
-                    const script = document.createElement('script');
-                    script.type = 'module';
-                    script.src = src;
-                    document.body.appendChild(script);
-                });
-
-                // Fallback to trigger load events for any straggling scripts
-                setTimeout(() => window.dispatchEvent(new Event('load')), 100);
-
-            } catch (error) {
-                console.error("Critical error booting application:", error);
+        function loadHTMLSync(url) {
+            var xhr = new XMLHttpRequest();
+            // The 'false' parameter makes the request Synchronous (blocking)
+            xhr.open('GET', url, false); 
+            xhr.send(null);
+            
+            if (xhr.status === 200 || xhr.status === 0) {
+                document.write(xhr.responseText);
+            } else {
+                console.error("Failed to load layout:", url);
             }
-        })();
+        }
+        
+        // Inject layouts directly into the body
+        loadHTMLSync('frontend/desktop/layout.html');
+        loadHTMLSync('frontend/mobile/layout.html');
+    </script>
 
-        // Your original tab and ribbon logic
-        function initUI() {
+    <!-- NATIVE MODULE SCRIPTS -->
+    <!-- Because the HTML was injected synchronously above, these scripts will now -->
+    <!-- behave exactly as they did in your original monolithic file. -->
+    <script type="module" defer src="frontend/desktop/layout.js"></script>
+    <script type="module" defer src="frontend/mobile/layout.js"></script>
+
+    <!-- INLINE EVENT LISTENERS (Original UI Logic) -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Bottom Panel Tab Switching logic
             const bpTabs = document.querySelectorAll('.bp-tab');
             bpTabs.forEach(tab => {
                 tab.addEventListener('click', (e) => {
@@ -83,6 +57,7 @@
                 });
             });
 
+            // Workspace Tab Switching logic
             const wsTabs = document.querySelectorAll('.workspace-tabs .tab');
             wsTabs.forEach(tab => {
                 tab.addEventListener('click', (e) => {
@@ -92,6 +67,7 @@
                 });
             });
 
+            // Ribbon active state logic
             const ribbonBtns = document.querySelectorAll('.ribbon-btn');
             ribbonBtns.forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -101,7 +77,7 @@
                     e.target.closest('.ribbon-btn')?.classList.add('active');
                 });
             });
-        }
+        });
     </script>
 </body>
 </html>

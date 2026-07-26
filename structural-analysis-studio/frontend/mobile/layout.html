@@ -1,179 +1,176 @@
-<div id="mobile-view">
-    
-    <!-- Mobile Sidebar (Drawer) -->
-    <div class="mob-sidebar" id="mob-sidebar">
-        <div class="mob-sidebar-header">
-            <div class="mob-avatar">SA</div>
-            <div class="mob-app-title">Structural<br>Analysis Studio</div>
-        </div>
-        <ul class="mob-menu-list">
-            <li><span>＋</span> New Project</li>
-            <li><span>📁</span> Open Project</li>
-            <li><span>💾</span> Save Project</li>
-            <li><span>📥</span> Import</li>
-            <li><span>📤</span> Export</li>
-            <hr>
-            <li><span>⚙</span> Settings</li>
-            <li><span>✂</span> Units</li>
-            <li><span>?</span> Help</li>
-            <li><span>ⓘ</span> About</li>
-        </ul>
+<!-- Mobile Sidebar (Drawer) -->
+<div class="mob-sidebar" id="mob-sidebar">
+    <div class="mob-sidebar-header">
+        <div class="mob-avatar">SA</div>
+        <div class="mob-app-title">Structural<br>Analysis Studio</div>
     </div>
-    <div class="mob-overlay" id="mob-overlay"></div>
+    <ul class="mob-menu-list">
+        <li><span>＋</span> New Project</li>
+        <li><span>📁</span> Open Project</li>
+        <li><span>💾</span> Save Project</li>
+        <li><span>📥</span> Import</li>
+        <li><span>📤</span> Export</li>
+        <hr>
+        <li><span>⚙</span> Settings</li>
+        <li><span>✂</span> Units</li>
+        <li><span>?</span> Help</li>
+        <li><span>ⓘ</span> About</li>
+    </ul>
+</div>
+<div class="mob-overlay" id="mob-overlay"></div>
 
-    <!-- SCREEN: HOME -->
-    <main class="mob-screen active" id="screen-home">
-        <header class="mob-header transparent">
-            <button class="mob-icon-btn menu-toggle">≡</button>
-            <button class="mob-icon-btn">🔔</button>
-        </header>
-        <div class="mob-content padding-large">
-            <h1 class="mob-title">Structural<br>Analysis Studio</h1>
-            <p class="mob-subtitle">Build • Analyze • Learn</p>
-            
-            <button class="mob-btn-primary huge">＋<br>New Project</button>
-            
-            <div class="mob-grid-2x2">
-                <button class="mob-card-btn"><span>📁</span> Open Project</button>
-                <button class="mob-card-btn"><span>🎲</span> Examples</button>
-                <button class="mob-card-btn"><span>📄</span> Templates</button>
-                <button class="mob-card-btn"><span>🎓</span> Learning Mode</button>
-            </div>
-            
-            <div class="mob-section-header">
-                <h3>Recent Projects</h3>
-                <a href="#">See All</a>
-            </div>
-            <div class="mob-list">
-                <div class="mob-list-item">📄 <div><b>Beam Example</b><br><small>12/05/2025 • 2.1 MB</small></div> ⋮</div>
-                <div class="mob-list-item">📄 <div><b>Truss Problem</b><br><small>10/05/2025 • 1.8 MB</small></div> ⋮</div>
-            </div>
-        </div>
-    </main>
-
-    <!-- SCREEN: MODELING -->
-    <main class="mob-screen" id="screen-model">
-        <header class="mob-header">
-            <button class="mob-icon-btn">←</button>
-            <div class="mob-header-actions">
-                <!-- FIX: Added IDs so JavaScript can trigger Undo/Redo on Mobile -->
-                <button class="mob-icon-btn" id="mob-undo">↩</button>
-                <button class="mob-icon-btn" id="mob-redo">↪</button>
-                <button class="mob-icon-btn">💾</button>
-                <button class="mob-icon-btn">⋮</button>
-            </div>
-        </header>
+<!-- SCREEN: HOME -->
+<main class="mob-screen active" id="screen-home">
+    <header class="mob-header transparent">
+        <button class="mob-icon-btn menu-toggle">≡</button>
+        <button class="mob-icon-btn">🔔</button>
+    </header>
+    <div class="mob-content padding-large">
+        <h1 class="mob-title">Structural<br>Analysis Studio</h1>
+        <p class="mob-subtitle">Build • Analyze • Learn</p>
         
-        <div class="mob-canvas-area">
-            <div class="mob-vert-toolbar">
-                <button class="active"><span>↖</span>Select</button>
-                <button><span>•</span>Node</button>
-                <button><span>/</span>Beam</button>
-                <button disabled title="Coming soon — boundary condition tools aren't built yet"><span>▵</span>Support</button>
-                <button disabled title="Coming soon — load tools aren't built yet"><span>↓</span>Load</button>
-                <button disabled title="Coming soon — load tools aren't built yet"><span>↺</span>Moment</button>
-                <button><span>🗑</span>Delete</button>
-                <button><span>⋯</span>More</button>
-            </div>
-            <div class="mob-canvas-placeholder">
-                <canvas id="editor-canvas-mobile"></canvas>
-            </div>
-            <div class="mob-floating-info">
-                <h4>Model Info</h4>
-                <div class="mob-stats-grid">
-                    <div>Nodes<br><b>5</b></div>
-                    <div>Elements<br><b>4</b></div>
-                    <div>Loads<br><b>3</b></div>
-                    <div>Supports<br><b>2</b></div>
-                </div>
-                <div class="mob-info-actions">
-                    <button class="mob-btn-outline" onclick="toggleBottomSheet('sheet-properties')">Properties</button>
-                    <button class="mob-btn-primary">View</button>
-                </div>
-            </div>
+        <button class="mob-btn-primary huge">＋<br>New Project</button>
+        
+        <div class="mob-grid-2x2">
+            <button class="mob-card-btn"><span>📁</span> Open Project</button>
+            <button class="mob-card-btn"><span>🎲</span> Examples</button>
+            <button class="mob-card-btn"><span>📄</span> Templates</button>
+            <button class="mob-card-btn"><span>🎓</span> Learning Mode</button>
         </div>
-    </main>
+        
+        <div class="mob-section-header">
+            <h3>Recent Projects</h3>
+            <a href="#">See All</a>
+        </div>
+        <div class="mob-list">
+            <div class="mob-list-item">📄 <div><b>Beam Example</b><br><small>12/05/2025 • 2.1 MB</small></div> ⋮</div>
+            <div class="mob-list-item">📄 <div><b>Truss Problem</b><br><small>10/05/2025 • 1.8 MB</small></div> ⋮</div>
+        </div>
+    </div>
+</main>
 
-    <!-- SCREEN: SOLVE -->
-    <main class="mob-screen" id="screen-solve">
-        <header class="mob-header">
-            <h2>Solve</h2>
+<!-- SCREEN: MODELING -->
+<main class="mob-screen" id="screen-model">
+    <header class="mob-header">
+        <button class="mob-icon-btn">←</button>
+        <div class="mob-header-actions">
+            <!-- FIX: Added IDs so JavaScript can trigger Undo/Redo on Mobile -->
+            <button class="mob-icon-btn" id="mob-undo">↩</button>
+            <button class="mob-icon-btn" id="mob-redo">↪</button>
+            <button class="mob-icon-btn">💾</button>
             <button class="mob-icon-btn">⋮</button>
-        </header>
-        <div class="mob-content padding-large">
-            <ul class="mob-steps-list">
-                <li><span class="icon">🔗</span> 1. DOF Numbering <span class="check">✔</span></li>
-                <li><span class="icon">🔗</span> 2. Element Matrices <span class="check">✔</span></li>
-                <li><span class="icon">Ⓜ</span> 3. Assembly <span class="check">✔</span></li>
-                <li><span class="icon">🔒</span> 4. Boundary Conditions <span class="check">✔</span></li>
-                <li class="active"><span class="icon">➗</span> 5. Solve Equations <span class="check">✔</span></li>
-                <li><span class="icon">📈</span> 6. Reactions <span class="check">✔</span></li>
-                <li><span class="icon">📉</span> 7. Member Forces <span class="check">✔</span></li>
-            </ul>
-            <button class="mob-btn-primary full-width mt-auto">▷ Solve Now</button>
         </div>
-    </main>
+    </header>
+    
+    <div class="mob-canvas-area">
+        <div class="mob-vert-toolbar">
+            <button class="active"><span>↖</span>Select</button>
+            <button><span>•</span>Node</button>
+            <button><span>/</span>Beam</button>
+            <button disabled title="Coming soon — boundary condition tools aren't built yet"><span>▵</span>Support</button>
+            <button disabled title="Coming soon — load tools aren't built yet"><span>↓</span>Load</button>
+            <button disabled title="Coming soon — load tools aren't built yet"><span>↺</span>Moment</button>
+            <button><span>🗑</span>Delete</button>
+            <button><span>⋯</span>More</button>
+        </div>
+        <div class="mob-canvas-placeholder">
+            <canvas id="editor-canvas-mobile"></canvas>
+        </div>
+        <div class="mob-floating-info">
+            <h4>Model Info</h4>
+            <div class="mob-stats-grid">
+                <div>Nodes<br><b>5</b></div>
+                <div>Elements<br><b>4</b></div>
+                <div>Loads<br><b>3</b></div>
+                <div>Supports<br><b>2</b></div>
+            </div>
+            <div class="mob-info-actions">
+                <button class="mob-btn-outline" onclick="toggleBottomSheet('sheet-properties')">Properties</button>
+                <button class="mob-btn-primary">View</button>
+            </div>
+        </div>
+    </div>
+</main>
 
-    <!-- SCREEN: LEARNING MODE -->
-    <main class="mob-screen" id="screen-learn">
-        <header class="mob-header">
-            <button class="mob-icon-btn">←</button>
-            <h2>Step 3 of 12</h2>
-            <div style="width:24px"></div>
-        </header>
-        <div class="mob-content padding-large">
-            <h3>Local Stiffness Matrix</h3>
-            <p class="mob-text-muted">This is the local stiffness matrix for Beam element (2-3) in local coordinates.</p>
-            
-            <div class="mob-math-matrix-container">
-                <span class="mob-math-var">k =</span>
-                <div class="mob-matrix-brackets">
-                    <div class="mob-matrix-grid">
-                        <span>12</span><span>6L</span><span>-12</span><span>6L</span>
-                        <span>6L</span><span>4L²</span><span>-6L</span><span>2L²</span>
-                        <span>-12</span><span>-6L</span><span>12</span><span>-6L</span>
-                        <span>6L</span><span>2L²</span><span>-6L</span><span>4L²</span>
-                    </div>
+<!-- SCREEN: SOLVE -->
+<main class="mob-screen" id="screen-solve">
+    <header class="mob-header">
+        <h2>Solve</h2>
+        <button class="mob-icon-btn">⋮</button>
+    </header>
+    <div class="mob-content padding-large">
+        <ul class="mob-steps-list">
+            <li><span class="icon">🔗</span> 1. DOF Numbering <span class="check">✔</span></li>
+            <li><span class="icon">🔗</span> 2. Element Matrices <span class="check">✔</span></li>
+            <li><span class="icon">Ⓜ</span> 3. Assembly <span class="check">✔</span></li>
+            <li><span class="icon">🔒</span> 4. Boundary Conditions <span class="check">✔</span></li>
+            <li class="active"><span class="icon">➗</span> 5. Solve Equations <span class="check">✔</span></li>
+            <li><span class="icon">📈</span> 6. Reactions <span class="check">✔</span></li>
+            <li><span class="icon">📉</span> 7. Member Forces <span class="check">✔</span></li>
+        </ul>
+        <button class="mob-btn-primary full-width mt-auto">▷ Solve Now</button>
+    </div>
+</main>
+
+<!-- SCREEN: LEARNING MODE -->
+<main class="mob-screen" id="screen-learn">
+    <header class="mob-header">
+        <button class="mob-icon-btn">←</button>
+        <h2>Step 3 of 12</h2>
+        <div style="width:24px"></div>
+    </header>
+    <div class="mob-content padding-large">
+        <h3>Local Stiffness Matrix</h3>
+        <p class="mob-text-muted">This is the local stiffness matrix for Beam element (2-3) in local coordinates.</p>
+        
+        <div class="mob-math-matrix-container">
+            <span class="mob-math-var">k =</span>
+            <div class="mob-matrix-brackets">
+                <div class="mob-matrix-grid">
+                    <span>12</span><span>6L</span><span>-12</span><span>6L</span>
+                    <span>6L</span><span>4L²</span><span>-6L</span><span>2L²</span>
+                    <span>-12</span><span>-6L</span><span>12</span><span>-6L</span>
+                    <span>6L</span><span>2L²</span><span>-6L</span><span>4L²</span>
                 </div>
             </div>
-
-            <div class="mob-math-legend">
-                Where,<br>L = Element length<br>E = Young's Modulus<br>I = Moment of Inertia
-            </div>
-
-            <div class="mob-pagination-controls">
-                <button class="mob-btn-outline">◁ Previous</button>
-                <button class="mob-btn-primary">▷ Next</button>
-            </div>
-            <div class="mob-dots"><span></span><span class="active"></span><span></span><span></span></div>
         </div>
-    </main>
 
-    <!-- BOTTOM NAVIGATION -->
-    <nav class="mob-bottom-nav">
-        <button class="active" data-target="screen-home"><span>🏠</span>Home</button>
-        <button data-target="screen-model"><span>◨</span>Model</button>
-        <button data-target="screen-solve"><span>⛭</span>Solve</button>
-        <button><span>📊</span>Results</button>
-        <button data-target="screen-learn"><span>🎓</span>Learn</button>
-    </nav>
-
-    <!-- BOTTOM SHEET: PROPERTIES -->
-    <div class="mob-bottom-sheet" id="sheet-properties">
-        <div class="mob-sheet-header">
-            <h3>Element Properties</h3>
-            <button class="mob-icon-btn close-sheet">✕</button>
+        <div class="mob-math-legend">
+            Where,<br>L = Element length<br>E = Young's Modulus<br>I = Moment of Inertia
         </div>
-        <div class="mob-sheet-content">
-            <div class="mob-form-row"><label>Element Type</label><select><option>Beam</option></select></div>
-            <div class="mob-form-row"><label>Section</label><select><option>IPE 300</option></select></div>
-            <div class="mob-form-row"><label>Material</label><select><option>Steel</option></select></div>
-            <div class="mob-form-row"><label>E (Young's)</label><span>2.00e+11 Pa</span></div>
-            <div class="mob-form-row"><label>I (Inertia)</label><span>8.10e-06 m²</span></div>
-            <div class="mob-form-row actions">
-                <button class="mob-btn-outline close-sheet">Cancel</button>
-                <button class="mob-btn-primary">▷ Apply</button>
-            </div>
+
+        <div class="mob-pagination-controls">
+            <button class="mob-btn-outline">◁ Previous</button>
+            <button class="mob-btn-primary">▷ Next</button>
+        </div>
+        <div class="mob-dots"><span></span><span class="active"></span><span></span><span></span></div>
+    </div>
+</main>
+
+<!-- BOTTOM NAVIGATION -->
+<nav class="mob-bottom-nav">
+    <button class="active" data-target="screen-home"><span>🏠</span>Home</button>
+    <button data-target="screen-model"><span>◨</span>Model</button>
+    <button data-target="screen-solve"><span>⛭</span>Solve</button>
+    <button><span>📊</span>Results</button>
+    <button data-target="screen-learn"><span>🎓</span>Learn</button>
+</nav>
+
+<!-- BOTTOM SHEET: PROPERTIES -->
+<div class="mob-bottom-sheet" id="sheet-properties">
+    <div class="mob-sheet-header">
+        <h3>Element Properties</h3>
+        <button class="mob-icon-btn close-sheet">✕</button>
+    </div>
+    <div class="mob-sheet-content">
+        <div class="mob-form-row"><label>Element Type</label><select><option>Beam</option></select></div>
+        <div class="mob-form-row"><label>Section</label><select><option>IPE 300</option></select></div>
+        <div class="mob-form-row"><label>Material</label><select><option>Steel</option></select></div>
+        <div class="mob-form-row"><label>E (Young's)</label><span>2.00e+11 Pa</span></div>
+        <div class="mob-form-row"><label>I (Inertia)</label><span>8.10e-06 m²</span></div>
+        <div class="mob-form-row actions">
+            <button class="mob-btn-outline close-sheet">Cancel</button>
+            <button class="mob-btn-primary">▷ Apply</button>
         </div>
     </div>
 </div>

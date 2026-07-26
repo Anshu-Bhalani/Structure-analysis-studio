@@ -37,3 +37,14 @@ body {
     flex-direction: column;
     overflow: hidden;
 }
+
+/* ------------------------------------------------------------------
+   Migrated verbatim from index.html's inline <style> block
+   ("Bulletproof Responsive View Switcher"). This single rule is the
+   only part of that block that isn't specific to either the desktop
+   or mobile view element — it's a global reset shared by both — so it
+   lives here. The #desktop-view / #mobile-view visibility rules from
+   that same block were moved to frontend/desktop/css/main.css and
+   frontend/mobile/css/main.css respectively.
+   ------------------------------------------------------------------ */
+html, body { margin: 0; padding: 0; height: 100%; width: 100%; }

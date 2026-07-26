@@ -14,41 +14,94 @@
     <link rel="stylesheet" href="frontend/shared/theme/themes.css">
     <link rel="stylesheet" href="frontend/desktop/css/main.css">
     <link rel="stylesheet" href="frontend/mobile/css/main.css">
+
+    <style>
+        /* Hidden by default, shows only if local file security blocks the load */
+        #server-error {
+            display: none;
+            height: 100vh;
+            background: #ef4444;
+            color: white;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
 </head>
 <body>
 
-    <!-- SYNCHRONOUS HTML INJECTION -->
-    <!-- This forces the browser to pause, fetch the HTML, and inject it into the DOM -->
-    <!-- BEFORE moving on. This mathematically guarantees your canvas exists before JS runs. -->
+    <!-- Server Check Error Screen -->
+    <div id="server-error">
+        <h2>⚠️ Local Server Required</h2>
+        <p>Your browser blocked the modular HTML files from loading.</p>
+        <p>Because the HTML is now split into multiple files, you cannot just double-click <b>index.html</b>.</p>
+        <p>You must run this project through a local web server (like <b>VS Code Live Server</b> or <b>Python http.server</b>).</p>
+    </div>
+
+    <!-- 
+      The bootloader fetches your layouts and injects them seamlessly,
+      preventing JavaScript race conditions and preserving your exact DOM structure.
+    -->
     <script>
-        function loadHTMLSync(url) {
-            var xhr = new XMLHttpRequest();
-            // The 'false' parameter makes the request Synchronous (blocking)
-            xhr.open('GET', url, false); 
-            xhr.send(null);
-            
-            if (xhr.status === 200 || xhr.status === 0) {
-                document.write(xhr.responseText);
+        // 1. Polyfill to ensure late-loading JS files still trigger DOMContentLoaded
+        const originalAddEventListener = document.addEventListener;
+        document.addEventListener = function(type, listener, options) {
+            if (type === 'DOMContentLoaded' && document.readyState !== 'loading') {
+                setTimeout(listener, 1); // Fire immediately if already loaded
             } else {
-                console.error("Failed to load layout:", url);
+                originalAddEventListener.call(document, type, listener, options);
+            }
+        };
+
+        // 2. Main Boot Sequence
+        async function bootStudio() {
+            try {
+                // Fetch the split HTML layouts
+                const [desktopRes, mobileRes] = await Promise.all([
+                    fetch('frontend/desktop/layout.html'),
+                    fetch('frontend/mobile/layout.html')
+                ]);
+
+                // If fetch fails (like via file:// protocol), this throws an error
+                if (!desktopRes.ok || !mobileRes.ok) throw new Error("Blocked by browser security");
+
+                const desktopHTML = await desktopRes.text();
+                const mobileHTML = await mobileRes.text();
+
+                // 3. Inject exactly into the body (No wrapper divs to break CSS or JS)
+                document.body.insertAdjacentHTML('afterbegin', mobileHTML);
+                document.body.insertAdjacentHTML('afterbegin', desktopHTML);
+
+                // 4. Bind the original inline UI events
+                initInlineUI();
+
+                // 5. Safely load the core functionality scripts
+                const scripts = [
+                    'frontend/desktop/layout.js',
+                    'frontend/mobile/layout.js'
+                ];
+
+                scripts.forEach(src => {
+                    const script = document.createElement('script');
+                    script.type = 'module';
+                    script.src = src;
+                    document.body.appendChild(script);
+                });
+
+                // Synthetically trigger the load event for the injected scripts
+                setTimeout(() => document.dispatchEvent(new Event('DOMContentLoaded')), 100);
+
+            } catch (error) {
+                console.error("Boot Sequence Failed:", error);
+                document.getElementById('server-error').style.display = 'flex';
             }
         }
-        
-        // Inject layouts directly into the body
-        loadHTMLSync('frontend/desktop/layout.html');
-        loadHTMLSync('frontend/mobile/layout.html');
-    </script>
 
-    <!-- NATIVE MODULE SCRIPTS -->
-    <!-- Because the HTML was injected synchronously above, these scripts will now -->
-    <!-- behave exactly as they did in your original monolithic file. -->
-    <script type="module" defer src="frontend/desktop/layout.js"></script>
-    <script type="module" defer src="frontend/mobile/layout.js"></script>
-
-    <!-- INLINE EVENT LISTENERS (Original UI Logic) -->
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            // Bottom Panel Tab Switching logic
+        // Original UI logic from the bottom of your previous file
+        function initInlineUI() {
             const bpTabs = document.querySelectorAll('.bp-tab');
             bpTabs.forEach(tab => {
                 tab.addEventListener('click', (e) => {
@@ -57,7 +110,6 @@
                 });
             });
 
-            // Workspace Tab Switching logic
             const wsTabs = document.querySelectorAll('.workspace-tabs .tab');
             wsTabs.forEach(tab => {
                 tab.addEventListener('click', (e) => {
@@ -67,7 +119,6 @@
                 });
             });
 
-            // Ribbon active state logic
             const ribbonBtns = document.querySelectorAll('.ribbon-btn');
             ribbonBtns.forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -77,7 +128,10 @@
                     e.target.closest('.ribbon-btn')?.classList.add('active');
                 });
             });
-        });
+        }
+
+        // Boot the app
+        bootStudio();
     </script>
 </body>
 </html>

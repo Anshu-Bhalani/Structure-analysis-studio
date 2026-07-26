@@ -16,58 +16,65 @@
     <link rel="stylesheet" href="frontend/mobile/css/main.css">
 </head>
 <body>
-
-    <!-- Mount points for layout components -->
-    <div id="desktop-view-container"></div>
-    <div id="mobile-view-container"></div>
+    
+    <!-- NO WRAPPER DIVS: The layout HTML will be injected directly into the body here, 
+         perfectly maintaining your original CSS flexbox and height calculations -->
 
     <script>
-        // Helper function to load modules and explicitly WAIT until they are ready
-        function loadModule(src) {
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.type = 'module';
-                script.src = src;
-                script.onload = resolve;
-                script.onerror = reject;
-                document.body.appendChild(script);
-            });
-        }
-
-        async function bootstrapApplication() {
+        (async function bootApp() {
             try {
-                // 1. Fetch HTML components concurrently (Pauses execution until done)
+                // 1. Fetch HTML components concurrently
                 const [desktopRes, mobileRes] = await Promise.all([
                     fetch('frontend/desktop/layout.html'),
                     fetch('frontend/mobile/layout.html')
                 ]);
 
-                // 2. Inject HTML into the DOM so the Canvas actually exists
-                document.getElementById('desktop-view-container').innerHTML = await desktopRes.text();
-                document.getElementById('mobile-view-container').innerHTML = await mobileRes.text();
+                const desktopHTML = await desktopRes.text();
+                const mobileHTML = await mobileRes.text();
 
-                // 3. Initialize the inline UI interactions (Tabs, Ribbon)
-                initInteractions();
+                // 2. Inject HTML DIRECTLY into the body.
+                // This fixes the CSS height collapse that broke your canvas hit-testing!
+                document.body.insertAdjacentHTML('afterbegin', mobileHTML);
+                document.body.insertAdjacentHTML('afterbegin', desktopHTML);
 
-                // 4. Load the JavaScript modules strictly AFTER HTML is injected
-                // We use await to guarantee they finish evaluating before moving on.
-                await loadModule('frontend/desktop/layout.js');
-                await loadModule('frontend/mobile/layout.js');
+                // 3. Re-initialize the local UI logic
+                initUI();
 
-                // 5. Fire DOMContentLoaded synthetically
-                // Because we fetched HTML asynchronously, the browser's native event 
-                // already fired on an empty page. This tells layout.js to wake up 
-                // and bind the Node/Beam tools to the newly loaded canvas.
-                document.dispatchEvent(new Event('DOMContentLoaded', { bubbles: true, cancelable: true }));
-                window.dispatchEvent(new Event('load'));
+                // 4. FIX THE TIMING TRAP: Overwrite DOMContentLoaded.
+                // Since the HTML is fetched dynamically, the native event already fired. 
+                // This forces layout.js to run immediately instead of waiting forever.
+                const originalAddEventListener = document.addEventListener;
+                document.addEventListener = function(type, listener, options) {
+                    if (type === 'DOMContentLoaded') {
+                        setTimeout(listener, 1);
+                    } else {
+                        originalAddEventListener.call(document, type, listener, options);
+                    }
+                };
+
+                // 5. Dynamically load your application scripts exactly like the original
+                const scriptsToLoad = [
+                    'frontend/desktop/layout.js',
+                    'frontend/mobile/layout.js'
+                ];
+
+                scriptsToLoad.forEach(src => {
+                    const script = document.createElement('script');
+                    script.type = 'module';
+                    script.src = src;
+                    document.body.appendChild(script);
+                });
+
+                // Fallback to trigger load events for any straggling scripts
+                setTimeout(() => window.dispatchEvent(new Event('load')), 100);
 
             } catch (error) {
-                console.error("Error booting application:", error);
+                console.error("Critical error booting application:", error);
             }
-        }
+        })();
 
-        function initInteractions() {
-            // Bottom Panel Tab Switching
+        // Your original tab and ribbon logic
+        function initUI() {
             const bpTabs = document.querySelectorAll('.bp-tab');
             bpTabs.forEach(tab => {
                 tab.addEventListener('click', (e) => {
@@ -76,7 +83,6 @@
                 });
             });
 
-            // Workspace Tab Switching
             const wsTabs = document.querySelectorAll('.workspace-tabs .tab');
             wsTabs.forEach(tab => {
                 tab.addEventListener('click', (e) => {
@@ -86,7 +92,6 @@
                 });
             });
 
-            // Ribbon Active States
             const ribbonBtns = document.querySelectorAll('.ribbon-btn');
             ribbonBtns.forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -97,9 +102,6 @@
                 });
             });
         }
-
-        // Start the boot sequence immediately
-        bootstrapApplication();
     </script>
 </body>
 </html>

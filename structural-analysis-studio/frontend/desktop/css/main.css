@@ -24,6 +24,24 @@ html, body {
     display: none;
 }
 
+/* ------------------------------------------------------------------
+   Migrated verbatim from index.html's inline <style> block
+   ("Bulletproof Responsive View Switcher"). The #desktop-view rule
+   from that block lives here since it targets the desktop view
+   element; the matching #mobile-view rule was moved to
+   frontend/mobile/css/main.css, and the shared html/body reset from
+   the same block was moved to frontend/shared/theme/theme.css.
+   Placed BEFORE the @media (max-width: 768px) block below, same as
+   in the original inline block, so that block still correctly
+   overrides this rule's !important display value at narrow widths.
+   ------------------------------------------------------------------ */
+#desktop-view { 
+    display: flex !important; 
+    flex-direction: column; 
+    width: 100%;
+    height: 100%; 
+}
+
 #editor-canvas {
     display: block;
     width: 100%;

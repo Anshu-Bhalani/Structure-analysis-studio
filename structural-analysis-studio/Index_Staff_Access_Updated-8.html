@@ -1,0 +1,3143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<title>Gathiya Junction & Tea</title>
+
+<style>
+/* --- 1. CORE VARIABLES & RESET --- */
+:root {
+  --bg-color: #f4efe8;
+  --primary-brown: #7a4a21;
+  --dark-brown: #5c3615;
+  --accent-yellow: #ffb703;
+  --accent-teal: #2a9d8f;
+  --accent-red: #d62828;
+  --text-dark: #333;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-color);
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  font-size: 14px;
+}
+
+/* --- 2. VIEW MANAGEMENT (SPA Logic) --- */
+.view-section {
+    display: none;
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+    background: var(--bg-color);
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.view-section.active-view {
+    display: flex;
+}
+
+/* --- 3. HOME SCREEN STYLES --- */
+.home-container {
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center; 
+  background-color: var(--bg-color);
+}
+
+.logo-area {
+  margin-bottom: 40px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.logo-circle {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: white;
+  padding: 25px; 
+  box-shadow: 0 8px 25px rgba(122, 74, 33, 0.2);
+  border: 4px solid var(--primary-brown);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 25px;
+  overflow: hidden; 
+  position: relative;
+}
+
+.app-logo { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+.app-title {
+  color: var(--dark-brown);
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.button-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+  max-width: 400px;
+  padding: 0 10px;
+}
+
+.dashboard-btn {
+  width: 100%;
+  padding: 20px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.dashboard-btn:active { transform: scale(0.97); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+.btn-orders { background: var(--accent-teal); color: white; }
+.btn-add { background: var(--accent-yellow); color: #222; }
+.btn-records { background: var(--primary-brown); color: white; }
+.btn-end-day { background: #d62828; color: white; margin-top: 10px; }
+.btn-icon { width: 26px; height: 26px; }
+
+
+/* --- 4. SHARED APP STYLES (POS & Records) --- */
+.nav-bar {
+    background: var(--primary-brown);
+    color: white;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 55px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.nav-back-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.9rem;
+}
+.nav-title { font-weight: 800; font-size: 1.1rem; letter-spacing: 0.5px; }
+
+/* POS Layout */
+.app-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+.center-header { padding: 10px 15px; background: #fff; border-bottom: 1px solid #ddd; display: flex; align-items: center; justify-content: space-between; height: 60px; flex-shrink: 0; }
+.menu-btn { background: transparent; color: #7a4a21; border: 1px solid #7a4a21; border-radius: 6px; padding: 6px 10px; font-size: 14px; font-weight: bold; }
+
+.header-title { display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+.header-title h2 { margin: 0; font-size: 1.1rem; color: #333; }
+
+.header-actions { display: flex; gap: 8px; align-items: center; }
+.icon-btn { border: none; background: transparent; font-size: 1.2rem; padding: 8px; cursor: pointer; border-radius: 4px; }
+.icon-btn-delete { color: #d62828; }
+.icon-btn-edit { color: #1d3557; }
+
+/* Customer & Inputs */
+.customer-section { background: #fdfdfd; border-bottom: 1px solid #eee; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+.customer-inputs { display: flex; gap: 8px; }
+.customer-inputs input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.85rem; outline: none; }
+.customer-inputs input:focus { border-color: #7a4a21; }
+.customer-inputs input[type="text"], .customer-inputs input[type="tel"] { flex: 1; }
+.customer-inputs input[type="number"] { flex: 1; border-color: #ffb703; background-color: #fffef8; }
+
+.order-type-bar { display: flex; background: #eee; padding: 4px; border-radius: 8px; gap: 4px; }
+.type-btn { flex: 1; border: none; padding: 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; cursor: pointer; background: transparent; color: #666; transition: all 0.2s; }
+.type-btn.active { background: #7a4a21; color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+/* Order List */
+.order-area { flex: 1; padding: 10px; overflow-y: auto; background: #fff8ef; }
+.order-table-container { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+table { width: 100%; border-collapse: collapse; }
+th { background: #f0e6dc; color: #5c3615; font-weight: 600; padding: 10px 5px; text-align: center; font-size: 0.8rem; border-bottom: 1px solid #ddd; }
+td { padding: 10px 5px; border-bottom: 1px solid #eee; text-align: center; font-size: 0.9rem; }
+.qty-input { width: 35px; padding: 5px 0; text-align: center; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-weight: bold; }
+/* Price/Total input styles */
+.price-input { width: 50px; padding: 5px 0; text-align: center; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-weight: bold; color: #333; }
+.total-input { width: 60px; padding: 5px 0; text-align: center; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-weight: bold; color: #333; background: #fcfcfc; }
+.unit-input { width: 60px; padding: 2px 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.75rem; margin-top: 2px; color: #555; }
+.unit-input:focus { border-color: #7a4a21; outline: none; }
+
+.remove-btn { background: #ffe5e5; color: #d62828; border: none; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; }
+
+.add-item-btn { margin-top: 15px; padding: 15px; width: 100%; background: white; border: 2px dashed #7a4a21; color: #7a4a21; font-weight: bold; border-radius: 8px; font-size: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+/* Checkout Bar */
+.checkout-bar { background: white; padding: 15px; border-top: 1px solid #ddd; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; z-index: 10; }
+.totals-row { display: flex; justify-content: space-between; align-items: center; font-size: 1.3rem; font-weight: bold; color: #333; }
+.actions-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; }
+.btn { padding: 14px; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.btn:disabled { background: #ccc; opacity: 0.7; }
+.btn-complete { background: #7a4a21; }
+.btn-new { background: #ffb703; color: #333; }
+
+/* RECORDS SCREEN SPECIFIC */
+.records-content { flex: 1; overflow-y: auto; padding: 15px; background: #f4efe8; }
+.date-bar { background: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.date-bar input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; outline: none; font-family: inherit; }
+
+/* ADD ITEMS FORM STYLES */
+.add-form-container { padding: 20px; flex: 1; overflow-y: auto; background: #f4efe8; }
+.form-group { margin-bottom: 15px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.form-label { display: block; font-weight: bold; color: #5c3615; margin-bottom: 8px; font-size: 0.9rem; text-transform: uppercase; }
+.form-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; outline: none; transition: border 0.2s; }
+.form-input:focus { border-color: #7a4a21; }
+.btn-save-item { background: #2a9d8f; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 1.1rem; margin-top: 10px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.btn-cancel-edit { background: #666; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 1.1rem; margin-top: 10px; cursor: pointer; display: none; }
+
+/*keyboard Overlap*/
+.order-area {
+  padding-bottom: 150px; /* Add bottom padding to allow scrolling above keyboard */
+  overflow-y: auto; /* Ensure scroll on smaller screens */
+}
+
+.order-area input:focus {
+  scroll-margin-bottom: 150px; /* Prevent inputs from being hidden behind keyboard */
+}
+
+/* MANAGE ITEMS LIST & SUB-NAV */
+.sub-nav-bar { padding: 15px; display: flex; gap: 10px; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; flex-shrink: 0; }
+.sub-nav-btn { flex: 1; padding: 12px; border: 1px solid #ddd; background: #f9f9f9; border-radius: 8px; font-weight: bold; color: #555; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }
+.sub-nav-btn.active { background: #5c3615; color: white; border-color: #5c3615; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+.manage-category { margin-bottom: 20px; }
+.manage-cat-title { font-size: 1rem; font-weight: bold; color: #7a4a21; margin-bottom: 10px; background: #e0d0c0; padding: 8px; border-radius: 6px; }
+.manage-item-card { background: white; border-radius: 8px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #eee; }
+.manage-item-info { flex: 1; }
+.manage-item-name { font-weight: 700; color: #333; font-size: 1rem; }
+.manage-item-meta { font-size: 0.85rem; color: #666; margin-top: 3px; }
+.manage-actions { display: flex; gap: 8px; }
+.manage-btn { padding: 8px; border-radius: 6px; border: none; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; }
+.btn-edit-item { background: #e0f2f1; color: #2a9d8f; }
+.btn-delete-item { background: #ffe5e5; color: #d62828; }
+
+.menu-tools-bar { margin-bottom: 15px; display: flex; gap: 10px; }
+.btn-menu-tool { flex: 1; padding: 10px; font-size: 0.85rem; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; color: white; }
+
+/* Filter Dropdowns */
+.filter-row { display: flex; gap: 5px; margin-bottom: 15px; position: relative; z-index: 200; } 
+.multi-select { flex: 1; position: relative; user-select: none; min-width: 0; }
+.select-box { background: white; border: 1px solid #ddd; border-radius: 6px; padding: 10px 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 13px; font-weight: 600; color: #444; box-shadow: 0 1px 2px rgba(0,0,0,0.05); white-space: nowrap; overflow: hidden; }
+.options-container { display: none; position: absolute; top: 110%; left: 0; width: 100%; min-width: 120px; background: white; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); max-height: 250px; overflow-y: auto; z-index: 201; }
+.multi-select.open .options-container { display: block; }
+.opt-label { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; color: #333; }
+.opt-header { background: #f0e6dc; padding: 5px 10px; font-size: 11px; font-weight: 800; color: #5c3615; text-transform: uppercase; }
+
+/* Stats & Cards */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.stat-card { background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: relative; overflow: hidden; }
+.stat-val { font-size: 1.2rem; font-weight: 800; color: #333; }
+.stat-lbl { font-size: 0.7rem; color: #666; font-weight: 600; text-transform: uppercase; margin-top: 5px; }
+.stat-highlight { border: 2px solid #2a9d8f; background: #e0f2f1; }
+
+.record-card { background: white; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #ddd; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.rc-dine { border-left-color: #2a9d8f; }
+.rc-parcel { border-left-color: #e9c46a; }
+.rc-deliv { border-left-color: #e76f51; }
+.rc-meta { display: flex; flex-direction: column; gap: 3px; }
+.rc-token { font-weight: 800; color: #333; }
+.rc-time { font-size: 0.75rem; color: #888; }
+.rc-pill { font-size: 0.65rem; background: #eee; padding: 2px 6px; border-radius: 4px; width: fit-content; font-weight: bold; color: #555; }
+.rc-right { text-align: right; }
+.rc-price { font-weight: 800; font-size: 1.1rem; color: #333; }
+.rc-items { font-size: 0.75rem; color: #666; }
+.no-data { text-align: center; padding: 40px; color: #999; font-style: italic; }
+/* --- MODERN E-RECEIPT UI --- */
+.modern-receipt {
+    background: #fff;
+    padding: 20px;
+    border-radius: 16px;
+    width: 100%;
+    margin: 10px 0 20px 0;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    border: 1px solid #f0f0f0;
+    color: #333;
+    max-height: 50vh;
+    overflow-y: auto;
+}
+.mr-header { 
+    text-align: center; 
+    border-bottom: 2px dashed #eee; 
+    padding-bottom: 15px; 
+    margin-bottom: 15px; 
+}
+.mr-title { 
+    font-size: 1.2rem; 
+    font-weight: 900; 
+    color: #7a4a21; 
+    margin: 0 0 5px 0; 
+    letter-spacing: 0.5px;
+}
+.mr-subtitle { 
+    font-size: 0.8rem; 
+    color: #888; 
+    font-weight: 600;
+}
+.mr-badge {
+    background: #e0f2f1;
+    color: #2a9d8f;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    display: inline-block;
+    margin-top: 5px;
+}
+.mr-details { 
+    display: grid; 
+    grid-template-columns: 1fr 1fr; 
+    gap: 12px; 
+    margin-bottom: 15px; 
+}
+.mr-detail-item span { 
+    display: block; 
+    color: #999; 
+    font-size: 0.65rem; 
+    text-transform: uppercase; 
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+.mr-detail-item strong { 
+    color: #222; 
+    font-size: 0.85rem; 
+}
+.mr-items { 
+    margin-bottom: 15px; 
+    border-bottom: 2px dashed #eee; 
+    padding-bottom: 10px; 
+}
+.mr-item-row { 
+    display: flex; 
+    justify-content: space-between; 
+    margin-bottom: 10px; 
+    align-items: flex-start; 
+}
+.mr-item-left { flex: 1; padding-right: 15px; }
+.mr-item-name { font-weight: 700; color: #333; font-size: 0.9rem; margin-bottom: 3px;}
+.mr-item-qty { color: #888; font-size: 0.75rem; font-weight: 500;}
+.mr-item-right { font-weight: 800; color: #222; font-size: 0.9rem; }
+.mr-totals { display: flex; flex-direction: column; gap: 8px; }
+.mr-total-row { display: flex; justify-content: space-between; font-size: 0.85rem; color: #555; font-weight: 600; }
+.mr-advance { color: #d62828; }
+.mr-grand-total { 
+    display: flex; 
+    justify-content: space-between; 
+    font-size: 1.2rem; 
+    font-weight: 900; 
+    color: #2a9d8f; 
+    margin-top: 5px; 
+    padding-top: 12px; 
+    border-top: 1px solid #eee; 
+}
+
+
+/* --- 5. OVERLAYS (Menu, Sidebar, Bill) --- */
+.overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(2px); z-index: 20; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+.overlay.active { opacity: 1; pointer-events: all; }
+
+/* Menu Modal (Bottom Sheet) */
+.menu-modal { position: fixed; bottom: 0; left: 0; width: 100%; height: 85vh; background: #fff; border-radius: 16px 16px 0 0; box-shadow: 0 -4px 20px rgba(0,0,0,0.2); z-index: 40; display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.menu-modal.active { transform: translateY(0); }
+.menu-header { padding: 15px; background: #7a4a21; color: white; border-radius: 16px 16px 0 0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+.menu-search-container { padding: 10px; background: white; border-bottom: 1px solid #eee; flex-shrink: 0; }
+.menu-search { padding: 12px; width: 100%; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; background: #f9f9f9; }
+.menu-body { flex: 1; overflow-y: auto; padding: 10px; background: #f4efe8; }
+.category-title { font-size: 1.1rem; font-weight: 800; color: #5c3615; margin: 15px 0 10px 0; padding-bottom: 5px; border-bottom: 2px solid #e0d0c0; text-transform: uppercase; }
+.menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.menu-item { background: white; padding: 12px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); cursor: pointer; border: 1px solid transparent; display: flex; flex-direction: column; justify-content: space-between; height: 100%; min-height: 80px; }
+.item-name { font-weight: 600; color: #333; margin-bottom: 8px; font-size: 0.95rem; line-height: 1.2; }
+.item-meta { display: flex; justify-content: space-between; align-items: flex-end; font-size: 0.85rem; }
+.item-price { font-weight: bold; color: #2a9d8f; background: #e0f2f1; padding: 2px 6px; border-radius: 4px; }
+.item-unit { color: #888; font-size: 0.75em; }
+
+/* Sidebar (History) */
+.sidebar { position: fixed; top: 0; bottom: 0; left: 0; width: 85%; max-width: 320px; background: #7a4a21; color: #fff; padding: 20px; z-index: 30; transform: translateX(-100%); transition: transform 0.3s ease; box-shadow: 4px 0 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; }
+.sidebar.active { transform: translateX(0); }
+.sidebar-content { flex: 1; overflow-y: auto; margin-top: 10px; }
+.close-btn { background: transparent; border: none; color: white; font-size: 28px; padding: 5px; cursor: pointer; }
+.new-order { background: #ffb703; border: none; padding: 15px; width: 100%; font-weight: bold; font-size: 16px; cursor: pointer; border-radius: 8px; color: #333; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.order-history-item { background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid transparent; }
+.order-history-item.active-item { background: rgba(255, 255, 255, 0.2); border-left-color: #ffb703; }
+
+/* Bill/Receipt Modal */
+.bill-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95); z-index: 60; width: 100%; max-width: 320px; display: flex; flex-direction: column; opacity: 0; pointer-events: none; transition: all 0.2s ease; }
+.bill-modal.active { opacity: 1; pointer-events: all; transform: translate(-50%, -50%) scale(1); }
+.bill-wrapper { background: #fdfdfd; border-radius: 4px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.6); width: 100%; display: flex; flex-direction: column; align-items: center; }
+.receipt-paper { background: #fff; color: #000; font-family: 'Courier New', Courier, monospace; font-size: 10px; line-height: 1.3; padding: 15px; width: 220px; }
+.bill-header { text-align: center; margin-bottom: 8px; }
+.bill-logo { width: 60px; height: auto; margin-bottom: 5px; }
+.bill-title { font-size: 11px; font-weight: bold; text-transform: uppercase; line-height: 1.1; margin-bottom: 3px; }
+.map-container { margin: 2px 0; display: flex; justify-content: center; }
+.map-link { text-decoration: none; color: #000; font-size: 9px; font-weight: bold; display: flex; align-items: center; gap: 4px; }
+.map-icon { width: 12px; height: 12px; object-fit: contain; }
+.bill-info-line { font-size: 8px; margin-top: 1px; font-weight: 500; color: #000; }
+.divider { border-bottom: 1.2px dashed #000; margin: 6px 0; }
+.meta-left { text-align: left; font-size: 9px; margin-bottom: 1px; font-weight: bold; }
+.meta-row { display: flex; justify-content: space-between; font-size: 9px; margin-bottom: 1px; font-weight: bold; }
+.bill-table { width: 100%; border-collapse: collapse; margin: 8px 0; table-layout: fixed; }
+.bill-table th, .bill-table td { padding: 4px 2px; font-size: 8px; border-bottom: none; vertical-align: top; line-height: 1.2; }
+.bill-table th { background: transparent; border-bottom: 1.2px dashed #000; font-weight: bold; color: black; }
+.bill-table td { font-weight: bold; color: black; overflow-wrap: break-word; }
+.bill-table th:nth-child(1), .bill-table td:nth-child(1) { width: 32%; text-align: left; word-break: break-word; }
+.bill-table th:nth-child(2), .bill-table td:nth-child(2) { width: 13%; text-align: left; }
+.bill-table th:nth-child(3), .bill-table td:nth-child(3) { width: 12%; text-align: center; }
+.bill-table th:nth-child(4), .bill-table td:nth-child(4) { width: 18%; text-align: center; }
+.bill-table th:nth-child(5), .bill-table td:nth-child(5) { width: 25%; text-align: right; }
+.total-section { border-top: 1.2px dashed #000; padding-top: 6px; }
+.subtotal-row { display: flex; font-size: 8px; font-weight: bold; margin-bottom: 3px; }
+.total-row { display: flex; justify-content: space-between; font-weight: 900; font-size: 12px; margin-top: 6px; border-top: 1.2px dashed #000; padding-top: 6px; }
+.qr-section { margin-top: 10px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+.qr-img { width: 70px; height: 70px; margin-bottom: 5px; display: block; }
+.qr-text { font-size: 9px; font-weight: bold; color: black; text-decoration: none; line-height: 1.3; text-align: center; display: block; }
+.footer { text-align: center; margin-top: 12px; font-size: 8px; font-weight: bold; }
+.bill-actions { width: 100%; padding: 12px; background: #eee; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid #ccc; }
+.payment-toggle { display: flex; background: #ccc; padding: 3px; border-radius: 6px; gap: 3px; }
+.pay-mode-btn { flex: 1; border: none; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; color: #555; background: transparent; }
+.pay-mode-btn.active { background: white; color: #333; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+.bill-toggle { font-size: 0.8rem; font-weight: bold; color: #333; display: flex; align-items: center; gap: 5px; cursor: pointer; }
+.bill-btn-row { display: flex; gap: 8px; }
+
+
+/* --- STAFF / HOST ACCESS CONTROL --- */
+.access-entry-card { background:#fff; padding:20px; border-radius:14px; box-shadow:0 8px 25px rgba(0,0,0,.14); width:calc(100% - 30px); max-width:420px; }
+.access-entry-title { margin:0 0 8px; color:#5c3615; font-size:1.2rem; font-weight:800; }
+.access-entry-sub { margin:0 0 15px; color:#777; font-size:.85rem; line-height:1.4; }
+.access-tabs { display:flex; gap:6px; background:#eee; padding:4px; border-radius:8px; margin-bottom:15px; }
+.access-tab { flex:1; border:0; padding:9px; border-radius:6px; font-weight:800; cursor:pointer; color:#666; background:transparent; }
+.access-tab.active { background:#7a4a21; color:#fff; }
+.access-input { width:100%; padding:13px; border:1px solid #ddd; border-radius:8px; font-size:1rem; outline:none; margin-bottom:10px; }
+.access-input:focus { border-color:#7a4a21; }
+.access-primary { width:100%; padding:13px; border:0; border-radius:8px; background:#2a9d8f; color:#fff; font-weight:800; font-size:1rem; cursor:pointer; }
+.access-secondary { width:100%; padding:11px; border:0; border-radius:8px; background:#eee; color:#444; font-weight:800; cursor:pointer; margin-top:8px; }
+.access-small { font-size:.75rem; color:#888; margin-top:10px; text-align:center; line-height:1.4; }
+.access-session-pill { display:inline-flex; align-items:center; gap:6px; background:#f0e6dc; color:#5c3615; border-radius:999px; padding:6px 10px; font-size:.75rem; font-weight:800; margin-top:10px; }
+.home-access-btn { margin-top:14px; border:1px solid #cdbba8; background:#fff; color:#5c3615; border-radius:9px; padding:10px 16px; font-weight:800; cursor:pointer; }
+.permission-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0 5px; }
+.permission-option { display:flex; align-items:center; gap:8px; background:#f8f6f3; border:1px solid #e7ded5; padding:10px; border-radius:8px; font-size:.82rem; font-weight:700; color:#444; }
+.staff-code-row { background:#fff; border:1px solid #eee; border-radius:10px; padding:12px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+.staff-code-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.staff-code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:900; letter-spacing:1px; color:#5c3615; }
+.staff-code-label { font-size:.8rem; color:#555; font-weight:700; margin-top:3px; }
+.staff-code-perms { font-size:.72rem; color:#777; margin-top:6px; line-height:1.45; }
+.staff-code-actions { display:flex; gap:6px; margin-top:8px; }
+.staff-code-actions button { flex:1; border:0; border-radius:7px; padding:8px; font-size:.75rem; font-weight:800; cursor:pointer; }
+.btn-code-copy { background:#e0f2f1; color:#146f66; }
+.btn-code-revoke { background:#ffe5e5; color:#b31f1f; }
+.access-modal { position:fixed; inset:0; z-index:80; background:rgba(0,0,0,.65); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; padding:15px; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+.access-modal.active { opacity:1; pointer-events:all; }
+.access-modal-panel { width:100%; max-width:560px; max-height:90vh; overflow:auto; background:#f4efe8; border-radius:16px; box-shadow:0 25px 60px rgba(0,0,0,.35); }
+.access-modal-head { background:#7a4a21; color:#fff; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:2; }
+.access-modal-head h3 { margin:0; font-size:1rem; }
+.access-modal-body { padding:15px; }
+.host-action-bar { display:flex; gap:8px; margin-bottom:12px; }
+.host-action-bar button { flex:1; border:0; padding:11px; border-radius:8px; font-weight:800; cursor:pointer; }
+.btn-host-generate { background:#2a9d8f; color:#fff; }
+.btn-host-close { background:#eee; color:#444; }
+.access-note { background:#fffdf7; border:1px solid #f1ddb5; color:#6d5b32; border-radius:8px; padding:10px; font-size:.75rem; line-height:1.45; margin-bottom:12px; }
+.permission-locked { opacity:.55; }
+.home-access-meta { font-size:.72rem; color:#777; margin-top:5px; text-align:center; }
+
+</style>
+
+<!-- Browser-only live backend: the Host browser is authoritative and PeerJS provides peer-to-peer signaling/data transport. -->
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+<!-- ACCESS SYSTEM: Host browser is the authoritative live backend; staff devices connect peer-to-peer using PeerJS. -->
+</head>
+
+<body>
+
+<!-- === VIEW 1: HOME SCREEN === -->
+<div id="home-view" class="view-section active-view">
+  <div class="home-container">
+    <div class="logo-area">
+      <div class="logo-circle">
+          <img src='data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj4KCTxkZWZzPgoJCTxpbWFnZSAgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGlkPSJpbWcxIiBocmVmPSJkYXRhOmltYWdlL3BuZztiYXNlNjQsaVZCT1J3MEtHZ29BQUFBTlNVaEVVZ0FBQUdRQUFBQmtDQVlBQUFCdzRwVlVBQUFBQVhOU1IwSUIyY2tzZndBQU90SkpSRUZVZUp6dGZRVllWTm43UDZpcjI2bFlkQmlvOU5BNWRIZkRNSFQzME4wNWRIZUhJQ0JoZ1lLTjJOMkFMUW9XTmNTOCt6K0R5bEx1dXZ2Zjc4K3Q5M25PTTNEdnlmZno1cm5uemxCUi9ZWHA1NTkvcGlxTmRHWE1kTlkwTC9VM3F6K1FGeHFRRmVYcmxSb1Q3TlorWU4vS0Q3WExpQTQwVEE3eWNLbU05OEVYQjFqblpibnFCWmRGZXZEM1h6eTI2djl5L3Y4WWFzbFArQ0xOellTM3lOdkVzVGpLN1ZCK3NQMjlGQS9UMXdHMmVrMGhCRWZuRUQvQ3R1cnFhdW9QdFk4SjlHS0s4bkUxODdNMkxJdHhNYjJiSCtuK3Vvem9mN2t5eHEwc0o4QkJzVG94bUhIbzl2a1B0ditQNXRDUnVvTHZNbnh0c3JJaUNCZFMvQnh1bDhaNnZRbHh4cmRhNjZzcDYrdnJmeDBlSHY1Ui9TUW5KMU81dWJsOTRlZGt5ZWRqYjdhdklNcHpxQzRya2xTYUh2V3FJVGYyYkVkcHV2YWJwMzBmMUxKL1BWMDcxdkY1YVlTUFozNnc4K2tzSDZ2N2VYNVdqeE5kak42NG1hZ1Z1bGlac1AzLzlKMlhrN1BjRzZkakVHeHJmTE13d0dZNjI5OW1LanZJZ1ZRVzQ5MTkvOG9wSmpKcGZObWZ0WTUvQkpVbkJ0T25ldGtlU2JOU0hzcXprbnRSNUtvNUZtdW5PZVJ0S0x2VDA5UHpzejlqaktLaUl1ck1NTUttY0F2TlovbGVKbFB4cHRpcGREc2xVcWFIeGNEK2txeXdxeGZQcmZnenh2bGIwOFRvRzZyT0ZOZHRtWjdtdGJVaGxyZDJSOW0xN0UvenZsWVo3L1V5d2Qyc3pNWkEvY2MvYzd5Nm1ncnF0RkF2KzB3LzIvdjc4aUpHOXVjRVAyMUpEN3FYNW16ODRrQnV0UGVMeDMzL2JxZC85bERETjlsKzlsMUJGbnA5L3ZxeURVSEdpaTFaWHZoenVlRnVENzNOdFl6eTh2S1gvOWxqSnZvNnJZOTJNU3VyUy9ZYmpYY3l1Tzlyb255VllLQjRJZG9aUDdCblYyWCtqZXZYdnZxengveGJVSE4rRXMzT0dQZVNWRmZjMkM0ZnJkZGw5dExQaXUxbEJuZEZXWStudXVxK0xJand3QzVzY3p3emJOWEUwTU5sbEhENFdtM3FpaU54TGo4ZUpSSytlOXE5ZCtYMTJ0UlZKeFBkdjdwYWx2RDUxS3RuMUpRNlo4clRWblFWSk04elJaVHIyUjRtbHZWSkFSTkZkbklqZVJZU0wwcnNwSVlLSFJXSDk1ZWxEbmVVSlBnZk8zYnNUekdUZnh0Ni91QXVkUlBSUnlBLzFPMUlpanR1ZDZHbmdYK09zN1p2cHJOdVNHV2l6L0hNWUtlT3pBaHYxcmx0QnA4TlVKZFl5eFhXMk1oV0ZwdkpaRmFiUys3YWJTZDlJVjFUNEV5cWhrQjd2YlhZb1JaSGlWTkZoc0pIaWt4bGN2SnhjaWxFSGJIR21pQUwyN245ek9RMlVSN3lOU2toVDVPZERYYmx1dXZIRlhnWnA1UUdXV2JYcElaZXJjNk03ZTV1cStINnYrWElKNlpiVnkrc1NIRTBPSkR0WXoyNGs2RHh2Q1ZROTM2RHQrYTlPbS90WnlVQjVpT05STUxONWxSLzJibHRuang2c0t6QVF2cEduQklQaEVoelFvb0tOMlJwOEVDZzVEYndrMkNISkZVdXlOQkM5OUQvSVZnT0NNQnlRckFjTnhSN0dSYmN1M2R2dHA4M0w1NVRsd2RZaFpaRWVZN1hlbXFPN0E0MGVOTWFZakt5TjhwaWZGZVk5V1JWaE11YnBuaEMrcVZMbC80OWVjcXRXN2VvTWtNSldUbFJQazlkREZVem5YVGtDSjVHS2c0ZXhtb3VQbFpHOFdYRTRQNlVNRys1Z1VjRE0weHBEcmRpS0hQVkxBM1FFRHRoSVNNVWFpUWpabTRqSytUckxJMnBzSlFUU2RSWGtNS2JLNGpiMm1NRnNoeGtoY3BONUNVQ3pHV0VYYnpWeExLenJKVXU3QTZ4RFR4ZWt2WXRwYS83dlhlV1Z5V0hKcVFGT0wxeTBaRzFjOWVSMGZBeVVOVDBOVlpSSS9yWTZXV0hlMTN3ZDdIMlAzM216TDhIa09IWHo2akw0Z09MR2pJalhqYjZHN2EzQkJnMjdRM0c3VzBQdDJodkNjRjNGVVI0dm00bStwUTJ4M3BpbXFLY2Z5cnoxRXNOTVZFb3NWQ1QzYWFpcExBS2o4ZFQyMW5oUHpQVlZQbEpWMVA5YXdzTGkyWDJkamJMTFF5MHZ6UFNWdnRKVDA5dnBhV0YyWEpMTGFYdkFnMWtoUE1kTlBjZFRQS3l2WG5tOElwS2Z4eStKc0h2YkpHNzN0aWVBSU8yOWpDejNidDlERnFhL1F4YTlrVGJkOVNuQkEyMHhka2UzRlZWUkVNeGIvOEsybDFaOUVXMHQ4dTFuSERDV0lDcXdCdUNIUGRMTHdXK0lSOWwva0UvZGVHbkFXYWFBeVZSWG1PcDd2aUMxaWdMNTJSYjlRT1dobHFyLytoNFJIdGRybDJCSnZ1YUVnUDRpeUxjYnFUNk9Vd0ZhSWtOQktqeVAvZFY1SHZzTGMvVDU2M0llenZlU3VOcFlZUUhLY0pVdHRmZng1UHVYd01JeFdTMTdpd1Zyc2lJNlRuUVdCNjV2eUtENDFoTkR2ZlozWGxDbCt0U1JJOFVSeW9VeHdWY09GQ2JmNzNFUSs5VWxMVldUbkJJOEIvT3BxdlRZMWNWT1NqdGJrMExxQ3RQaVJyT0N2ZTYySndXcU5kZFFSUTczMXpFZDYxajU3WTdQWWZZRCs0cWJTeE9DRDFia1I0ajNOWFY5ZTh4V1FkeUkzN0l3NHM4U1BNd21hcU84NXd1dEJDYktyRVVJUmRiQ1ZNS0ZLSlNZQzlEVGlIWVRwVjZHMHhsZTVva051OXUvc01NYWlzZ3Jzd3dsOTZYNTI4ekVXK2pQcDJIRnlYbm1mQkRBVTZRWEdJaFFpNjNFWjhxY1ZHZHFzdU1KUmU1cUpNenpiRXZpL0t5Zi9vejEveVhwdXEwbUsrUmVicnJweTgva1JzZkJORm1LdVArYW9KWHZWV0Z6bmdvQ1I1MFZCQnNzbGNXTFhNeFVpL1BjMUlkYWlaNnROdzZmL3dQSld3VXM5TmVrYkVtdzFyK25KKzUxcFNObHV4ZVJ3WCtmQWNzVjVHN1BFKzFqekttMDBlWjkxcHhwUHRrakpNNTJWY1ptVkExa1ZzK1BqNC8vTm5yL2t1VEJkN2tHeitDQzFla3YvdnB0cHFjL2pQSER2RGV2M2xoNCtPZXRtMjNXM0pFTDVhR0t2Vmt1T3Z2OHRQdUt2TXpuZWpZVmQ2ek16blU3TUh0NjdPSjNzaklDRldUdCs3bS9RRmFGa2RpYkNSNzhpUG5nWmJyWi90ZGFTeWhvSkFZM0pkbExUdVo0NjUzNjJpU3MrSFZzaEM1Ui9zTE1LOXZITjg2K09ndWJYZDdnMzRwTVdJOEtZUnd5TW5Pa2s1ZFJmRnp5bTd4djRyeVBQR2I2OTBVOTFWN3FMN0pqUThnbjZpT25Xd2d5RTNVT29xUmEreEZvTXhTRUFwTU1aQnJ4QXVGVGtvUTVHcEhMb2dQbXI1MHBDM3N4WU83MzFENnVIZm5JblVPWHBMWVlDODJuYUFuK2pUVVhHY21kNW1lbktTNmYrSEkrcjNsYVZXUkJIdUlzdEdCYkdOK3lEYmtoUUlUUGlpMzVJZDZSeUZvY2hNajc0a3duS2pMaUpxT2Q4SkJrN3ZLWkkyM2FWSmpROE8vYTZPeHBiSndlWDI0dFUybXBleWRTQlVlY3BDNTlsQnFpUHQwZVpRTFJPbExQQWxVd3V6eFVjUVVlU2hnSWp3Vk1EWUpobUxGWWZhR0R3TTlYVzdsUmdlOWJpbk9iTmlYNVNkem9jSmJ1eWxRcHpUSEFFUEt3TW5jYVFreURXa1B4MHUyWklhYlo4VUVub24yY3gxenRURWJpdFVSZmVtbkpoamlwY2pyNHFQSUYrdWp4SnZ2cDh6YmtHU2xNbGdVNnc4UkJLZXBDQTJwRjVIS0FrUGVXbkpCS1NuSmYvb2UybCthV21yTGx0Y0g2dTA5VmVnNFZSOWlQQjFzcFpjWjR1WGFreFVkVEc0cXpUaFhWMXUxdWJxNjh2TW5qKzU5MGR0ZXM2SFdVNGRRU2pDODB4anQySmhITUgyZDY0TWpueXAySDNwd0lHTGlZcjRaN1BQQlFvZVhGTFM2aUpFYkhLV0d5dHcwaHVOdHRhQ0FZUEFxejgveWZMYUo1Sk05eWY2S0wzdXZNZ3dPUHZ2K3l1WExYL1VjYk9IZlcxdmM2K3RrU3liWW1yVTd5d3FiTzhtTG11SFZGR2svTlgvK1R5bkR5L29Mb29XcTFrNDNwWnVuRW5TbW54K05nZTRDejBkVjdsb0hVdjJkeHBQRGZNZ25Hb3RmdEFRWjNXdHdrbjVaWlNreVdZeWlvbXg5QWNnM0ZvU09RR1c0bVc4RVQvWjZ3NE42Vytnck5ZQTd1VHB3Tmd3THgzekVvTVVHQTdzcythQUt6dytGUmhoSTBlU0ZFcnc0VkZnalUyZ25OclhiVysxTmU1Yi8wOTFGYVdNUlBxNlE3Mlk0WFUvUTZTMGlXSmg4YXQ1OEVrcjNkMW9aYXFLSVNUY1REMnoxa1crL1UyRTFlWDlmS0ZRNUs1S1RETVNubzczdHB6SmovQ0RIeHdLU0RFUWhXVnNBY294RmdLZ3RCSVVtQXREa0xBRkhRcFNnSjBFVHVxT1VvRHRDRVk2SHlrT1hueFRzZHhlRFJsc0JxTVpqb01RWUFXSElCL0VxQWxQcE9vTGtWQ09ScVJROS91bENUME55UVp3L09ZVGdCT0htMm1TaXBnQTVYaDB6NVcrazZ2R3BlZk5KU1Y5Zmd5cFNXMmhqcTRma0JZcTBuNjl5bS9EUndlWTQ2S3NFUndaNjlJVjdPNU16SXYwZ0s4RHhSYkt4RkNrZkp3SVZpTkdsZUFFazhRZ1lUeG5vQ0ZhQzlrQkZPSWcrTzlEblBtOVpxTFJBd1lBZU4rUnFjVUtKQVFvSWpFV21pQm9DVXpIT3VON0sxTWdYS1VnRC9Ud2RwOTNzekU2YVlZVThYZVdFSEIyVXhHMk1kRFcvLzlROCtlUlVuaHkyTEYyUE4rdHVwVFgwN3cyYXJvbDNkaXB6VlZWckROUTRudVp2UTBKK2hWVHRhMEt1c0JLQlZrZEJPQk9KaFJ1WjZuQ3owQVN1RitHaE8xb0JEdnBKd0g0dk1UamdLUUtkM21Kd3pGOENqdnFJdzE0SGZtaTJ4a0N0R1FhS2thYVVPR3VUMHFQOEp5SUMzWWRUblhUSEt3bDYzYVdoWHZ5Zm1nZC9LVHJiYzVRNlJvc3YvRmF4Q1R6Y0h3U1ZnWWFGL29yOGpvbHFYQ09VRURYVFFwcmM2aUVCZTcwUWs4TVY0R0s2RHR3dU00ZWhJOUV3ZURBRUh0UmF3NzFLUFBRV0djSDFGQlc0a2F3QzF4T1Y0VnFpQ2h6MUZvZDJWeUhvOEJTRFhYYWlTRk1FSU4xYVpUSmVWM1FpWFljUHZHVDRSOXdNTkpRL05RLytVdFI3NXdaMW5LNXd3UFVzRFhqWTRnWTFua3Ezc3FQOWYvVEU4dHI2eWZFTXRBY3J3K1VZYWJpU3FBQm5vdVRnVkl3U25Nbkd3ZUZvRGVpTTBvQmo4ZHB3UEY0TGpzV2cvME5Wa1BsU2dqYUNET3h5RklOS2MzN2sySkV2UWNEbWFYQkRpUzR2MUpvTFFyQ2l3RDFYTEYrWGhSSVdaMlNnKzk4eG9MazBNUENRT2xwSDJQOU1oQ3c4cU1MRDZXZ0Zjb3UvUWVEWm5ibmZkU1lhRjk3TzFvSHI4Zkp3QzBuK3ZTb3JlTjZkQlM5NjB1QnBleUE4YlBPQyswMnUwRnVPaDV0WjJuQXBUZ0hPUjh2Q3FTQUo2RWFsSjFRYWppRnpWb09TeXdJRVNKRTJMOVFoODFYam90WmFHT0RPb0tpbytLbVgvOWVqTzdkdlVZV3BDZnJYb3hDMXI4Z1Flb3VOb05OTEZJcU1NQzlQRVBWSk40Z0tjQU1CY2lkTkJSNmc4UFpKUnhnOFB4UU16enVEWWJBckJGNmRqSVduelU3d3NCSUg5L0oxNFM2cWR6dEpBYTdGeXNERkNDazQ1QzRLN1k3Q1VLakpEUVVvL0MzVDQ0V2RUakpUbFRFK3JRZHFDdVU3Sy9PKy85ZHNzWDhNOWZYZHBncFNGemNvTitBbG53NlJncnU1Mm5BOVV4dWFuVVhoTkRKUDErUGtrSFlvd1lNU1BYaFNaUVJQRzIyUUpwbkE0enBMZUx6VEhCN1hXOEtqS2h6MDVldkJqU1JGdUo0Z0I5ZmlaZUJLRkJZdWhJbkRNVitrS2Y3aVVHT0NnWHhOSGlqVTVrRjlTNUFUM1hFUFVxT0NiamFWNXg3c3FLOTBQM3VnbVdkaWRPUnJFbW5zMzdQbHZoVDFuVDFPblJmZ0lsNWtpSmxxdHVDQkU3NGljQ1ZCQVpyZEpHWjh4c1ZJYWJpVHJncVBLZ3poU2JVeERMWTV3SU5LRTNoU2gwZUE0T0ZSTFNwVnB0Q2JyVEVEeHEwVUpiaVJLQWVYbzZUZ2ZJZ0VIUFlVaFdPZVFyRFhYaENLa1hZVWFQRkFvNTBJeE5sbzNuUjNzdWt2eXN3WXVYUGwrc1M5cTdkdXZIazVrVGI2WnRKc2tqVE5TQ0tSL2wwbkdhOGMzck04TnpwSXBhNG90N28wSzJVczNVRUZLazE0WUpjNU4rekNJL05peUFQSEE2U2d5ME1FYmlLSDNwZW5BWTlyakpGbTRPQlJOUUprQmd3emVGUmpCZzhxak9BV01sVzNVaFRoYnJZcTNFeFdnRXNSRW5BVmFVbFBnQmdjZFJlRTR6NGlVSXZuZ3p3dGJxaXhGSWFLWVBmeDIxZDZKMjVkdXdTbmpyZkFxV04xY1BaVUsxeTljQVFlOVQ5OFBUand1dkw1czZkZmZHbysvYytwTGlOaFpWVjJpbUJsVGxwc2ZrcjgvYWdnNzBsZmdqTkV1K09nMGdFTDVTYThVS1REQ1lYNlBORHVKZ3g3YlBqZ1Jwd3M4aUhJYkZVWUlPMHdnb2RWeG5DdjFIREdkRDJxd1VGdm5qYmNJRkxBVUlQZUhEVzRGaWNEbHlNazRYeXdHSnp4RjRGVDNrTFE3U01FTzgzNFprNnA3UEpRaCs1OTlkTkhEdFZCYTFNS05OUWx3TzVkaWREV2xBeDdtMVBoY0hzeFhMNXdZdnpheVgzeHQ0NjM4ZDA4dXVlZnVmTmJIdTYxWVY5dFNWRkxiZVd6YUg4dnNMY3hneUJmTjNLS213bTV4bGthYWgwa0lRTkZRb1VHZkZDSklxTTlqa0pJVzNqaGFzeGJVM1N2ekFEdTVPdEFYeUh5RjZrcWNEZGZHKzVrYXlMZm9ZVDhCb3JFVXBXUmRxQy9ZMlRnZElBSTlQZ0t3ZGtBVVRqb0xBaXR0Z0lvd3VLSFREVWUyQjFxRGgwdHVWQmJGWW1BU0VLQUpLSlBJalNqMHRxVUNpMk5TZEN4TndkS2N4SW16aDFwdVg5MlgwM3loYmFhZjhiVHc1OUpKS3F1aWl6V0M0ZDJSeDZvTDN0S2pBZ0VkMGRMQ1BMem5JNTB3STlIYVlsQkljcWlheTB4MElDeTZpYkV1RVlyZnFoQVRyak9VZ2dxamZuZ2dJc0luQW1UZ2Z0SVE2Nm5xOFBsV0RtNGlnQzRObE9RRTBjYTlMNVFJcXR6SWVMUTR5Y01weEFncC8yRm9jbVNIOG9OTVpDbnlRY1pxcnhRNzZrT2JWV0pzTE1tQ3VxcVkySFh6amdFU2p3Q0pRSHFLNk9ndGp3S21tcFNwNE9EZlo2RStUbS9QbFNkTVgybkpmZmVsWFEzd3RQV25EV2ZtcWQvaUM0MVZWQzM1eWF0T2Q1YzdYZGtYOU5JVWxRd09GcWFnSitYS3praXdPdXlrNW1CaTUyY01LODNsak12VUpMamFZZ2tCemxkblJ2cUxmaWhjUVljQVNqUTUwYzJueGVhclRCd3lFMFVibE8yVE5MVjRId0VGcTdHVWFJcFdaU2pVQUNoT0hFWk9CY3FDVDJCb25BS2FjY3hMeUhrMEFXaHkxMEFxb3dwWVBCQ2loSVBKQ3Z5UUxHcEFEVEZPSkYzVmlSRGRWa0VWSldGUW5WNTJBdzRGY1ZSU0d1dHB6eGQ3UHBhdzYwZjNVM1FucnpvZ1lGT0xVYm9WS2FGazU3eWQvcmE2elNQVlJkOVMzbzkrS25aL0hIMDZ0NGQ2bzZTVE95bDdzN3U0Z3ppcEpPZEJYaTRPMEpxZk5SMGtMdER1WjJ4THJ1R21zTE1BeUFiV2NGVnpoTGNuQVJKenJSZ0xPZElsQnducEtweFFRblNqR3h0WlBQVlVYYU40NGRtRzBHNEVDa3pBOGlaY0dta0lRaUlCUG1acFBGU2xEUjBCNHJCY1Y5aEZLVUp3MGxVV3V5UWljSUxJTCtCa2tJZDNobk5TSlRuaGpUMFdXSWhOVmxoSlRhZDQyNE0yYkh1a0pYc0NvVVpqcENiNGdnaC9qZ3dORkR1RC9mekRqbnRJREJ5WEk4T0RxalRRb2N1RXpTSmZBL2RWbXh3THQ5LzVIYlA4UU9ISy9JdzA5UFRuNXJkSDZidXV0SmxCNHN6MmM1MHRqVTJWQmErOFhXeEJpZEhLNGlPQ0lBTVgxdlk2U2d6dmNkTHFYR1BuNEZFZjBmdHZDMExRMzAxYWtjRkVYcFBLVzdYWUFYK2dhSkFWNmlOOFlJOGZVSElVT2VEVWdNTUhIUVhnWXV4Q25BNVFSR1pNRW00VE5FU0ZDS2ZDcGFBNDhoRUhVY202aGh5M2wwRTRaa05SUXFRWmNnZlpXdndRZ0lDSXg2VkxGMEJLSW4xUDk5V2tIajZhSzduVkxXUEFWVGxXSUtkcnpRWW9pREN5VXNPanU4T2ZYeStMcmE3U1hNajVBdDhEOFVpUDBBSkFpTlA5QWRvVlBrSk9oeWtvYk9sQ1U0Y2FCeTgyTlZXZExRaWU5MmJCM2YvV3ZsTGMySEtzcXJFTVBjanJUdUhFcU1Dd2RIZURIeDlYU0VsaEFEWkZsSlFqZXg0SGZJTmU1MEZZTGVqSUtuT1h1SjRtN2UyYUVlNDdiZFRVOE5VVTZSUnF2YVNkSnBUTGRXMlp6cjNEbFVYWllLamhSR0VtU3BBcWlvR3NqVXhzQk5sOC91ZEJPQTA4aWRud2xHZWdYS1U2MG5LY0RKUUhJNzRDTU5CbEcvc2N4R0UzY2dQVlNBTkswUUJRaTRDSTBXWlp3YU1HbmRkT0pudkFUZmJpVkNUNUV6dXFYS0ZyQlI5Y0VBYVIwaTBCRzFuRElRRXk4T1ZCbGU0WHU4Qyt4MUVvWkR2SjZnVXBZRjgvbThoZ3YwYlNPWDZCa3FzVlNBbUtwVHM2V1FOTmFVNWNHaFhXWDh0TVVTdm9xejBVOFB3QyszTVNWam1wYWNjUWpEVEdhQUFFUmJpOThiWDFuU1B0d3h2YjV3Q0I3bEFud3QyV2ZPK0xiWjgwSUJLczczZ2l6MnVFZ2QzdW1yYW5taXVzajExcVBWY2MyMEpLY0RiRmF5Um1Rc0s5WU9rTUc5STF4TkdqaDhsZHNneDE1bGpvTTFCRUlFZ0NVZFFGdDdsSXdIdDdzSXpXL08xNXZ4UVl5WUExYWdVSWpPVnFZNThoaElYRUJXNUlVTlhDSHBLUGVESmlSVG8yeGNLZXdzc0lTQVVDL1lvbTdjTGt3UG5DRTJ3Y2VXQnNoZ1Z1TmJrQ2YwZDRYQ3ZJd3FPUnB0Q3FTSUwxS3R1UWxHYUl1eVBKRXczWldVY1RZa09TRTZJRDc5SDhIQ1k4c05wM1BFeVVuWEl5ODM5YTJtSm83SDJqM2JHbWxaK0hnNFhIU3lNMDNRMVZWZTd5dkhMQjBwekhRM0JicDhrS25OQUZVcjZHaW1Bb1B4aWp4TS83TElYZ2VZNGorbWVybjJUbWNSSXNMWTBBaXNIYTRpTmk0Q2tjTC94TUgzRmlUZ2xYaUNxOFVJcWlwSW9qcjRTTDBodXNCVWgxMXNMdzA0TFFWU1F2MENmdGVpekNpY0FSYWhPdGhZZkpLcnhUTWNyY1pQakZibWd6RkVlenBaWnd1a2lQTFRuVzBCVW5EcmcvYmxCajdBTjNFTmtJU1pTQXJMOFpLQXRXUmZ1N2d1RSs1MlI4S0FyR3ZyYlE2RTlSQU1PeEFTUzI4c3F4Nm95c2xzOFRQUzR6YlNVVmliR0JPdkhoUGxrV21qSVlZMTFWTC84MVB6L0lBVUdCaTd6OHZLYWxSWW5YZVVWemxoZVlSUlJOWWZLY0V3VGtkTXVSZlo5ZjVJUG5EbllDaFVGR1dCbmpRTnJCeXVJaUFxQmhPalFONTQydUd4alZmbk56bkpDMjMya2VHb0RwTGlHQXFWNXA1eGxoWFphYUNzSjRLUUZ1YTBrdVNSYzVYbDF2SlQ0ekx3VStTdzhGVEhtTHZKOFJ0WXlmQXA0R1NHTXVhNHF2YXVTcUZRbFFmWDYyVklyNkM3Q1FWY0JEanhDQk1ERWN4Tm9HMjJCWkc5UmlETGJBYnRqRmVGQ3RSVmNieWJNYU1ldDFnQjRjQ1FXZWhFZ25ja2EwSmxoTnBVUzZHQ25wNjMrejBnU25lMnRxSnhsTVhTQnlrSXhTV2JxYjNhblJjUEIzWFdRa1JnTnRpaEJkQ2U0QWpFMkJQTENQU2Jqdk95RFRIWFVWaXZJeTFHNzJkdFFPY2tLcnZPVUZkQnhsaGR4TUphWDNLQ21wamJiNytyVnE2bFVWRlNvc0Znc3RiU1VKSld5a2lMVnRtM2JadS83RXR5b2ErTXQvTTZXbXNLaFZBM0lEaFVHTXp0NjhQSGdBRTJoalZEcEl3RG55ZzJSbGlyRDNVTXg4UGhvSkp6STBvRnNKeEc0dElzQU4xdTg0Vm9qQWM2VTRDYzZ5LzA4a3BLUy9qbDdYUHRTWTc5ckw4dlB1WERpeUdobGZoYlk0QTNCeXNZY2lLbnhrQnNYQktYMjhqTVBsaHBkRlBxYW9nallpeGN2enJaMWNuS2FLWCtFOWplV00zYVhPNHdkenRDQ3ZabXFVQjR1QzRkeWphRFlUd0oyUjh0Q0IxRU96dGE0dzkwV0F2VFdtY0tOR2dzNGthc1BSNU5rNFVpeUlseXB0b2FEQlo3WGNYckszd1VFQlB4WjdQaDBWQi91c2FLOUxGZjIzTkdENTQ4ZTJnOGh2aDVnWm1ZSTNuNEVJTWFGUTRHL05UUTZpOE5PbEF5bWF2SkFtQXduUk9LMXNwRTAvaW1IMVM2YzZQcStNRURyVlpZRFAzU2xxc0tlV0pTNzFGbERYYVFLN0VrMmhpRGRyWEF3UlF0dWw2aENiNmtLM0t3eWh2b2dhYmhRcEFXbmM5WGdWSjRCWEt6MWZyNHZueWo1dU8vRzMxOURmRlhGNmFQeDJyZHpvb1BBMGxRSDdGM3NJQ28ySEJMRC9NWUNOU1NuS0srZnBhRHdORXlhRXdMUjMrNVkzb2NXV3NyeVJDTHhUNGxhRG5VY1gxV2FHSFgxWUk0ZHRNUnB3b2s4UXpoVmFBQnBGbHZoNmk0bklDaXh3dFV5ZmVqZmFReDNxN1RnYklFT3RCTlZvUXhsK1dkejFLRWhDQXU3a2dJZzJFQ2hNeXNoNHBzL1kwNmZsTHgxRkQ1emxPRTNzOU9TZit6aTRRakVsRmlVRWJzTjJPdXJhcmxKODhZRVNIR01CVW51QUQ4cFRySzluRkNQb1lJa3Y3YTIxcDhtaWUzdGg2ajNWZWJFWEcwT0l2ZDNoTUxGQ2t2WUc2TUlGYjVTY0dlUE4yaHlyb2Y5OGNwd3NVQURydFRpNFdvMUhpNFVJNjBvTVlCVDZRcXdOOE1kSW14TitteFZzV3JPRHJiL25DT21PRTM1OVY1TzVvRUVSM3lpZ1pyY0RzbzFKMlB0NWM0S0ltSXVVcnlsWm9waVp0b3FDdjhUQ2F3cEx0NVFtaGg2TWovSUdnNmxHOE81Q210NGRDUUVqdVFZUTZxdEtIVG5hQ0VBak9CY3NSSDBOWmpEWlFST3RSczNkT1M0VGVTbHBwYnFxU21zKzEvTTYxOU51M2UxY2g3WTFiUm5kMjdzOUlrS2I3aFlZd1hwbGp1Z084OEV1dE8xb0MxU0RzNVhPOE9oRkEwNFhZSzBxRGp0U1UxcGRZaWNyTUovSjFQK0YrVGpGVWpkVUxkbmRWdmRia0pIZmUyQll6V0pEdzhYZVkrZXEvYWUzcDhYUW00dkNoMC9WcHZ3L05qdTB0TjdkbFptbHhSV2NIdDUrbi8rcWVmOWp5ZE5UUjNxNEtCb210Mk5CMVNPSHo3dGRmVGdrYVJqbmFlU2p4MCs0OSt5KzZCUlNGQTBxNFM0NUQ4akFmeVAvcVAvNkQvNmovNmp2eklORDl5bXZudTRZdm1waXRBdmorVDdmbk8rTHViTDI1MGxLNGFmWEtFZUhmbWJQT2YrcTlMUFUwK29mb2FKajlvaXVkQkUvRHpTaUV1Um9NeWE2b0RkMkdJbnVmR3duZFRHRTNaU3RJZnRwVGJ1SmFpd0Z2bHJidkhNYzVIbTZ6dFc5ZS82dnF2L1g4cHdVL25TUVpvdXpWWnk0MVhFMkljdThreDFtWjZhbTg2ZE9iZW9yci8yZGk1VWwyZ2x0dTZSbWRBYU1CWlk4MHFQYjgxZWJWNmFEQzFlbWhRZFBwcHlQUXpOU1JPQk5aT1UrNmlRVWIvOUxuS01tZEU0QVlsNzUvYi8vVGNFLzVlVUVXVHptWjAwZzlzNzVzMFdHeXpEbVZCWDA5bHpUMkdtUWwrNEs3RnE0b1ZwUnQ3WDBlWmIwNDFocDJmaDVlV2NwMVVhYXFyVXNqeU1ZZ2lZWFRpaE5STy85THVhN0tteUtTdlZTWDd0Zzh1ZGY2MUhySDhWOGpWVCtOSmNuQzUrSVNER0lyVDNjQnJZbWErRFRmTXlXR2FIcFhkSFlEeC9mMStYZjhNVEtXNldyUi9xMThYRmhVcGRpT1ZIZmNFTklUakJOYk1nNG9YWFROdEswZllFNkhBcDdFNGovR2ZLRmxKZWF2d3lVeWsyYVZQQk5hT3pZQ0J6bzR4aHpGUlZrdnVhVXNkVGcyT051ZWk2Yysvdkk2a0hOWkV0cFRnYzdqZWwzRmhiY2FXUjRQcUtoWUFqVUs2RW1RaXEvKzlYK0RjbGVUNW1aa1d1ZFRwS25EUTQwVzIwN0xLeXNyUE10cGZmaEVIYThmb1hRTmFTelZTRW5UKzJieU5sMGErTWhEYlVvN2JUN3dBbkk2MEJDNUcxWTZFbXdpcU4yY0gvYWNwU3BLeXNUS1drcExUb3VxM2NKazR6NGJXRHYwZzREVGlvOGFaWGxSZC90Qjh3bE5pMHcwUm8zWm1aOWlMckI0MkVhWStaQ05JTTRTU1lpYlphNHYrTXc5UC9WMlNySnZBZFRuamRpYmtteDFKOC9jdEVKMVgyaiswandOdVQya1NPaTl0VWtPWWxSVk5zWlZqejlTWFpKY1c0Mkg2UWs1UDcrenI0TzExVjFQa2V5cXZkRlZtc1FneDRWSTlXeGYycXVnOC91N0ZzYk9qMmNrcVpmUDNvZ3dzZmZYWnJHZW5GM2VXa2wzZVhqdy9lbTFmdnlNR0RWRVppTE9yR2dtdjc1b0ppaDZVN20ySXZ4MzZscCtPakdXb2t6dVN1eTc5dXdrUjYyNkZnTXluZllBZEQvczcyQTM4b0ZMN1FjMkpac0xFQWxxRE1vaDl1ekNkNCsyVHpCM2VGeHdkdlVJOFAzVmsranZnd09uam5nK09OUGJ0TFBUcDBhem1GRitNdmVqODhyNXBJL0twZzNSMTBQa2JpQW1aaWREUFNhaTVDTStHbnpaRlNISVQ3ZW01ZFB6MitaU2k4M0Joa0xFempvc0JjNHl4TDMrc2lSOS9uWTRMVm1Gc3Ywa2FSbXFDMlpVT2drZEE2VjBYV1hCYzVoajVLUFlLQnFQbkM4YU1pSTVmaEpabHdDNTJ6aGZqRzY2NDR0WS82Z3BpSnNUZFVKWm54S3gzVStTbDV6S2l4OElZcGF5c3I1bzlwUzZHbURHL3FiR2Zabi93MHQvT0c2SEVZUk9FRXVheFUrSDFNaFdnbUxFWFh2ZmJWM0I2OXY2RnNIaE45ZGJocHZEVFlHZDNWdG11ajlkMm5GQThOenAzMTlmWHorZzQweFB6b283bU4yVnVYVHhyVnVVY3BIcHBjM1lzbThmVE9CZXE2YUtzdEx2TE0xWlppNjI1N0tHK3FDOFRMdXBvSXJYM3pOb3lrbWZMUjVveTdlUEhpckpTNnFIT3RzUlRmMEdHdnRMM2VYR3pEbWRtUVV4RXo3L3REL0V5a3Y3RVMzOUJzcjdpOXkxS1Mvc0JzUFFXZWhJWHpvSHd2bzRVRW5lWkNRSkJ3REpqckt1ejRMV2JldTloSkhXTXVJaHFDbHphMHhqTDdVQkpHVXpINlNWOWYzdzIvRGNWYkNuWTFYV1V1ejJsbkpyTHVFUXFmcDZ6RTF6OUhBcGxzTHIycDdhMkFyaDJOc0pJVjJMZG56d3d2S0cvMG9vQ2syRUowZlorenRsRFdiRkFpeVhLSjhtTUFjL3UybDJQelIveTk1NllubmpLN05pblcwVVdUaVBlMVcyWWdzVVZjQjdNdTE1Q2ZaZ0NGbkdUVWNNUkdpbUhnZlVNMGtZa2dZMUhMaHNxaUdlbHcwZURaZ01MVW0xWlNqRS9OUmRiTjVnNm1DbnkrYy92Mk1wTDRIdDAvZzhBWXQ1U2dmVFk3RVFXK3pJWHp1SFBuRGpYcVQzY2hJRGd4K3VkNEhYbk9YMlBrOGM1OTFNNXl6Rzdtd2pRdkhCUTJIN0ZUWUxkRWJhZndJdXZJQVM0VzJ6OFdFQXJsNStkVHFRcXk4aG9KcnV1aGdFb3A5dEwwczd5d2syT3I5N2RRWHY4T0VHb2JhWlk5S0NFRld6bTJPN044a0dDNW5wdWJQMCtUYktTWkUyZkNjYm5OZmIvVVl5WDk2bVRrUmJocHRERHJzMDBFMTd4WXlCaWtFUTlDckpRNEtQV2MxYmtwZ054WVdNZFVuczluYm45ZWh1TGZJa0JPTDVKNlJiNnNoV00vZWZLRTJscUthUkVnWnVMMGczaGRoVjhGcE9ma3NlVm1ZclJIM2llR0hob2NXUWlNVjVULzNkVTV3bEo5Y0wvNyt4dU5zTnZva1pXNHNIQSs1bUliWDlxcjhzcFI2bEFBc1pabWJsM0VCd21XR3dYNVN3TXl2eDdyeEtLQjkyVzRyNGpEQzI3dzE5ckI2NkhNSnVLaXVsM0NXR3FMSm5Ld2QzRHY0dnAzcG92c3FzVmZYbE5UczhKSmxYTWRXdkQxUlFNb3pBZUVZQ0QyTFg0SlFQQ0tpeldrdjcrZjJnckxwTGVFaGd6K2xvWlFDQy9MTG9NWWVIK0dhY0kwSklxcG5SRWtzZlhQUFpRMyt4VDdHMzc5VzMzTUpSY2JVMnE4ekJaZHN6azhlQmVTVCtQbE9XM25BTEo3S1VDUXlab1BpQXhMMG04Q2ttUXRzZFpWZ2NuRlVaYWh4UjVMZDg5YWJOMUxXeXo5SFY5VGFRTTlNVFlqdE1EK3VSMVlZWm5meE1mRjBQNEtJUE5NbHFlKzZKS0E0T1I1TXhZeTRPSERoeDhDNUxtWjlxOERNakwwaUxvcXhuNDFUbnFiQjhvOVJoZjJnUnp5a0pmYWxyQ3FNTlBmOWZza2ljRnVQeUlBWHMrYkR5WHhsT0Z3bndVRXk3UVlFRWtFU0hIeFFrQ1Nsd0R1cmNtS3hvdCs2U1RMNklJeTJWbjdqekpic2pZZnpRTjF2ZzBOeG5LOHR1WGw1ZFE0N0JZRG5CRE4yTnhPM0cyTTFaM1VPTmViTHdFSVRnSGpOM2NTN3pTa1p6RWdQR2tMRjMvLy9uM0s0cGJ3SVhUUHpMUmxPWlppV0pxanpDb1VucXZiU2RFZVFCSGhHTEwxbDYzVUJJUDFoVGFlTVJWY0tObHJ3QnFaM1VBZFR2T2RNVFlmZGJxa0pNSHZXNlJwZzNQN01CUmMvMFpIY29mYWUwQ3NzSXdOUzJsSWFXbjV2RU4yU3dPQ2ZFaUNqZHhuOXRJTU51WUxCeEttdldBdXQ4M1BXUk9qNDJzZ0pGNGRqbHZqaVZPa05SUGRjRzV1UFZ0RFZVdG5OUzRLSUl0OXlFSkFmdEdRbjM4TGtOdTNiMU1XdHlRZ09FMlpSVkdXdnc3WFdxVFYva2lvSGxDRVNZOS8zVU45RWNaeUx3TlJmVWQxUG5NREVZWkNJd0dhZXd2N3N4SmIvNVNneGg2U0h6QS9sSSt6RUYzdHE3RmxlNWcrMTVZOE4vbnZZM0FDYXh4bG1TaTcxRk56MjJzSjBEVXFpM0V6dmdmRVdtcEpRRzZXbDMwTUlFaERuT1ZaRlZEVTFMZndKcksxb3pZU0cwYXMzNWFYenZJc1BaSDJtbEkyOHV5enRvK2lybmc5RmV0M2dDdzJXZklZLzdtVDhOUVQrUkFncVFzWlBPTkRKQm0xbHdCa3dFeFRkbDZrZEdaZjJYSWJ5WTJOeUlHUFUrcmd4V2duYk9VMm5iR1IySGdaWFg5dUxiNStpS0RGN1k0a0dVVkw4ODN1VEgza1g3eTFPR2VGcHlMTytTdGJLZG9qS0xwOGhyVG9NZm84WXlHNjlpSmU2RzMvNzlaTzFzWFE5R014VzltVWxSWGZoNzJVeUhBeElKS3N0NHVMU3hjQ3NvUVBRWUJZaW0rc05Yc2J6czIvS2JnR2pQaFhrMmMyNXREL1JzSjBFNWJhTW1ZZXVrSXU3K3NnUncrRytqcFk1RVBXTCtWRGNJb0NRVXRvU004aVFPUzRGMzFyTWZJaGxEeEVhd2xBbnBwcHlzeStCSkxpcnJYU1NZN1phcWsxek14UllBMUpEN1BtdnJFSS9VRUNUbEZZVDNJcmo3SFErcU1MNjFtZ1JDL0NSbG1Bb3BuT3l0dFVsK3JMUkdETm1BNGZUYjBXTDAyNENoZU5zZkFPUnJxNWMzN3JReGdiRndQQ2NydTBwR1ErSU5MTVMyc0lDbGV2empOVi9EU2pDcHpyV3dXMk01dnk4M0FJQzNGdmxaYm1vblBURWR0eXlBNnZMK3Ftd1QwYnJta0lzVHgyZG5iK2tlSkRsZ0xFVEVrd2VMNkdpSDZERjFsN2FqRWdYTVNGZ0x4TERCY0RJa3I3QktlQm5kM1RjbEhhd29tMCtkckNla1lDYTE0cmM5RlVZOWdaT01URnhGYVltNXN2OC9UMG5KRms1QXZGa0M4Y1d0akdWb2I1WUxTL3k3ZjJpdHNXSmFSSVFFbktmSFEyRWhJU0g5eTIrUkFnT0VuV084WEZ4UXNBWVNFdUFseUNaWndLTVhJZUlFcENXMm9reFlTKzE5UFRtMmxZVWxKQ1pXOXJSNjJ2SnJjbU80cEFhNHRsUFBWT082WlZ4YmxDbzZPanFaMVVPWmFNc2hBZ29mTUEwVjhhRUZNNXJzU0ZpN3Q3OXk2VjVkS0FQRWFBekQ2b3NwRm1Na0xYSitmV1FiNkNKTTNOWkMzRXRXWEpmTVBGVk8wTFU5R045UXY3UmpuRlkyYzlpVzJPNmhqdWhScUhFMTQzYkNMSEkva2hNTjREWWlYRjFMU1V5U29yTFZ1b0lVdmtJU3hqVkNpQktqT2I0NmljTkFXSzZpcUtGeDB3dm52dThBby9QVDVYNUc5SUZCT216RWQvVUU1U2VDM2wzanRBRmtucElrRDBSTjRETXAvSnNweUx0azVRbFBWaFFEU2x0NzVqQUpVTmxzbC9ZUjBOUWFabUhBNzN3WTI2eTVjdlU5a3BjeG91Nmx0ay9iQzVFcDlZVW9UZkZ3aUFCL1B1QzYrZGNGREhtUDRXSUV1SHZheDNDZ29LRmdLeWhJWXdqMUlaUzIzak1CSDZaYXNiT2JFM2tXWWk3Z1ZlYWh0dWRSWi8zbE1iOVVXNm84dzZINjBkaWNpNXZaeDVlc2UzNFlLVXBPVDY5NTA3cXV4WUdoRGwrWUI0NkM0TmlPa1NnQ0NuVGdGa3NWTkhnSmpPMFJCTExMUExRbWsya09VTitUWEdVY2hkbTE5K0VVT0UxNy9RaytIQlVPNmJpak5Hb0xYT3kySHNwQm5PcFhyb2ZqQjNhY3YwV1c2RFpleFlDcEQ4L1BrL0FXZ3R6WlN3cUo0NDh3aFZzSjgzdGE0d0U3Y0IvOXA2RThFMU05c0xLSFNjUU5ISkRRY3NiWmVkMU1ZdUJCSXlhelNUaHZ4cmhsUjQxbGRKOG0zWkdoVGtPZHM1QW1UdFIybUkvZ2MwUkk0cmFlSGlIang0UUdVcHlhaXpCQ0JQVE9mNEVITnBOa0VremJmbTFyRlZ4U1JmdW5UcGcyRFVad1F0dDVkakNWM1l0eFkvN1Y1bHJNak16MVNZS2ZLdU5SYmVrSTJiYnc3SkRqSU1UU2gzRVV0Q1dYTjdodU9YUjRxOFY2YllpUDdvcmNIT2c4THVSR1JCUnBZQTVHNWhRZUc4cmZvUEFESThjNVB5ZzcveW90emZhL0N1ZDlURDBCd3k0Ri96REVVbjA1UklpL0twajFuelJwTjM3UUU1emcyT2dydzd2bDI0UUVmbEQ1cXNlWkk2eDRmTVovSVNZUzhsVTdkZWNuTVJPWFZONlY4QVVSSDh5bGlVd1dkdUhVZUZ6U2M3VytzKytBVmtJU1lpRzFFZ2NINXVHMzErbWtGSkRMc1VjdjZ6VGx0WGpKWEpRR0JkKzhJNW9ERDZpWk1zd3k1bk9hWWtCeG42S0FkcHVoSjA3VGJLZnlnOG0xb01DTnRkcENIekFjRXlMVHJvTVF2SVhOTFIwYVVTRVJWZXhidWRiUzNQVmlaV2JuWldXbDRlcm04VUZSVS9HRjA0cXZ6aTFFMlJGT2tMckp2WnFzY3QwQkFVOW42TkFPbWV1VWRod3R0NlpETkZ2dXlGZmZiMjlzNXVuWmdJMG93YkNheDk4UllRdWdHVUdNN0xRMXpzclpickN0S0dHZ3ZRUEg2L09GZEYxa01aVHZMaXorNmNtVFVWazFNazZuaHJTWXdkbHI3bHZabWpaUERhZkRUZEVseU1tS1hXWm1La3QwSURzOUVNQWRhRHdsN1NJZ0ZCL2FEMDRJVXUzNW9HQmM1MWlzZ1AxZjRDOHRxWHBtanVwbEtiSHFBb2E5NkRQUVJJN1B0NmhnSnJ4OUVhU1VzQzhrZG9yZzlCZG5oQ1g0eWxEWm0vY1JNRi9ubnZFU09uVGdIazVGdmdhS2IwUlZuMm9ucWpPQVcrUlh0WmZYMTlGRUIwMy9YWmJ5akMwSURxVHBtSTBqM0ZhY2t0eXRUVnhMWjloMHlPRG1MQ2ZxVFZnOGpFVGlHemU5dGRrU1hmUjIyTHM0LzZWbnMzUlpaUWxPeGVSb2tnQ1RGM0hGbUNLMm84YXlPd25MVGJoWVFFUHhnRXlJdGlWaWp6Yk5paXdidE9UNU9YSmxxYmQwMCtLZ1ZhdkdzeTFIbG8zRlc1YWVTbHRxOWJiMlpxdE14Q2tyN3VQYVAxUkppN2tIKythU3k1Nlg1UlVkRzhRTWtLeXhnMUM1d0k0MVZrSGk4Yml6RzkrRjJNSno5M1dqbjlPbkxSZTREV0N1dy9HUWpRSE5QRHJINmxJN0RocVlFTXA3RXFINjI2bG96QXBybjFYSFdFdjBEMTJ2UXhxMS9vOGE5OVlvRGRnVmZGMEdsb1NtTVcvYkxtelpzM3Fjd2tHR1JRM1dkSWt6cU41SG01bFhrM2FpdnpNNm5wcThrdStTNmlsYVVsRlZhQTgwdVVMMkFRQS8zVWVkZnVSVXg3b011MytqVXFiM1I0Vnc4aUJsNVU1bHBicU1DMVhsMXNHKzE2WVdIaDMvVjhYVmRYbDRwaUxlVGw1YW1WbFpYbnRhVkVmYVppZEJsNmxQV2hvaSs1TFYxYmhGVktUWlJkcWJTMGRCN2dhRzN1QnBqVmo5SDZCdlRFTnpYb1NtNlRWQkZrVTZQNldCb3VGYVlkejJac0p1VXlEdDRvMXBuM0s1d1JZY0ZVc2xMaW4vUHpjbjBqaU9IOVhsSmNkTWxuelVRaWtVb1dLN1ZTZ0pmN1MwRituaStsc1JLLytsYXJoN016dGFnZ1pxVXdodTh6TXpPemo1N3JlK0xsNWFYQ1NrbXQ0T2ZqL1k2ZmwvdDdBUXpmbDlMUzB0UlNVbEsvdTYrUEpTME4xZVdDR0o0dmViazR2cExCU255V21ibm95Y0lNNmVsb1VxTjFyVURKOTJkeU10alBFaElXQlpxL1RsZUlRbXlEU1l5SEg4ZlJqaFM2OEd2K0NYUC9qLzUvcURqYW5ycmRtNVd0eUpwWlFsTk82Qi8xTXVUUFAwOVF3d0RoQytpMytKbzhuUEhQZVJmOTcwZ1RkUmdSVWo1ekN5bUwvalVwZzI2Y2xNdDBmcUpxaDJ2dmhiMS8vVlB6MDlmeEs2ZjZ2YjRZSEp6L1lneTUzMmZaNUI3QjFaTU5HUHJKRGpHYTZldVdxOGJHSGkvWkIvbVJEL1hVWWV6WEUzWGN6Qk90UWh1bmJybDhzamRlSitxdzlLUk0raGVrZERwNG1VVDdjb2hJZDNzMGpXNENBVU4rV2k0dG01ZWQrYnNQMUkyTVBLRW1rK3FXVDQvWHJoZ2Z2Ly9IRHVSTkhwRDhtbFN4aFp0VXZnTTdVYmxEWkhLZktPUEVxMSsyaStGNUN2VkUyUllwVWg1ekJhbVE3ZURER3IzWnhHeXlsbThEcVlBMWk1VE5lSDQ4aS9IT1FBckRxWUVNbHZyaG5RSzJmUjN6ZjFkd3NrbHFKYW1JemVaVkJtTkhmd0pqeWJOVXBzYng0azJWRTIyU25GZGJRcWc2RXpDcmg0czJHMDFVc0R1UmRna0s5QjNPK00wenVDZUtiYWc3NHdYWGpCUnR3cEhLdHRwTzFQTUpuVHRVODFIU1BaTERiazBCWXh5VmZaNU0xclVPREF6UGlFeDdLTmZ1Sm01TENuTDlmWWNoYmxjcHJlN0w0eVE4eTJJdEdTdGcyVE5SdWpXTDFDQWcrZnA4d01vYkdUdTJvTFdaVGxSc3N4OXJrdGh4dU1CbTJja0VicmF4WWphTGlYSjJtL0ZkUWx1N0R1MmpwcHJlSy9rZHFXU3o5MmdPWSsvekpOcm40em1NUStqL3JvbFdDYlZyMTY1UXc4TlU2b2thVHFieExJWnJhS0xrOFRRNnVKVEFiL2QrRXFSY1ZyLzNpN29mUS9mZ29DZXQyMUVmV3VlYmNVdzVKd3B0ZU9aT21GVE14VHFXUWQ5N0xaemhuSm5jNXA5T0I3T29qcVRTdnlFVmIrbTYxUkg1L2I1NENZN0hDZlNuU09tME1KSzMrZVNWWXVNbEg5WE9BNlRhZjFsTGpCemZ3M2pHZmpRSE1pbWZwYStud0lycFl4ajRNbU9yNzd1NWsrdDhCSVFHZXp1WGpXUnR5cWRjT3hlMktjM2FTUFYzSFlRNG5ZbmR1cC9BWkhuY2g4N3dTUUxkaVptKzg5a3VEZGJLWXp2RHVRMmZKRExlcGx4N25iLzlVR05KL09kN0k0VDBCb2owanloOEhjNW5yMnZNSVB4RVJjcGhLeG9rMHIrdXNHVnkxUkRmK3QwaGIwYTlnVVM2TytPWmRGT2pEZExSWTVVWU13Ukc3OHNrdW9rckliUUhLcXhwTlhDeWJMUGJFaTlUbVdzb2d3eW4waytlajl3eWJ4czlPanB1bnNvK3orQVFIRW1qZjNrbGJuc1Y1WWxnYjRZWTdXZzYweTFLKzJlNXZPVzVTZUdybnFWdTFxZjgveUtGYWZoVU5ML0wzUGJUTi9CZlRyWUs4RTgyOEtoTU5XRTBwNXI0TktjYStUUlFVWCtWdDZWMExKMmVSR2w3T0p4ZjcyTVllRDJSVncwSkdKblM1bFVKWnphU1hqOWt3b2FRNlpwSXdyT0xtNWlZL3VFendKM2hJdHZIMHVpbUtNeCtrTVRlME56Y1RQMHNkVXZ3akhsTVlSeDNkN0tlK2Y2VTV5bXNrWlJyZzhuTUR4b0RKUldveGpPWUxpRHA2Z3MyRldDbFZFaTI1dnVzSjVoTmVUaVY3c1Y0THN1THNXem1lNE9KZE04UGU5RjU1MXZRczBrSzdaaG5EbTdGYnRKN25VdzNSSkd5bDdsYlR3MmZzbDA5T25KMzJkVGszdVhreCtGZlRGOVUvMjZ5bDdDS1V2ZG0vUFkxejRoMDFZL1NONTI0VW1lc2NiZE1aOHRZQnRPTkdVQ1NXUzZrZU9tdUdjcGcxM3czNmRHZUNBNENwZDFVRDU1Nm9vcGpLM0srRmNnczNoeElZYno5S0ltNSsya0s4N0dCVktiRHo5T1lEcjFNWmJpSjVrQmhBQndLNHZ5b244QnJqMVA1OFZFQ2N3OWw3cWpmVjZSTWh0ZlBFdWdlSHZXaFM5R1c0Vm4xUjhHZ1VIK1o3b2J4Tk5vSmlrVzVHYzNhMnRuWlNmVXFZNHZITytHZHNNTnB6eHlIZlpXK0tYQm0vVW5NQTNYZVFycFViOUtZcmp4TFlla3JEOWFZUGZPYVJveWhmcDdNWEVXcCtDaU9ycS9DbGtGSGtJOXJuclJNVFQ2bUpwRmVMMnVyenZxc00xeEk5WFlNOHcySzJTS1ZiK3VZcU9aSUdTL2JWRHVlejN4a05Kdng5RmpwOXZxT3hwSnZxNnNMcUNwczZiL2U3VXpMa202MTQvdlgrWHliU0JtTTl5bmpYSTlnT21GaklQZmRpOHgzZ0NRempKNEszK0ZGR1d1aWJEczkwdEt6TTdZOWttNGczNExSS0ZhZmpqblJnSTR1elpoMlF6YU9kbDEvSExQM2FCb3lmNmpPd1lBZHVJOWgydlJnOGJKWGhlenhhTjdUbEhhajZYUVQ1eUpZOGZvU3JEUGJIRCtUYXBiOVBMbjdzK214M2I4cjRob2JHNktlcU9Cd29HZ0gwcmFYN1FTbUdVMS9uYjdKNVQwZ05zYnF0Tyt1elFEeU5KSHBXYVdIZ0NIVll5SnI2cHQweHRkRHU3Q2VyOXFrdDdVMjFuN3o4NXR1NnRFczV1d1owNUhLZkhOUGxMelF3a0dIQ3Ztd1kyV2M1MGVLdDE5N2xyZTEvMzR5NDhXN2tiU2R6eEpvKzVHcWttK25iQnBvRGVHeFRET2xGMjcxWUxFSzlYVmJQL1UwOU12cFh2TzEwNzBXNnlkUHFIQ1RTdGlKYUl5cEovRzB3d21tbXpYMURQU3BoeksyNmJ3RmhIR3NPMnlIejdNbjk2bEpPWnNJbE1XTnBOS1JpYmhOVnBLU2tzdUdod2VRUUF6T0NzbUxqSzMyWStrTTd3RGgrRTFBSnZvcmw1TUsyQkpSL2VtUkZMcnBGOGdrejRCU3NLbHp1RTF4ODhQTFhTdkhjdGtLU1RrTXI2NFMrU3grcmEvSkE0cGZ2Qzdkcmo5ZXhKWkpLdHBjUFpMUGR1dzVrZlk1NGtmM0lVOWFFejNKelRQYTlqcUR6ZWtkSUNRclE5V05sR3Z2TmVRcGtRSUl2eUZWZ3lmSEQvZGk2VkplRUdtZlhJdGc2a3BPalBwcW9weERhVGlWZGhSTmNoUnAwTVMxRkpINGhaTW90ZCswc3RLV1RzUlBuWjVMVHBEOUswa3hVV3JLeXpkRmRsdFpIc1RSN3hsSGpubThpdlBLbXk0YnRwUEhqMURmNnlCK1BwVEJkSElzblhaeVBJTjIram1SN3RWQUFtM3YxZENOaHhPTjZLVm5nYzdZcHZjZWtKTmhPM3o3RG1XdkhFdG4zRVc1MWgvRE9LeXJxN3V1OTFEb3FwRWl0aHBTQlh2OVlJTUtJNlhkeTR3dHRnaVExNVI2SFFFN2ZuV2ZwZi9tQmFxSkVrNEs4R1FVNXBMM2V6SmtkL215dWlBelBVVUplY2NMTngwWmExRGZSc3BrT29QTURyUVMySDkxandsWmlEV0orQjNTejRrTTV5bmozNHBtT2FJaXdmV05pS0RnUEtzeW5NSDJYa05JS0dDWU9mUTlSME9lVjdoampHWXFWdGd4ZmRubHRYRnJnUlh6UmxLRjRBL2ptUXpIanZreG5qc1p4T1pQaWN0dkU3bjMvTnFFNWxKSVNCRFZ0YWhOa2loNmVra1phS1NJby8xTWhkc1BaMm9DbDNVSHNjcStTYUcvUjdsK0pvUXRMY09jaGMxS2x2RXJVVkhSMmZZdk1yYS9kZXJKak9NbndqajlMKytPL1h3NGpiR1ZjcTAzbG5YQXk4dnI2NDQwbytVUEU1Z3JLZEo5allpWk9jYjVLbU9yemNjQ2NyT3JaTVZJQmt2MVcrRHBSL1o0YlpGT2RwYi82bno0NW1LMFhvcjVta2JoZlE4cGczNFltUnlTandFUDQ2LzFseElmUDFNZUp6Qkh6S3c1ZzJINFJJRVJ5OXc2VTUyYTM1Q3ltY29YQXZJcVkzUFFXdzFoUm9Ed0d5M3FmQ1JuRzlkNE92MWd0aDJuNzZNMEx2YlJOSVludCtMWUw3UzF0YzFEKytHOVBxclh1K1hGeC9wVFZ5OWFjSXJRVDZQcGpPZmZSUThESGVGaU04OHZEaVRxckVTUzMwUzVmaStGWTA5enZQYWk5endHMG5ab3ZBZmtlQ2hud09uRGU1WTlUMkZKbzF3YlNHWVpDUXYybTJuek5JM2RDSm13NmM0QTlobm1ENmF6bXlOQVhyd0ZoQVAvYXd3OHZiZDB4VkFxNjg2M2ZvT2VkRE5UeUpCeXZkWkw2UHY3Y1V6MU0rRXo1UjdTbUNNK2pKbEtpb29mNVVNT0JmSFFEU1RTei9qUzBiTHRMWlBYYlRaT3ZtNWNPZGtseHppZXk5dzZsRVEzUEF1SXNkcU15WHFSeHViOWl3L2hOMXpVS1FvN09aQ1VQSy8wa1RKNFV5UzBBeTN5NmFXSVRkM1YxWFh6NmoxNWNwL3FkdUlPbzdHSzdVY25XaVZsSm84b3JDTS9jLzJjZk52MGM1UmM4cU9JcFo4eTBNMElodk1ST0o3WnI4anJqMmZUUjR4OE5aekZPdnFnVEE1M3V1Zm9QS0N2RWdXMm92RkpDQkRTMFZEdW1TZU9OMkszaXIxSlFaRmNCdEtzZkczUGcyMFZ5OGF5TjFuZGo2VjdYR2kzZFNaWHVaV3dRM0FZUlZxVU1RLzRjVmorRnZNdXhYSVp2UXRMZ1ZUSStwalVKR3hBMnNtbk9GYTBwZVo5dERhU1RqOTZQNC9iNU9LcGd4OGQvdGE1c1RQY2lhU3RSSm4vcytFTStqY2plY3dQWDZiUXZid2NRdHQ2MklmSkI0MDVSbkhxVmtacURKVDZ2WW5zS2hRQmVKTElQRmptTHJqNEVNV2xHSTZ2bmliU3h6MG9FYXNaTHVQTHV4OUwvNmplZFhQUW9vcUkyc0trUHI4WFF4ZjFJbzNoeHV0TXBvc291ZXdjeVdMc2VwVktmL3RaSXQyVGEyRzBiVmw0WmlFWktkRlpDZXNKM2ZwTlh3eUR3K3RrTk9HQ0xWZEhHaVdzZTJ2bGxidExOTG1QdGpkUnR4RE5WdHlOWVFwNVJtUzRkNTRvV0hIczJESHF2ZjQ4S3krRU1KaytUNlM5TkppOStkYWpTbEhQL25qRzJocEhaZ3U4RXM5TVJMUXZSbmxWZnl3VEFlVkxUeTRtOG9hZlBuMzZWeG0zTTFMdjg5NFl4dVJYeVhRdktFRUlLWk51RXVVZ3BPRVUyc2xuaWJTUFVMbUxCR05xTEp2cDZhczZDWVhEaHc5L0ZDQVdPRE9xUUcyMlZjZDlhSGNjODZGVlArcE5xNHNjT3paYWorR0hyc0J0UHlKKzVpTGYvS0k1VGxuN1lGc3Q5WUVJcVcvN1l4Z3FIaVl3UFRvU0t4cTRaS2NGZHR1K3ZCeEI1M3cxbkM2cnlabmVXbDlteHlLejlKNEM5TGV2T2tUWXFJQ1N4b2pyWWJSNVYwTm84ODRFYkl5c2Q5aW9ZeTdOdE9RSmpYQlRuaFVYZ3plYTNvcWdUYjBSUTUvWEhjM2lUblNTWFZkZVhqNXp2OGlCNC9PelFYVGFaNGlDUG9jT0hwelp3aUc0dVZHMXVOSnpvNzc5ZXdKcGd5dHNHVVhudmtwTm9USkg5cStPKzlMcG5ZemxkVUp4LzI5S2RhSTV4OWM5L25RMnR5TG9hdTlHMFhZanlUNTZJWWcycThseG84WXhYd1o1dEo3MHE2RzBwZWNUdVFodHJhMS95b3VpTWJnZDMzYjcwOW9kVDVHd2FpeFBtOW5ISzNiWTlzT3hBRWFuemhnaGwvOEhoblBWTmVlQmphb0FBQUFBU1VWT1JLNUNZSUk9Ii8+Cgk8L2RlZnM+Cgk8c3R5bGU+Cgk8L3N0eWxlPgoJPHVzZSBpZD0iQmFja2dyb3VuZCIgaHJlZj0iI2ltZzEiIHg9IjAiIHk9IjAiLz4KPC9zdmc+'" alt="Logo" class="app-logo" crossorigin="anonymous"/>
+      </div>
+      <h1 class="app-title">GATHIYA JUNCTION<br>& TEA</h1>
+    </div>
+
+    <div class="button-stack">
+      <!-- 1. ORDERS -> Opens POS Screen -->
+      <button class="dashboard-btn btn-orders" onclick="navigateTo('orders')">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+        Orders
+      </button>
+
+      <!-- 2. ADD ITEMS -> Opens Add Items Screen -->
+      <button class="dashboard-btn btn-add" onclick="navigateTo('add-items')">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Add / Manage Items
+      </button>
+
+      <!-- 3. RECORDS -> Opens Records Screen -->
+      <button class="dashboard-btn btn-records" onclick="navigateTo('records')">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        Records
+      </button>
+<button class="dashboard-btn btn-end-day" onclick="triggerEndOfDay()">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+        End Day
+      </button>
+    </div>
+    <button class="home-access-btn" onclick="openAccessCenter()">🔐 Staff / Host Access</button>
+    <div id="homeAccessMeta" class="home-access-meta"></div>
+    <button class="home-access-btn" onclick="openAccessCenter()">🔐 ACCOUNT / SWITCH STAFF</button>
+  </div>
+</div>
+
+<!-- === VIEW 2: ORDERS (POS) SCREEN === -->
+<div id="orders-view" class="view-section">
+  <!-- Nav Bar -->
+  <div class="nav-bar">
+    <button class="nav-back-btn" onclick="navigateTo('home')">
+      <span>◄</span> BACK
+    </button>
+    <span class="nav-title">ORDERS</span>
+    <div style="width: 70px;"></div> <!-- Spacer for balance -->
+  </div>
+
+  <div class="app-content">
+    <div class="center-header">
+      <button class="menu-btn" onclick="openSidebar()">☰ History</button>
+      <div class="header-title">
+        <h2>Order <span id="orderIdDisplay">#1</span></h2>
+        <span id="statusBadge" class="status-badge" style="background: #ffb703; font-size: 0.7em; padding: 2px 6px; border-radius: 4px; color: black;">ACTIVE</span>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn icon-btn-edit" id="btnEditOrder" onclick="unlockOrder()" style="display:none;" title="Edit Order">✏️</button>
+        <button class="icon-btn icon-btn-delete" onclick="attemptDeleteOrder()" title="Delete Order">🗑️</button>
+      </div>
+    </div>
+
+    <div class="customer-section">
+        <div class="customer-inputs">
+            <input type="text" id="custNameInput" placeholder="Customer Name" oninput="saveOrder(true)">
+            <input type="tel" id="custMobileInput" placeholder="Mobile Number" oninput="saveOrder(true)">
+        </div>
+        <!-- Separate row for Advance -->
+        <div class="customer-inputs">
+             <input type="number" id="custAdvanceInput" placeholder="Advance Payment (₹)" oninput="saveOrder(true)">
+        </div>
+        
+        <div class="order-type-bar">
+            <button class="type-btn active" id="type-dine" onclick="setOrderType('DINE-IN')">DINE-IN</button>
+            <button class="type-btn" id="type-parcel" onclick="setOrderType('PARCEL')">PARCEL</button>
+            <button class="type-btn" id="type-delivery" onclick="setOrderType('DELIVERY')">DELIVERY</button>
+        </div>
+    </div>
+
+    <div class="order-area">
+      <div class="order-table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align: left; padding-left: 10px;">Item</th>
+              <th style="width: 50px;">Price</th>
+              <th style="width: 80px;">Qty</th>
+              <th style="width: 60px;">Total</th>
+              <th style="width: 40px;"></th>
+            </tr>
+          </thead>
+          <tbody id="orderBody"></tbody>
+        </table>
+      </div>
+
+      <button id="addItemBtn" class="add-item-btn" onclick="openMenu()">
+        <span style="font-size: 20px;">+</span> ADD ITEMS
+      </button>
+    </div>
+
+    <div class="checkout-bar">
+      <div class="totals-row">
+        <span style="font-size: 1rem; color: #666;">Total:</span>
+        <span>₹ <span id="grandTotal">0</span></span>
+      </div>
+
+      <div class="actions-grid">
+        <button class="btn btn-new" onclick="triggerNewOrder()">New</button>
+        <button class="btn btn-complete" id="btnComplete" onclick="completeOrder()">PAY & PRINT</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- === VIEW 3: RECORDS SCREEN === -->
+<div id="records-view" class="view-section">
+  <!-- Nav Bar -->
+  <div class="nav-bar">
+    <button class="nav-back-btn" onclick="navigateTo('home')">
+      <span>◄</span> BACK
+    </button>
+    <span class="nav-title">DAILY RECORDS</span>
+    <div style="width: 70px;"></div>
+  </div>
+
+  <div class="records-content">
+      <div class="date-bar">
+        <input type="date" id="recordDateInput" onchange="renderDailyView()">
+      </div>
+      
+      <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+        <button class="btn" style="flex: 1; background: #457b9d; font-size: 0.75rem; padding: 10px;" onclick="exportData('DAILY')">📤 EXP DAY</button>
+        <button class="btn" style="flex: 1; background: #2a9d8f; font-size: 0.75rem; padding: 10px;" onclick="exportData('ALL')">📦 EXP ALL</button>
+        <button class="btn" style="flex: 1; background: #1d3557; font-size: 0.75rem; padding: 10px;" onclick="triggerImport()">📥 IMPORT</button>
+        <input type="file" id="importFile" style="display:none" accept=".json" onchange="handleFileSelect(this)">
+      </div>
+
+      <div class="filter-row">
+        <div class="multi-select" id="payFilter">
+            <div class="select-box" onclick="toggleDropdown('payOptions', event)">
+                <span id="payLabel">Payment: All</span>
+                <span class="arrow">▼</span>
+            </div>
+            <div class="options-container" id="payOptions"></div>
+        </div>
+
+        <div class="multi-select" id="typeFilter">
+            <div class="select-box" onclick="toggleDropdown('typeOptions', event)">
+                <span id="typeLabel">Type: All</span>
+                <span class="arrow">▼</span>
+            </div>
+            <div class="options-container" id="typeOptions"></div>
+        </div>
+
+        <div class="multi-select" id="itemFilter">
+            <div class="select-box" onclick="toggleDropdown('itemOptions', event)">
+                <span id="itemLabel">Items: All</span>
+                <span class="arrow">▼</span>
+            </div>
+            <div class="options-container" id="itemOptions"></div>
+        </div>
+      </div>
+      
+      <div class="stats-grid" id="statsGrid"></div>
+      <div id="recordsList"></div>
+  </div>
+</div>
+
+<!-- === VIEW 4: ADD/MANAGE ITEMS SCREEN === -->
+<div id="add-items-view" class="view-section">
+    <!-- Nav Bar -->
+    <div class="nav-bar">
+        <button class="nav-back-btn" onclick="navigateTo('home')">
+          <span>◄</span> BACK
+        </button>
+        <span class="nav-title">ITEMS</span>
+        <div style="width: 70px;"></div>
+    </div>
+
+    <!-- Toggle Buttons -->
+    <div class="sub-nav-bar">
+        <button id="tab-add" class="sub-nav-btn active" onclick="switchAddManageTab('add')">ADD NEW ITEM</button>
+        <button id="tab-manage" class="sub-nav-btn" onclick="switchAddManageTab('manage')">MANAGE ITEMS</button>
+    </div>
+    
+    <div class="add-form-container">
+        <!-- Section: Add/Edit Form -->
+        <div id="section-add-item">
+            <h3 style="margin: 0 0 15px 0; color: #5c3615;">ITEM DETAILS</h3>
+            <div class="form-group">
+                <label class="form-label">Item Name</label>
+                <input type="text" id="newItemName" class="form-input" placeholder="e.g. Masala Tea">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Category</label>
+                <input type="text" id="newItemCategory" class="form-input" list="categoryList" placeholder="Select or type new category">
+                <datalist id="categoryList"></datalist>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Price (₹)</label>
+                <input type="number" id="newItemPrice" class="form-input" placeholder="e.g. 50">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Unit</label>
+                <input type="text" id="newItemUnit" class="form-input" placeholder="e.g. Cup, Full, 100g">
+            </div>
+
+            <button class="btn-save-item" id="btnSaveItem" onclick="saveItemAction()">+ ADD NEW ITEM</button>
+            <button class="btn-cancel-edit" id="btnCancelEdit" onclick="cancelEditMode()">CANCEL EDIT</button>
+        </div>
+
+        <!-- Section: Manage List with Export/Import -->
+        <div id="section-manage-items" style="display:none;">
+            <div class="menu-tools-bar">
+                <button class="btn-menu-tool" style="background:#457b9d;" onclick="exportMenuData()">📤 Backup Menu (JSON)</button>
+                <button class="btn-menu-tool" style="background:#e63946;" onclick="triggerMenuImport()">📥 Restore Menu</button>
+                <input type="file" id="importMenuFile" style="display:none" accept=".json" onchange="handleMenuImport(this)">
+            </div>
+            
+            <div id="manageItemsList"></div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- === ACCESS CONTROL MODAL === -->
+<div id="accessModal" class="access-modal" onclick="if(event.target===this) closeAccessCenter()">
+  <div class="access-modal-panel">
+    <div class="access-modal-head">
+      <h3 id="accessModalTitle">ACCESS CONTROL</h3>
+      <button class="close-btn" onclick="closeAccessCenter()">✕</button>
+    </div>
+
+    <div id="accessLoginPane" class="access-modal-body">
+      <div class="access-entry-card" style="width:100%; box-shadow:none; padding:0; background:transparent;">
+        <h3 class="access-entry-title">Enter Access</h3>
+        <p class="access-entry-sub">Host uses the Host PIN (default: 1234). Staff use a permanent staff code issued by the host.</p>
+
+        <div class="access-tabs">
+          <button id="accessTabStaff" class="access-tab active" onclick="switchAccessLogin('staff')">STAFF</button>
+          <button id="accessTabHost" class="access-tab" onclick="switchAccessLogin('host')">HOST</button>
+        </div>
+
+        <input id="staffRoomInput" class="access-input" type="text" inputmode="text" autocomplete="off" placeholder="Enter Host Room Code">
+        <input id="accessCodeInput" class="access-input" type="text" inputmode="text" autocomplete="off" placeholder="Enter staff code">
+        <button id="accessLoginBtn" class="access-primary" onclick="submitAccessLogin()">JOIN HOST & ENTER APP</button>
+        <div class="access-small">The Main Host starts the day. If it leaves, a connected staff device can temporarily keep the live POS running. Data is stored locally on participating devices and synchronized when they reconnect.</div>
+      </div>
+    </div>
+
+    <div id="accessSetupPane" class="access-modal-body" style="display:none;">
+      <div class="access-entry-card" style="width:100%; box-shadow:none; padding:0; background:transparent;">
+        <h3 class="access-entry-title">Create Host PIN</h3>
+        <p class="access-entry-sub">This PIN controls the Main Host. Staff codes, permissions and records remain available locally. If the Main Host leaves during the day, a connected staff device can temporarily keep the live POS running.</p>
+        <input id="hostPinSetupInput" class="access-input" type="password" inputmode="numeric" autocomplete="new-password" maxlength="8" placeholder="Choose 4–8 digit PIN">
+        <input id="hostPinSetupConfirm" class="access-input" type="password" inputmode="numeric" autocomplete="new-password" maxlength="8" placeholder="Confirm PIN">
+        <button class="access-primary" onclick="createHostPin()">CREATE HOST PIN</button>
+      </div>
+    </div>
+
+    <div id="accessHostPane" class="access-modal-body" style="display:none;">
+      <div class="access-note">
+        Main Host permissions are always full. Records remain Main Host-only. Staff codes are permanent until you revoke them. A Temporary Host can keep the live POS running but never gets Main Host control.
+        <br><br><strong>Live Room:</strong> <span id="hostRoomCodeDisplay">NOT STARTED</span>
+        <br><span id="hostLiveStatus">Starting Host connection...</span>
+      </div>
+
+      <div class="host-action-bar">
+        <button class="btn-host-generate" onclick="openGenerateCodePane()">＋ GENERATE STAFF CODE</button>
+        <button class="btn-host-close" onclick="logoutAccess()">LOG OUT</button>
+      </div>      <button class="access-secondary" style="margin:0 0 12px;" onclick="changeHostPin()">CHANGE HOST PIN</button>
+
+      <div id="generateCodePane" style="display:none;">
+        <div class="access-entry-card" style="width:100%; box-shadow:none; padding:0; background:transparent; margin-bottom:15px;">
+          <h3 class="access-entry-title">New Staff Code</h3>
+          <input id="staffCodeLabel" class="access-input" type="text" maxlength="40" placeholder="Staff name / role (optional)">
+          <div class="permission-grid">
+            <label class="permission-option"><input id="permOrders" type="checkbox" checked> Orders</label>
+            <label class="permission-option"><input id="permAdd" type="checkbox"> Add Item</label>
+            <label class="permission-option"><input id="permManage" type="checkbox"> Manage Items</label>
+            <label class="permission-option"><input id="permEndDay" type="checkbox"> End Day</label>
+          </div>
+          <button class="access-primary" onclick="generateStaffCode()">GENERATE PERMANENT CODE</button>
+          <button class="access-secondary" onclick="closeGenerateCodePane()">CANCEL</button>
+        </div>
+      </div>
+
+      <h4 style="margin:0 0 10px; color:#5c3615;">ACTIVE STAFF CODES</h4>
+      <div id="staffCodesList"></div>
+    </div>
+
+    <div id="accessStaffPane" class="access-modal-body" style="display:none;">
+      <div class="access-entry-card" style="width:100%; box-shadow:none; padding:0; background:transparent;">
+        <h3 id="staffWelcomeTitle" class="access-entry-title">Staff Access</h3>
+        <p id="staffPermissionSummary" class="access-entry-sub"></p>
+        <button class="access-primary" onclick="closeAccessCenter()">CONTINUE TO APP</button>
+        <button class="access-secondary" onclick="switchAccount()">LOG OUT / SWITCH ACCOUNT</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- === GLOBAL OVERLAYS === -->
+<div class="overlay" id="overlay" onclick="closeAll()"></div>
+
+<div class="menu-modal" id="menuModal">
+    <div class="menu-header">
+      <h3 style="margin:0; font-size: 1.1rem;">ADD ITEMS</h3>
+      <button class="close-btn" onclick="closeAll()">✕</button>
+    </div>
+    
+    <div class="menu-search-container">
+      <input type="text" id="menuSearch" class="menu-search" placeholder="Search item..." onkeyup="filterMenu()">
+    </div>
+
+    <div class="menu-body" id="menuContainer"></div>
+</div>
+
+<aside class="sidebar" id="leftSidebar">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2 style="margin:0">History</h2>
+      <button class="close-btn" onclick="closeAll()">✕</button>
+    </div>
+    <div class="sidebar-content">
+      <button class="new-order" onclick="triggerNewOrder()">
+        <span>+</span> NEW ORDER
+      </button>
+      
+      <!-- Records button removed from here -->
+
+      <div class="orders-list" id="recentOrdersList"></div>
+    </div>
+</aside>
+
+<div class="bill-modal" id="genericModal" style="z-index: 200;">
+    <div class="bill-wrapper" style="padding: 20px; text-align: center;">
+        <h3 style="margin-top: 0; color: #5c3615;">Confirmation</h3>
+        <p id="genericMsg" style="color: #666; margin-bottom: 20px; white-space: pre-wrap; font-size: 1.1em;"></p>
+        <div class="bill-btn-row">
+            <button class="btn" style="flex:1; background: #bbb; color: #333;" onclick="closeGenericModal()">Cancel</button>
+            <button class="btn btn-confirm" id="genericConfirmBtn" style="flex:1; background: #1d3557; color: white;">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<div class="bill-modal" id="billModal">
+    <div class="bill-wrapper" style="padding: 15px; background: #fdfdfd; border-radius: 12px;">
+        
+        <!-- MODERN DIGITAL E-RECEIPT UI -->
+        <div class="modern-receipt" id="receiptPreview"></div>
+      
+        <div class="bill-actions" style="border: none; background: transparent; padding: 0;">
+            <div style="font-size: 0.8rem; font-weight: bold; color: #555; margin-bottom: 5px;">Payment Method:</div>
+            <div class="payment-toggle" style="margin-bottom: 10px;">
+                <button class="pay-mode-btn active" id="btn-cash" onclick="setPaymentMode('CASH')">CASH</button>
+                <button class="pay-mode-btn" id="btn-upi" onclick="setPaymentMode('UPI')">UPI</button>
+            </div>
+            
+            <label class="bill-toggle" id="advance-toggle-container" style="display:none; margin-bottom: 15px;">
+                <input type="checkbox" id="chk-apply-advance" checked onchange="updateBillTotals()"> Apply Advance Payment
+            </label>
+            
+            <div class="bill-btn-row">
+                <button class="btn" style="flex:0.6; background: #e0e0e0; color: #333; font-size: 0.9rem;" onclick="closeAll()">Cancel</button>
+                <button class="btn" style="flex:1; background: #25D366; color: white; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(37,211,102,0.3);" onclick="sendSmartWhatsAppReceipt()">
+                    Send via WhatsApp
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+/* --- NAVIGATION LOGIC --- */
+function navigateTo(page) {
+    DOM.viewSections.forEach(v => v.classList.remove('active-view'));
+
+    if(page === 'home') {
+        DOM.views.home.classList.add('active-view');
+        applyAccessUI();
+        return;
+    }
+
+    if(page === 'orders') {
+        if (!hasPermission('orders')) {
+            showGenericModal("Your staff code does not have access to Orders.", null);
+            DOM.views.home.classList.add('active-view');
+            return;
+        }
+        DOM.views.orders.classList.add('active-view');
+        return;
+    }
+
+    if(page === 'records') {
+        if (!isHostSession()) {
+            showGenericModal("Records are available to the host only.", null);
+            DOM.views.home.classList.add('active-view');
+            return;
+        }
+        DOM.views.records.classList.add('active-view');
+        openRecordsView();
+        return;
+    }
+
+    if(page === 'add-items') {
+        if (!hasAnyPermission('addItems', 'manageItems')) {
+            showGenericModal("Your staff code does not have access to Item Management.", null);
+            DOM.views.home.classList.add('active-view');
+            return;
+        }
+        DOM.views.addItems.classList.add('active-view');
+        cancelEditMode();
+        switchAddManageTab(hasPermission('addItems') ? 'add' : 'manage');
+        renderAddItemCategoryOptions();
+        renderManageItemsList();
+        applyItemAccessUI();
+    }
+}
+
+/* --- GLOBAL VARS & STATE --- */
+let pendingImportData = null; // Defined globally to avoid reference errors
+const DOM = {}; // Global DOM Cache
+
+const DEFAULT_MENU = [
+  {
+    category: "CHAI & DAIRY",
+    items: [
+      { name: "Special Chai", price: 20, unit: "Full" },
+      { name: "Rajvadi Chai", price: 10, unit: "Half" }, 
+      { name: "Rajvadi Chai (Full)", price: 20, unit: "Full" },
+      { name: "Coffee", price: 20, unit: "Half" },
+      { name: "Coffee (Full)", price: 35, unit: "Full" },
+      { name: "Elaichi Dhoodh", price: 30, unit: "Cup" }
+    ]
+  },
+  {
+    category: "BHAJIYA & SNACKS",
+    items: [
+      { name: "Methi Gota", price: 50, unit: "100g" },
+      { name: "Bharela Marcha", price: 50, unit: "100g" },
+      { name: "Bateta Vada", price: 50, unit: "100g" },
+      { name: "Bataka Puri", price: 50, unit: "100g" },
+      { name: "Bateta Chips", price: 50, unit: "100g" },
+      { name: "Kumbhaniya", price: 60, unit: "100g" },
+      { name: "Mix Bhajiya", price: 100, unit: "200g" }
+    ]
+  },
+  {
+    category: "GATHIYA & FAFDA",
+    items: [
+      { name: "Vanela Gathiya", price: 60, unit: "100g" },
+      { name: "Masala Gathiya", price: 70, unit: "100g" },
+      { name: "Nylon Fafda", price: 60, unit: "100g" },
+      { name: "Methi Fafda", price: 70, unit: "100g" }
+    ]
+  }
+];
+
+const state = {
+  menu: [], /* Dynamic Menu */
+  orderHistory: [],
+  currentOrderId: 1,
+  currentItems: [],
+  currentStatus: 'active',
+  currentOrderType: 'DINE-IN', 
+  currentPaymentMode: 'CASH',
+  editingItemCoords: null, // Stores {catIndex, itemIndex} during edit
+  accessControl: {
+    hostPin: null,
+    staffCodes: []
+  }
+};
+
+let activeBill = null; // Central bill object
+
+/* --- DOM CACHING --- */
+function cacheDOM() {
+    // Static Views
+    DOM.views = {
+        home: document.getElementById('home-view'),
+        orders: document.getElementById('orders-view'),
+        records: document.getElementById('records-view'),
+        addItems: document.getElementById('add-items-view')
+    };
+    DOM.viewSections = document.querySelectorAll('.view-section');
+
+    // Orders Screen Elements
+    DOM.orderIdDisplay = document.getElementById('orderIdDisplay');
+    DOM.statusBadge = document.getElementById('statusBadge');
+    DOM.custNameInput = document.getElementById('custNameInput');
+    DOM.custMobileInput = document.getElementById('custMobileInput');
+    DOM.custAdvanceInput = document.getElementById('custAdvanceInput');
+    DOM.orderBody = document.getElementById('orderBody');
+    DOM.grandTotal = document.getElementById('grandTotal');
+    DOM.addItemBtn = document.getElementById('addItemBtn');
+    DOM.btnComplete = document.getElementById('btnComplete');
+    DOM.btnEditOrder = document.getElementById('btnEditOrder');
+    
+    // Type Buttons
+    DOM.typeDine = document.getElementById('type-dine');
+    DOM.typeParcel = document.getElementById('type-parcel');
+    DOM.typeDelivery = document.getElementById('type-delivery');
+    DOM.typeBtns = document.querySelectorAll('.type-btn');
+
+    // Modals & Overlays
+    DOM.overlay = document.getElementById('overlay');
+    DOM.menuModal = document.getElementById('menuModal');
+    DOM.menuContainer = document.getElementById('menuContainer');
+    DOM.menuSearch = document.getElementById('menuSearch');
+    DOM.leftSidebar = document.getElementById('leftSidebar');
+    DOM.recentOrdersList = document.getElementById('recentOrdersList');
+    DOM.genericModal = document.getElementById('genericModal');
+    DOM.genericMsg = document.getElementById('genericMsg');
+    DOM.genericConfirmBtn = document.getElementById('genericConfirmBtn');
+    
+    // Bill Modal Elements
+    DOM.billModal = document.getElementById('billModal');
+    DOM.mainLogo = document.getElementById('main-logo');
+    DOM.mapLogo = document.getElementById('map-logo');
+    DOM.uiDate = document.getElementById('ui-date');
+    DOM.uiTime = document.getElementById('ui-time');
+    DOM.uiCustName = document.getElementById('ui-cust-name');
+    DOM.uiCustMobile = document.getElementById('ui-cust-mobile');
+    DOM.uiToken = document.getElementById('ui-token');
+    DOM.uiType = document.getElementById('ui-type');
+    DOM.uiPay = document.getElementById('ui-pay');
+    DOM.uiTableBody = document.getElementById('ui-table-body');
+    DOM.uiTotalQty = document.getElementById('ui-total-qty');
+    DOM.uiSubtotalAmt = document.getElementById('ui-subtotal-amt');
+    DOM.uiAdvanceRow = document.getElementById('ui-advance-row');
+    DOM.uiAdvanceAmt = document.getElementById('ui-advance-amt');
+    DOM.uiTotal = document.getElementById('ui-total');
+    DOM.uiQrImg = document.getElementById('ui-qr-img');
+    DOM.uiQrLink = document.getElementById('ui-qr-link');
+    DOM.advanceToggleContainer = document.getElementById('advance-toggle-container');
+    DOM.chkApplyAdvance = document.getElementById('chk-apply-advance');
+    DOM.btnCash = document.getElementById('btn-cash');
+    DOM.btnUpi = document.getElementById('btn-upi');
+    DOM.payModeBtns = document.querySelectorAll('.pay-mode-btn');
+
+    // Records Screen Elements
+    DOM.recordDateInput = document.getElementById('recordDateInput');
+    DOM.payLabel = document.getElementById('payLabel');
+    DOM.typeLabel = document.getElementById('typeLabel');
+    DOM.itemLabel = document.getElementById('itemLabel');
+    DOM.payOptions = document.getElementById('payOptions');
+    DOM.typeOptions = document.getElementById('typeOptions');
+    DOM.itemOptions = document.getElementById('itemOptions');
+    DOM.statsGrid = document.getElementById('statsGrid');
+    DOM.recordsList = document.getElementById('recordsList');
+    DOM.importFile = document.getElementById('importFile');
+    DOM.multiSelects = document.querySelectorAll('.multi-select');
+
+    // Add Items Screen Elements
+    DOM.tabAdd = document.getElementById('tab-add');
+    DOM.tabManage = document.getElementById('tab-manage');
+    DOM.sectionAddItem = document.getElementById('section-add-item');
+    DOM.sectionManageItems = document.getElementById('section-manage-items');
+    DOM.newItemName = document.getElementById('newItemName');
+    DOM.newItemCategory = document.getElementById('newItemCategory');
+    DOM.categoryList = document.getElementById('categoryList');
+    DOM.newItemPrice = document.getElementById('newItemPrice');
+    DOM.newItemUnit = document.getElementById('newItemUnit');
+    DOM.btnSaveItem = document.getElementById('btnSaveItem');
+    DOM.btnCancelEdit = document.getElementById('btnCancelEdit');
+    DOM.manageItemsList = document.getElementById('manageItemsList');
+    DOM.importMenuFile = document.getElementById('importMenuFile');
+    DOM.subNavBtns = document.querySelectorAll('.sub-nav-btn');
+
+    // Access Control Elements
+    DOM.accessModal = document.getElementById('accessModal');
+    DOM.accessLoginPane = document.getElementById('accessLoginPane');
+    DOM.accessSetupPane = document.getElementById('accessSetupPane');
+    DOM.accessHostPane = document.getElementById('accessHostPane');
+    DOM.accessStaffPane = document.getElementById('accessStaffPane');
+    DOM.accessCodeInput = document.getElementById('accessCodeInput');
+    DOM.staffRoomInput = document.getElementById('staffRoomInput');
+    DOM.hostPinSetupInput = document.getElementById('hostPinSetupInput');
+    DOM.hostPinSetupConfirm = document.getElementById('hostPinSetupConfirm');
+    DOM.staffCodesList = document.getElementById('staffCodesList');
+    DOM.homeAccessMeta = document.getElementById('homeAccessMeta');
+    DOM.staffWelcomeTitle = document.getElementById('staffWelcomeTitle');
+    DOM.staffPermissionSummary = document.getElementById('staffPermissionSummary');
+}
+
+/* --- GLOBAL HELPER FUNCTIONS --- */
+
+function generateUUID() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+function ensureMenuIds() {
+    if (!state.menu) return;
+    state.menu.forEach(cat => {
+        if (cat.items) {
+            cat.items.forEach(item => {
+                if (!item.id) item.id = generateUUID();
+            });
+        }
+    });
+}
+
+function triggerImport() { 
+    if (!isHostSession()) { showGenericModal("Record import is host-only.", null); return; }
+    if(DOM.importFile) {
+        DOM.importFile.value = ''; 
+        DOM.importFile.click(); 
+    } else {
+        console.error("Import file input not found!");
+    }
+}
+
+function handleFileSelect(input) {
+    const file = input.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) { try { const json = JSON.parse(e.target.result); validateAndPrepImport(json); } catch(err) { showGenericModal("Error: Invalid JSON file format.", null); } };
+    reader.readAsText(file);
+}
+
+function validateAndPrepImport(json) {
+    let orders = [];
+    // Handle both direct array and export object format
+    if(Array.isArray(json)) { 
+        orders = json; 
+    } else if (json.orderHistory && Array.isArray(json.orderHistory)) { 
+        orders = json.orderHistory; 
+    } else { 
+        showGenericModal("Error: Invalid file structure.\nNo order history found.", null); 
+        return; 
+    }
+
+    if (orders.length === 0) {
+        showGenericModal("Import Error:\nFile contains 0 orders.", null);
+        return;
+    }
+
+    // STRICT VALIDATION LOOP
+    for (let i = 0; i < orders.length; i++) {
+        const o = orders[i];
+        
+        // 1. ID must be a number
+        if (typeof o.id !== 'number') {
+            showGenericModal(`Import Rejected:\nOrder at index ${i} has invalid ID (must be a number).`, null);
+            return;
+        }
+        
+        // 2. Items must be an array
+        if (!Array.isArray(o.items)) {
+            showGenericModal(`Import Rejected:\nOrder #${o.id} has invalid items structure.`, null);
+            return;
+        }
+        
+        // 3. Status must be present
+        if (!o.status) {
+            showGenericModal(`Import Rejected:\nOrder #${o.id} is missing status.`, null);
+            return;
+        }
+        
+        // 4. Timestamp must be present
+        if (!o.timestamp) {
+            showGenericModal(`Import Rejected:\nOrder #${o.id} is missing timestamp.`, null);
+            return;
+        }
+    }
+
+    pendingImportData = orders;
+    showGenericModal(`Validation Passed.\nFound ${orders.length} orders.\nMerge with current data?`, () => { finalizeImport(); });
+}
+
+function finalizeImport() {
+    if(!pendingImportData) return;
+    const currentIds = new Set(state.orderHistory.map(o => o.id));
+    pendingImportData.forEach(o => { if(o.id && o.items && Array.isArray(o.items)) { if(!currentIds.has(o.id)) { state.orderHistory.push(o); currentIds.add(o.id); } } });
+    if(state.orderHistory.length > 0) { const maxId = Math.max(...state.orderHistory.map(o => o.id)); if(maxId >= state.currentOrderId) { state.currentOrderId = maxId + 1; } }
+    state.orderHistory.sort((a,b) => a.id - b.id);
+    saveState(); renderHistory();
+    if(DOM.views.records.classList.contains('active-view')) { renderDailyView(); }
+    closeGenericModal(); pendingImportData = null;
+}
+
+function exportData(type) {
+    if (!isHostSession()) { showGenericModal("Records and record export are host-only.", null); return; }
+    const today = new Date();
+    const yyyy = today.getFullYear(); const mm = String(today.getMonth() + 1).padStart(2, '0'); const dd = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+    let dataToExport = []; let fileName = "";
+    if (type === 'DAILY') {
+        const selectedDate = DOM.recordDateInput.value;
+        if (!selectedDate) { alert("Please select a date first."); return; }
+        dataToExport = state.orderHistory.filter(o => {
+            if(o.status !== 'completed') return false;
+            const d = new Date(o.timestamp);
+            const oY = d.getFullYear(); const oM = String(d.getMonth() + 1).padStart(2, '0'); const oD = String(d.getDate()).padStart(2, '0');
+            return `${oY}-${oM}-${oD}` === selectedDate;
+        });
+        fileName = `POS_Daily_${selectedDate}.json`;
+    } else {
+        dataToExport = state.orderHistory;
+        fileName = `POS_AllData_upto_${todayStr}.json`;
+    }
+    const exportObj = { meta: { version: "1.0", exportDate: new Date().toISOString(), type: type, app: "Gathiya Junction POS" }, orderHistory: dataToExport };
+    const blob = new Blob([JSON.stringify(exportObj, null, 2)], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = fileName;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+/* --- INIT --- */
+
+/* --- HOST / STAFF ACCESS CONTROL + ROTATING HOST P2P LIVE SYNC --- */
+const ACCESS_SESSION_KEY = 'gathiya_access_session_v4';
+const HOST_PEER_ID = 'gathiya-junction-main-host';
+const HOST_ROOM_KEY = 'gathiya_host_room_v2';
+const DEVICE_ID_KEY = 'gathiya_pos_device_id_v2';
+const BUSINESS_META_KEY = 'gathiya_business_meta_v2';
+const P2P_META_KEY = 'gathiya_p2p_meta_v2';
+
+let p2pPeer = null;
+let p2pHostConnections = [];
+let p2pHostConn = null;
+let p2pIsHost = false;
+let p2pMode = 'none'; // none | mainHost | tempHost | staff
+let p2pStarted = false;
+let p2pReady = false;
+let p2pRoomCode = '';
+let p2pApplyingRemote = false;
+let p2pBroadcastTimer = null;
+let p2pElectionTimer = null;
+let p2pHeartbeatTimer = null;
+let p2pReturnPollTimer = null;
+let p2pLastHostMessageAt = 0;
+let p2pReturnInProgress = false;
+let p2pStateRevision = 0;
+let pendingStaffSync = null;
+
+function defaultAccessControl() { return { hostPin: '1234', staffCodes: [], mainHostDeviceId: null }; }
+function getAccessControl() {
+    if (!state.accessControl || typeof state.accessControl !== 'object') state.accessControl = defaultAccessControl();
+    if (!Array.isArray(state.accessControl.staffCodes)) state.accessControl.staffCodes = [];
+    if (!('hostPin' in state.accessControl)) state.accessControl.hostPin = null;
+    if (!('mainHostDeviceId' in state.accessControl)) state.accessControl.mainHostDeviceId = null;
+    return state.accessControl;
+}
+function getDeviceId() {
+    let id = localStorage.getItem(DEVICE_ID_KEY);
+    if (!id) { id = generateUUID(); localStorage.setItem(DEVICE_ID_KEY, id); }
+    return id;
+}
+function getBusinessMeta() {
+    try { return JSON.parse(localStorage.getItem(BUSINESS_META_KEY) || 'null') || { activeDay: null, status: 'idle', startedAt: null, closedAt: null }; }
+    catch(e) { return { activeDay: null, status: 'idle', startedAt: null, closedAt: null }; }
+}
+function setBusinessMeta(meta) { localStorage.setItem(BUSINESS_META_KEY, JSON.stringify(meta)); }
+function todayKey() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function ensureBusinessDayStarted() {
+    const meta = getBusinessMeta();
+    const today = todayKey();
+    if (meta.activeDay !== today) {
+        setBusinessMeta({ activeDay: today, status: 'active', startedAt: new Date().toISOString(), closedAt: null });
+        return true;
+    }
+    return false;
+}
+function markBusinessDayClosed() {
+    const meta = getBusinessMeta();
+    if (meta.activeDay) { meta.status = 'closed'; meta.closedAt = new Date().toISOString(); setBusinessMeta(meta); }
+}
+function getP2PMeta() {
+    try { return JSON.parse(localStorage.getItem(P2P_META_KEY) || 'null') || { revision: 0, source: getDeviceId() }; }
+    catch(e) { return { revision: 0, source: getDeviceId() }; }
+}
+function setP2PMeta(meta) { localStorage.setItem(P2P_META_KEY, JSON.stringify(meta)); p2pStateRevision = Number(meta.revision || 0); }
+function bumpLocalRevision() {
+    const meta = getP2PMeta();
+    meta.revision = Number(meta.revision || 0) + 1;
+    meta.source = getDeviceId();
+    setP2PMeta(meta);
+    return meta.revision;
+}
+function currentRevision() { return Number(getP2PMeta().revision || p2pStateRevision || 0); }
+function getAccessSession() {
+    try { return JSON.parse(sessionStorage.getItem(ACCESS_SESSION_KEY) || 'null'); } catch(e) { return null; }
+}
+function setAccessSession(session) { sessionStorage.setItem(ACCESS_SESSION_KEY, JSON.stringify(session)); applyAccessUI(); }
+function clearAccessSession() { sessionStorage.removeItem(ACCESS_SESSION_KEY); applyAccessUI(); }
+function isHostSession() { return getAccessSession()?.role === 'host' && p2pMode === 'mainHost'; }
+function isTemporaryHostSession() { return getAccessSession()?.role === 'staff' && getAccessSession()?.temporaryHost === true && p2pMode === 'tempHost'; }
+function isLiveHost() { return p2pIsHost && p2pReady && (p2pMode === 'mainHost' || p2pMode === 'tempHost'); }
+function getStaffSession() {
+    const s = getAccessSession();
+    if (s?.role !== 'staff') return null;
+    const staff = getAccessControl().staffCodes.find(c => c.code === s.code && !c.revoked);
+    return staff ? s : null;
+}
+function hasPermission(permission) {
+    const session = getAccessSession();
+    if (!session) return false;
+    if (session.role === 'host' && p2pMode === 'mainHost') return true;
+    const staff = getAccessControl().staffCodes.find(c => c.code === session.code && !c.revoked);
+    return !!staff?.permissions?.[permission];
+}
+function hasAnyPermission(...permissions) { return permissions.some(p => hasPermission(p)); }
+
+function getSavedRoomCode() {
+    try { return localStorage.getItem(HOST_ROOM_KEY) || ''; } catch(e) { return ''; }
+}
+function setSavedRoomCode(code) { try { localStorage.setItem(HOST_ROOM_KEY, code); } catch(e) {} }
+function generateRoomCode() {
+    const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code=''; for(let i=0;i<6;i++) code += chars[Math.floor(Math.random()*chars.length)];
+    return code;
+}
+function getOrCreateHostRoomCode() {
+    let code=getSavedRoomCode();
+    if(!code){ code=generateRoomCode(); setSavedRoomCode(code); }
+    p2pRoomCode=code;
+    return code;
+}
+function setHostLiveStatus(text, ok=false) {
+    const el=document.getElementById('hostLiveStatus');
+    if(el){ el.textContent=text; el.style.color=ok?'#2a9d8f':'#d62828'; }
+    const room=document.getElementById('hostRoomCodeDisplay');
+    if(room) room.textContent = p2pRoomCode || 'NOT STARTED';
+    updateTemporaryHostUI();
+}
+function applyStaffRoomInputVisibility(mode) {
+    const r=document.getElementById('staffRoomInput'); if(r) r.style.display=mode==='staff'?'':'none';
+}
+function ensureTemporaryHostUI() {
+    if (document.getElementById('temporaryHostControls')) return;
+    const pane = DOM.accessStaffPane;
+    if (!pane) return;
+    const wrap = document.createElement('div');
+    wrap.id='temporaryHostControls';
+    wrap.style.cssText='margin-top:14px;padding:12px;background:#fffdf7;border:1px solid #f1ddb5;border-radius:10px;';
+    wrap.innerHTML=`<div id="temporaryHostStatus" style="font-size:.78rem;color:#6d5b32;line-height:1.45;margin-bottom:9px;"></div><button id="temporaryHostTakeoverBtn" class="access-primary" style="background:#ffb703;color:#222;display:none;">BECOME TEMPORARY HOST</button><button id="temporaryHostReleaseBtn" class="access-secondary" style="display:none;">RELEASE TEMPORARY HOST</button>`;
+    pane.querySelector('.access-entry-card')?.appendChild(wrap);
+    document.getElementById('temporaryHostTakeoverBtn')?.addEventListener('click', ()=>promoteSelfToTemporaryHost(true));
+    document.getElementById('temporaryHostReleaseBtn')?.addEventListener('click', ()=>releaseTemporaryHost());
+}
+function updateTemporaryHostUI() {
+    ensureTemporaryHostUI();
+    const status=document.getElementById('temporaryHostStatus'), take=document.getElementById('temporaryHostTakeoverBtn'), release=document.getElementById('temporaryHostReleaseBtn');
+    if(!status) return;
+    if(p2pMode==='tempHost') {
+        status.innerHTML='<strong>Temporary Host active.</strong><br>This device is keeping the live POS running. You still have only your normal staff permissions.';
+        if(take) take.style.display='none'; if(release) release.style.display=''; return;
+    }
+    if(p2pMode==='mainHost') { status.innerHTML='<strong>Main Host active.</strong><br>All staff can synchronize through this device.'; if(take)take.style.display='none'; if(release)release.style.display='none'; return; }
+    if(getAccessSession()?.role==='staff') {
+        status.innerHTML='<strong>Temporary-host backup.</strong><br>If the Main Host leaves, one connected staff device can automatically take over the live connection.';
+        if(take)take.style.display=''; if(release)release.style.display='none';
+    } else { status.textContent=''; if(take)take.style.display='none'; if(release)release.style.display='none'; }
+}
+function safeSend(conn,msg){ try{ if(conn && conn.open) conn.send(msg); }catch(e){ console.error('P2P send failed',e); } }
+function broadcastToStaff(msg){ p2pHostConnections.forEach(c=>safeSend(c,msg)); }
+function buildSharedState(){
+    return {menu:state.menu||[], orderHistory:state.orderHistory||[], accessControl:state.accessControl||defaultAccessControl(), currentOrderId:state.currentOrderId, businessMeta:getBusinessMeta(), revision:currentRevision(), source:getDeviceId()};
+}
+function broadcastSharedState(){
+    if(!isLiveHost()) return;
+    const packet={type:'STATE', state:buildSharedState(), hostMode:p2pMode, roomCode:p2pRoomCode};
+    if(p2pBroadcastTimer) clearTimeout(p2pBroadcastTimer);
+    p2pBroadcastTimer=setTimeout(()=>{ if(isLiveHost()) broadcastToStaff(packet); },80);
+}
+function cloneSharedState(data){ try{return JSON.parse(JSON.stringify(data||{}));}catch(e){return {};} }
+function itemKey(item){ if(!item || typeof item!=='object')return ''; return String(item.id||item.name||'').trim().toLowerCase(); }
+function mergeMenuData(hostMenu, localMenu){
+    const base=Array.isArray(hostMenu)?cloneSharedState(hostMenu):[];
+    const extra=Array.isArray(localMenu)?localMenu:[];
+    const categoryMap=new Map();
+    base.forEach((cat,i)=>categoryMap.set(itemKey(cat)||`cat-${i}`,cat));
+    extra.forEach(cat=>{
+        const ck=itemKey(cat)||`cat-extra-${Math.random()}`;
+        const target=categoryMap.get(ck);
+        if(!target){ const copy=cloneSharedState(cat); base.push(copy); categoryMap.set(ck,copy); return; }
+        const items=Array.isArray(target.items)?target.items:[];
+        const seen=new Set(items.map((it,i)=>itemKey(it)||`item-${i}`));
+        (Array.isArray(cat.items)?cat.items:[]).forEach(it=>{ const k=itemKey(it); if(!k || !seen.has(k)){items.push(cloneSharedState(it)); if(k)seen.add(k);} });
+        target.items=items;
+    });
+    return base;
+}
+function ensureOrderSyncIds(orders){
+    if(!Array.isArray(orders)) return;
+    orders.forEach(order=>{
+        if(!order || typeof order!=='object') return;
+        if(!order.syncId){
+            const seed = `${order.createdAt||order.timestamp||Date.now()}-${order.id||1}-${Math.random().toString(36).slice(2,9)}`;
+            order.syncId = `${getDeviceId()}-${seed}`;
+        }
+    });
+}
+function orderSyncKey(order){
+    return String(order?.syncId || order?.token || '').trim();
+}
+function mergeOrderData(hostOrders, localOrders){
+    const base=Array.isArray(hostOrders)?cloneSharedState(hostOrders):[];
+    ensureOrderSyncIds(base);
+    const local=Array.isArray(localOrders)?cloneSharedState(localOrders):[];
+    ensureOrderSyncIds(local);
+
+    const bySync=new Map();
+    const usedIds=new Set();
+    let nextId=Math.max(0,...base.map(o=>Number(o?.id)||0))+1;
+
+    base.forEach(order=>{
+        const k=orderSyncKey(order);
+        if(k) bySync.set(k,order);
+        if(order && Number.isFinite(Number(order.id))) usedIds.add(Number(order.id));
+    });
+
+    local.forEach(order=>{
+        const k=orderSyncKey(order);
+        if(k && bySync.has(k)){
+            const existing=bySync.get(k);
+            const a=new Date(existing?.timestamp||existing?.updatedAt||0).getTime()||0;
+            const b=new Date(order?.timestamp||order?.updatedAt||0).getTime()||0;
+            if(b>a){ Object.assign(existing,cloneSharedState(order)); }
+            return;
+        }
+
+        const candidate=Number(order?.id);
+        let copy=cloneSharedState(order);
+        // Same numeric order number but different sync identity means two real offline-created orders.
+        if(Number.isFinite(candidate) && usedIds.has(candidate)){
+            while(usedIds.has(nextId)) nextId++;
+            copy.id=nextId++;
+        } else if(!Number.isFinite(candidate)){
+            while(usedIds.has(nextId)) nextId++;
+            copy.id=nextId++;
+        }
+        usedIds.add(Number(copy.id));
+        if(k) bySync.set(k,copy);
+        base.push(copy);
+    });
+
+    base.sort((a,b)=>Number(a?.id||0)-Number(b?.id||0));
+    return base;
+}
+function mergeSharedStates(hostState, localState){
+    const host=cloneSharedState(hostState||{}), local=cloneSharedState(localState||{}), merged={...host};
+    merged.menu=mergeMenuData(host.menu,local.menu);
+    merged.orderHistory=mergeOrderData(host.orderHistory,local.orderHistory);
+    merged.currentOrderId=Math.max(Number(host.currentOrderId||1),Number(local.currentOrderId||1),merged.orderHistory.reduce((m,o)=>Math.max(m,Number(o?.id||0)+1),1));
+    merged.accessControl=host.accessControl||local.accessControl||defaultAccessControl();
+    merged.businessMeta=host.businessMeta||local.businessMeta;
+    merged.revision=Math.max(Number(host.revision||0),Number(local.revision||0))+1;
+    merged.source=getDeviceId();
+    return merged;
+}
+function applyRemoteSharedState(data, mergeLocal=false){
+    if(!data || p2pApplyingRemote)return;
+    p2pApplyingRemote=true;
+    try{
+        const incoming=mergeLocal?mergeSharedStates(buildSharedState(),data):data;
+        if(Array.isArray(incoming.menu))state.menu=cloneSharedState(incoming.menu);
+        if(Array.isArray(incoming.orderHistory))state.orderHistory=cloneSharedState(incoming.orderHistory);
+        if(incoming.accessControl && typeof incoming.accessControl==='object') state.accessControl=cloneSharedState(incoming.accessControl);
+        if(!Array.isArray(state.accessControl.staffCodes))state.accessControl.staffCodes=[];
+        if(incoming.businessMeta) setBusinessMeta(incoming.businessMeta);
+        if(Number.isFinite(Number(incoming.revision))) setP2PMeta({revision:Number(incoming.revision),source:incoming.source||getDeviceId()});
+        ensureMenuIds(); saveStateLocalOnly(); renderMenu(); renderHistory(); if(isHostSession())renderStaffCodes();
+        const session=getAccessSession();
+        if(session?.role==='staff'){
+            const active=state.accessControl.staffCodes.find(c=>c.code===session.code && !c.revoked);
+            if(!active){clearAccessSession();if(p2pHostConn){try{p2pHostConn.close();}catch(e){}}p2pHostConn=null;closeAccessCenter();navigateTo('home');showGenericModal('Your staff access has been revoked by the Host.',null);}
+            else if(JSON.stringify(active.permissions||{})!==JSON.stringify(session.permissions||{})||active.label!==session.label)setAccessSession({...session,label:active.label||'Staff',permissions:active.permissions||{}});
+        }
+        applyAccessUI();
+    }finally{p2pApplyingRemote=false;}
+}
+function compareRevision(a, b){ return Number(a||0)-Number(b||0); }
+
+function setupHostConnection(conn){
+    p2pHostConnections.push(conn);
+    conn.on('open',()=>safeSend(conn,{type:'HOST_HELLO', roomCode:p2pRoomCode, hostMode:p2pMode}));
+    conn.on('data',msg=>handleHostMessage(conn,msg));
+    conn.on('close',()=>{p2pHostConnections=p2pHostConnections.filter(c=>c!==conn);});
+    conn.on('error',()=>{p2pHostConnections=p2pHostConnections.filter(c=>c!==conn);});
+}
+function handleHostMessage(conn,msg){
+    if(!msg || typeof msg!=='object') return;
+    p2pLastHostMessageAt=Date.now();
+    if(msg.type==='STAFF_LOGIN'){
+        const room=(msg.roomCode||'').toUpperCase();
+        if(room!==p2pRoomCode) return safeSend(conn,{type:'LOGIN_FAIL',reason:'Wrong Host Room Code.'});
+        const code=(msg.code||'').trim().toUpperCase();
+        const staff=state.accessControl.staffCodes.find(c=>c.code===code && !c.revoked);
+        if(!staff) return safeSend(conn,{type:'LOGIN_FAIL',reason:'Invalid or revoked staff code.'});
+        conn.staffCode=staff.code; conn.staffId=staff.id;
+        safeSend(conn,{type:'LOGIN_OK',staff:{id:staff.id,code:staff.code,label:staff.label||'Staff',permissions:staff.permissions||{}},state:buildSharedState(),hostMode:p2pMode});
+        return;
+    }
+    if(msg.type==='STAFF_SYNC_REQUEST'){
+        const staff=state.accessControl.staffCodes.find(c=>c.code===conn.staffCode && !c.revoked);
+        if(!staff)return safeSend(conn,{type:'ACCESS_REVOKED'});
+        const merged=mergeSharedStates(buildSharedState(),msg.state||{});
+        if(!(staff.permissions?.addItems||staff.permissions?.manageItems)) merged.menu=cloneSharedState(state.menu||[]);
+        if(!(staff.permissions?.orders||staff.permissions?.endDay)) merged.orderHistory=cloneSharedState(state.orderHistory||[]);
+        merged.accessControl=cloneSharedState(state.accessControl||defaultAccessControl());
+        state.menu=merged.menu;state.orderHistory=merged.orderHistory;state.currentOrderId=Math.max(Number(state.currentOrderId||1),Number(merged.currentOrderId||1));
+        setP2PMeta({revision:Number(merged.revision||0),source:getDeviceId()});saveStateLocalOnly();broadcastSharedState();
+        return safeSend(conn,{type:'SYNC_MERGED',state:buildSharedState(),staff:{id:staff.id,code:staff.code,label:staff.label||'Staff',permissions:staff.permissions||{}},hostMode:p2pMode});
+    }
+    if(msg.type==='REQUEST_STATE') return safeSend(conn,{type:'STATE',state:buildSharedState(),hostMode:p2pMode});
+    if(msg.type==='STAFF_STATE_UPDATE'){
+        const staff=state.accessControl.staffCodes.find(c=>c.code===conn.staffCode && !c.revoked);
+        if(!staff) return safeSend(conn,{type:'ACCESS_REVOKED'});
+        const incoming=msg.state||{}; const incomingRev=Number(msg.revision||0); const merged=mergeSharedStates(buildSharedState(),incoming); let changed=false;
+        if(staff.permissions?.addItems || staff.permissions?.manageItems){if(Array.isArray(merged.menu)){state.menu=merged.menu;ensureMenuIds();changed=true;}}
+        if(staff.permissions?.orders || staff.permissions?.endDay){if(Array.isArray(merged.orderHistory)){state.orderHistory=merged.orderHistory;changed=true;}}
+        state.currentOrderId=Math.max(Number(state.currentOrderId||1),Number(merged.currentOrderId||1));
+        if(changed){setP2PMeta({revision:Math.max(incomingRev,currentRevision(),Number(merged.revision||0)),source:conn.staffId||getDeviceId()});saveStateLocalOnly();broadcastSharedState();safeSend(conn,{type:'STATE_ACCEPTED',revision:currentRevision(),state:buildSharedState(),hostMode:p2pMode});}
+        else safeSend(conn,{type:'STATE',state:buildSharedState(),hostMode:p2pMode});
+        return;
+    }
+    if(msg.type==='STAFF_PING') return safeSend(conn,{type:'PONG'});
+    if(msg.type==='MAIN_HOST_RETURN'){
+        if(p2pMode!=='tempHost') return safeSend(conn,{type:'RETURN_FAIL',reason:'This device is not the temporary host.'});
+        if((msg.hostPin||'') !== (state.accessControl.hostPin||'')) return safeSend(conn,{type:'RETURN_FAIL',reason:'Main Host authentication failed.'});
+        p2pReturnInProgress=true;
+        safeSend(conn,{type:'MAIN_HOST_RETURN_STATE',state:buildSharedState(),roomCode:p2pRoomCode});
+        return;
+    }
+    if(msg.type==='MAIN_HOST_CLAIMED' && p2pMode==='tempHost'){
+        broadcastToStaff({type:'MAIN_HOST_RETURNED',message:'Main Host has returned. Reconnecting...'});
+        setTimeout(()=>relinquishTemporaryHost(),700);
+    }
+}
+
+function destroyP2P({silent=true}={}){
+    if(p2pBroadcastTimer){clearTimeout(p2pBroadcastTimer);p2pBroadcastTimer=null;}
+    if(p2pHeartbeatTimer){clearInterval(p2pHeartbeatTimer);p2pHeartbeatTimer=null;}
+    if(p2pElectionTimer){clearTimeout(p2pElectionTimer);p2pElectionTimer=null;}
+    if(p2pReturnPollTimer){clearInterval(p2pReturnPollTimer);p2pReturnPollTimer=null;}
+    try{p2pHostConnections.forEach(c=>{try{c.close();}catch(e){}});}catch(e){}
+    p2pHostConnections=[];
+    try{if(p2pHostConn)p2pHostConn.close();}catch(e){}
+    p2pHostConn=null;
+    try{if(p2pPeer)p2pPeer.destroy();}catch(e){}
+    p2pPeer=null; p2pIsHost=false; p2pReady=false; p2pStarted=false;
+    if(!silent) setHostLiveStatus('Live connection closed.',false);
+}
+
+function startHostHeartbeat(){
+    if(p2pHeartbeatTimer)clearInterval(p2pHeartbeatTimer);
+    p2pHeartbeatTimer=setInterval(()=>{ if(isLiveHost()) broadcastToStaff({type:'HOST_HEARTBEAT',time:Date.now(),hostMode:p2pMode}); },3000);
+}
+
+async function claimMainHostPeer(){
+    if(typeof Peer==='undefined'){showGenericModal('PeerJS could not be loaded. Check internet access and reload the page.',null);return false;}
+    destroyP2P();
+    p2pMode='none'; p2pPeer=new Peer(HOST_PEER_ID); p2pStarted=true;
+    setHostLiveStatus('Claiming Main Host connection...',false);
+    return await new Promise(resolve=>{
+        let settled=false;
+        const finish=v=>{if(!settled){settled=true;resolve(v)}};
+        p2pPeer.on('open',()=>{
+            p2pIsHost=true;p2pMode='mainHost';p2pReady=true;p2pRoomCode=getOrCreateHostRoomCode();
+            startHostHeartbeat();setHostLiveStatus('MAIN HOST ONLINE • Staff can join now.',true);broadcastSharedState();finish(true);
+        });
+        p2pPeer.on('connection',conn=>setupHostConnection(conn));
+        p2pPeer.on('error',err=>{ if(err?.type==='unavailable-id'){ finish(false); } else { console.error('Main Host PeerJS error',err); finish(false); } });
+        setTimeout(()=>finish(false),8000);
+    });
+}
+
+async function connectMainHostReturn(pin){
+    if(typeof Peer==='undefined'){showGenericModal('PeerJS could not be loaded. Check internet access and reload the page.',null);return false;}
+    try{if(p2pPeer)p2pPeer.destroy();}catch(e){}
+    p2pPeer=new Peer();p2pStarted=true;
+    return await new Promise(resolve=>{
+        let done=false; const finish=v=>{if(!done){done=true;resolve(v)}};
+        p2pPeer.on('open',()=>{
+            const conn=p2pPeer.connect(HOST_PEER_ID,{reliable:true});
+            p2pHostConn=conn;
+            conn.on('open',()=>safeSend(conn,{type:'MAIN_HOST_RETURN',hostPin:pin,deviceId:getDeviceId()}));
+            conn.on('data',msg=>{
+                if(msg?.type==='MAIN_HOST_RETURN_STATE'){
+                    const merged=mergeSharedStates(buildSharedState(),msg.state||{}); applyRemoteSharedState(merged,false);safeSend(conn,{type:'MAIN_HOST_CLAIMED'});try{conn.close();}catch(e){}
+                    finish(true);
+                    setTimeout(()=>takeBackMainHost(pin),400);
+                } else if(msg?.type==='RETURN_FAIL'){showGenericModal(msg.reason||'Main Host return failed.',null);finish(false);}
+            });
+            conn.on('error',()=>finish(false));
+            conn.on('close',()=>{if(!done)finish(false);});
+        });
+        p2pPeer.on('error',err=>{ if(err?.type==='peer-unavailable')finish(false); else console.error(err); });
+        setTimeout(()=>finish(false),9000);
+    });
+}
+
+async function takeBackMainHost(pin){
+    for(let i=0;i<20;i++){
+        const ok=await claimMainHostPeer();
+        if(ok){ setAccessSession({role:'host',signedInAt:Date.now()}); ensureBusinessDayStarted(); showHostAccessPane(); showGenericModal('Main Host restored. Latest data has been synchronized from the Temporary Host.',null); return true; }
+        await new Promise(r=>setTimeout(r,500));
+    }
+    showGenericModal('The Temporary Host has not released the live connection yet. Try Host login again in a few seconds.',null);return false;
+}
+
+async function initHostP2P(){
+    const ok=await claimMainHostPeer();
+    if(ok){ ensureBusinessDayStarted(); return true; }
+    return false;
+}
+
+async function promoteSelfToTemporaryHost(manual=false){
+    const session=getAccessSession();
+    if(session?.role!=='staff' || p2pMode==='mainHost' || p2pMode==='tempHost') return false;
+    if(typeof Peer==='undefined') { if(manual)showGenericModal('PeerJS could not be loaded. Check internet access and reload the page.',null); return false; }
+    destroyP2P(); p2pMode='none'; p2pPeer=new Peer(HOST_PEER_ID);p2pStarted=true;
+    return await new Promise(resolve=>{
+        let settled=false; const finish=v=>{if(!settled){settled=true;resolve(v)}};
+        p2pPeer.on('open',()=>{
+            p2pIsHost=true;p2pMode='tempHost';p2pReady=true;p2pRoomCode=getOrCreateHostRoomCode();
+            startHostHeartbeat();
+            setAccessSession({...session,temporaryHost:true});
+            setHostLiveStatus('TEMPORARY HOST ONLINE • Main Host can return any time.',true);
+            broadcastSharedState();showStaffAccessPane();updateTemporaryHostUI();finish(true);
+        });
+        p2pPeer.on('connection',conn=>setupHostConnection(conn));
+        p2pPeer.on('error',err=>{
+            if(err?.type==='unavailable-id'){
+                finish(false);
+                const s=getAccessSession();
+                setTimeout(()=>{ if(s?.role==='staff' && !p2pIsHost) connectAsStaff(p2pRoomCode,s.code,true); },700);
+            } else console.error('Temporary Host PeerJS error',err);
+        });
+        setTimeout(()=>finish(false),8000);
+    });
+}
+function scheduleTemporaryHostElection(){
+    if(Date.now()<p2pDoNotElectUntil) return;
+    if(p2pMode!=='none' && p2pMode!=='staff') return;
+    const session=getAccessSession(); if(session?.role!=='staff') return;
+    if(p2pElectionTimer)clearTimeout(p2pElectionTimer);
+    const delay=1000+Math.floor(Math.random()*2500);
+    p2pElectionTimer=setTimeout(()=>promoteSelfToTemporaryHost(false),delay);
+}
+function relinquishTemporaryHost(){
+    if(p2pMode!=='tempHost') return;
+    const session=getAccessSession();
+    destroyP2P();
+    p2pMode='staff';
+    if(session?.role==='staff') setAccessSession({...session,temporaryHost:false});
+    updateTemporaryHostUI();
+    applyAccessUI();
+}
+function releaseTemporaryHost(){
+    if(p2pMode!=='tempHost')return;
+    showGenericModal('Release Temporary Host and allow another connected staff device to take over?',()=>{ p2pDoNotElectUntil=Date.now()+8000; relinquishTemporaryHost(); closeGenericModal(); scheduleTemporaryHostElection(); });
+}
+
+function connectAsStaff(roomCode, code, silent=false){
+    if(typeof Peer==='undefined'){showGenericModal('PeerJS could not be loaded. Check internet access and reload the page.',null);return;}
+    roomCode=(roomCode||'').trim().toUpperCase(); code=(code||'').trim().toUpperCase();
+    if(roomCode.length<4){if(!silent)showGenericModal('Enter the Host Room Code.',null);return;}
+    if(!code){if(!silent)showGenericModal('Enter your staff code.',null);return;}
+    destroyP2P();p2pMode='staff';p2pPeer=new Peer();p2pIsHost=false;p2pReady=false;p2pStarted=true;p2pRoomCode=roomCode;
+    const hostConn=p2pPeer.connect(HOST_PEER_ID,{reliable:true});p2pHostConn=hostConn;
+    hostConn.on('open',()=>safeSend(hostConn,{type:'STAFF_LOGIN',roomCode,code}));
+    hostConn.on('data',msg=>handleStaffMessage(msg));
+    hostConn.on('close',()=>{
+        p2pReady=false;p2pHostConn=null;
+        if(getAccessSession()?.role==='staff' && !p2pReturnInProgress){
+            setHostLiveStatus('Main/Temporary Host disconnected. Electing a temporary host...',false);
+            scheduleTemporaryHostElection();
+        }
+    });
+    hostConn.on('error',err=>{ if(!silent)showGenericModal('Could not connect to the Host. Check the Room Code and make sure at least one live POS device is running.',null); console.error('Staff connection error',err); });
+    p2pPeer.on('open',()=>{p2pReady=true;});
+    p2pPeer.on('error',err=>{ if(err?.type==='peer-unavailable'){ if(!silent)showGenericModal('No live Host is available for this Room Code.',null); } else console.error('Staff PeerJS error',err); });
+}
+function handleStaffMessage(msg){
+    if(!msg || typeof msg!=='object')return;
+    if(msg.type==='HOST_HELLO'){ p2pRoomCode=msg.roomCode||p2pRoomCode;p2pLastHostMessageAt=Date.now();return; }
+    if(msg.type==='LOGIN_FAIL')return showGenericModal(msg.reason||'Staff login failed.',null);
+    if(msg.type==='LOGIN_OK'){
+        p2pReady=true; const staff=msg.staff; pendingStaffSync={staff,localBefore:buildSharedState()};
+        safeSend(p2pHostConn,{type:'STAFF_SYNC_REQUEST',state:pendingStaffSync.localBefore}); return;
+    }
+    if(msg.type==='SYNC_MERGED'){
+        const staff=msg.staff||pendingStaffSync?.staff; applyRemoteSharedState(msg.state,false);
+        if(staff){setAccessSession({role:'staff',code:staff.code,label:staff.label,permissions:staff.permissions||{},signedInAt:Date.now(),temporaryHost:false});DOM.staffWelcomeTitle.textContent=staff.label?`Welcome, ${staff.label}`:'Staff Access';DOM.staffPermissionSummary.textContent=permissionSummary(staff.permissions);}
+        pendingStaffSync=null;showStaffAccessPane();return;
+    }
+    if(msg.type==='STATE'){applyRemoteSharedState(msg.state,true);return;}
+    if(msg.type==='HOST_HEARTBEAT'){p2pLastHostMessageAt=Date.now();return;}
+    if(msg.type==='STATE_ACCEPTED'){return;}
+    if(msg.type==='ACCESS_REVOKED'){clearAccessSession();closeAccessCenter();navigateTo('home');showGenericModal('Your staff access has been revoked by the Host.',null);return;}
+    if(msg.type==='MAIN_HOST_RETURNED'){p2pReturnInProgress=false;try{if(p2pHostConn)p2pHostConn.close();}catch(e){}p2pHostConn=null;setTimeout(()=>{const s=getAccessSession();if(s?.role==='staff'&&!s.temporaryHost){connectAsStaff(p2pRoomCode,s.code,true);}},900);return;}
+}
+
+async function openAccessCenter(){
+    getAccessControl();ensureTemporaryHostUI();DOM.accessModal.classList.add('active');
+    const session=getAccessSession();
+    if(session?.role==='staff'){
+        if(p2pMode==='tempHost' || (p2pReady&&p2pHostConn))showStaffAccessPane();else showStaffAccessPane();
+        return;
+    }
+    if(session?.role==='host'){
+        if(p2pMode!=='mainHost'){
+            const ok=await initHostP2P();
+            if(!ok){clearAccessSession();switchAccessLogin('host');return;}
+        }
+        showHostAccessPane();return;
+    }
+    switchAccessLogin(state.accessControl.hostPin?'host':'staff');
+    DOM.accessLoginPane.style.display='block';DOM.accessSetupPane.style.display='none';DOM.accessHostPane.style.display='none';DOM.accessStaffPane.style.display='none';
+    document.getElementById('accessModalTitle').textContent=state.accessControl.hostPin?'HOST / STAFF LOGIN':'JOIN HOST / FIRST HOST SETUP';
+}
+function closeAccessCenter(){DOM.accessModal.classList.remove('active');}
+function switchAccount(){logoutAccess();setTimeout(()=>openAccessCenter(),0);}
+function switchAccessLogin(mode){
+    document.getElementById('accessTabStaff').classList.toggle('active',mode==='staff');document.getElementById('accessTabHost').classList.toggle('active',mode==='host');
+    const input=DOM.accessCodeInput,room=document.getElementById('staffRoomInput');
+    if(mode==='host' && !state.accessControl.hostPin && !getAccessControl().mainHostDeviceId){
+        DOM.accessLoginPane.style.display='none';DOM.accessHostPane.style.display='none';DOM.accessStaffPane.style.display='none';DOM.accessSetupPane.style.display='block';document.getElementById('accessModalTitle').textContent='FIRST MAIN HOST SETUP';return;
+    }
+    DOM.accessLoginPane.style.display='block';DOM.accessSetupPane.style.display='none';input.value='';input.type=mode==='host'?'password':'text';input.inputMode=mode==='host'?'numeric':'text';input.placeholder=mode==='host'?'Enter Main Host PIN':'Enter staff code';input.dataset.mode=mode;
+    if(room){room.value='';room.style.display=mode==='staff'?'':'none';}
+    document.getElementById('accessLoginBtn').innerText=mode==='host'?'ENTER AS MAIN HOST':'JOIN LIVE POS';
+}
+async function createHostPin(){
+    const pin=(DOM.hostPinSetupInput.value||'').trim(),confirm=(DOM.hostPinSetupConfirm.value||'').trim();
+    if(!/^\d{4,8}$/.test(pin))return showGenericModal('Host PIN must be 4–8 digits.',null);
+    if(pin!==confirm)return showGenericModal('Host PIN confirmation does not match.',null);
+    if(getAccessControl().mainHostDeviceId || state.accessControl.hostPin)return showGenericModal('A Main Host is already configured. This device should use a Staff Code to join.',null);
+    const ok=await initHostP2P();if(!ok)return showGenericModal('Could not start the Main Host connection. Another device may already be hosting.',null);
+    state.accessControl.hostPin=pin;state.accessControl.mainHostDeviceId=getDeviceId();if(!Array.isArray(state.accessControl.staffCodes))state.accessControl.staffCodes=[];state.accessControl.hostRoomCode=p2pRoomCode;
+    setAccessSession({role:'host',signedInAt:Date.now()});ensureBusinessDayStarted();saveState();showHostAccessPane();showGenericModal(`MAIN HOST CREATED\n\nRoom Code: ${p2pRoomCode}\n\nOther devices join using Staff Codes and this Room Code.`,null);
+}
+async function submitAccessLogin(){
+    const mode=DOM.accessCodeInput.dataset.mode||'staff';const value=(DOM.accessCodeInput.value||'').trim();
+    if(mode==='host'){
+        const ac=getAccessControl();
+        if(value!==ac.hostPin)return showGenericModal('Invalid Main Host PIN.',null);
+        // Default Host PIN is 1234. On the very first Host login, this device claims the Main Host role.
+        if(!ac.mainHostDeviceId){
+            const ok=await initHostP2P();
+            if(!ok)return;
+            state.accessControl.hostPin=state.accessControl.hostPin||'1234';
+            state.accessControl.mainHostDeviceId=getDeviceId();
+            state.accessControl.hostRoomCode=p2pRoomCode;
+            if(!Array.isArray(state.accessControl.staffCodes))state.accessControl.staffCodes=[];
+            setAccessSession({role:'host',signedInAt:Date.now()});
+            ensureBusinessDayStarted();
+            saveState();
+            showHostAccessPane();
+            showGenericModal(`MAIN HOST ACTIVE\n\nDefault PIN: 1234\n\nYou can change the Host PIN from the Host Control Center.`,null);
+            return;
+        }
+        if(ac.mainHostDeviceId!==getDeviceId())return showGenericModal('This device is not the Main Host device. Use your Staff Code instead.',null);
+        let ok=await claimMainHostPeer();
+        if(!ok){
+            ok=await connectMainHostReturn(value);
+            if(ok)return;
+            showGenericModal('Main Host could not reclaim the live connection. Make sure the Temporary Host is still online and try again.',null);return;
+        }
+        setAccessSession({role:'host',signedInAt:Date.now()});ensureBusinessDayStarted();saveState();showHostAccessPane();return;
+    }
+    const room=(document.getElementById('staffRoomInput')?.value||'').trim();connectAsStaff(room,value,false);
+}
+function showHostAccessPane(){
+    DOM.accessLoginPane.style.display='none';DOM.accessSetupPane.style.display='none';DOM.accessHostPane.style.display='block';DOM.accessStaffPane.style.display='none';document.getElementById('accessModalTitle').textContent='MAIN HOST CONTROL CENTER';p2pRoomCode=getOrCreateHostRoomCode();setHostLiveStatus(p2pMode==='mainHost'?'MAIN HOST ONLINE • Live POS active.':'HOST CONNECTION OFFLINE',p2pMode==='mainHost');renderStaffCodes();
+}
+function showStaffAccessPane(){
+    DOM.accessLoginPane.style.display='none';DOM.accessSetupPane.style.display='none';DOM.accessHostPane.style.display='none';DOM.accessStaffPane.style.display='block';document.getElementById('accessModalTitle').textContent='STAFF ACCESS';updateTemporaryHostUI();
+}
+function permissionSummary(p){const names=[];if(p?.orders)names.push('Orders');if(p?.addItems)names.push('Add Item');if(p?.manageItems)names.push('Manage Items');if(p?.endDay)names.push('End Day');return names.length?names.join(' • '):'No permissions';}
+function openGenerateCodePane(){if(!isHostSession())return;document.getElementById('generateCodePane').style.display='block';}
+function closeGenerateCodePane(){document.getElementById('generateCodePane').style.display='none';}
+function changeHostPin(){
+    if(!isHostSession())return;const current=prompt('Enter current Main Host PIN:');if(current!==state.accessControl.hostPin)return showGenericModal('Current Host PIN is incorrect.',null);const next=prompt('Enter new 4–8 digit Main Host PIN:');if(!/^\d{4,8}$/.test(next||''))return showGenericModal('Main Host PIN must be 4–8 digits.',null);const confirm=prompt('Confirm new Main Host PIN:');if(next!==confirm)return showGenericModal('Host PIN confirmation does not match.',null);state.accessControl.hostPin=next;saveState();showGenericModal('Main Host PIN changed successfully.',null);
+}
+function generateStaffCode(){
+    if(!isHostSession())return;const label=document.getElementById('staffCodeLabel').value.trim();const permissions={orders:document.getElementById('permOrders').checked,addItems:document.getElementById('permAdd').checked,manageItems:document.getElementById('permManage').checked,endDay:document.getElementById('permEndDay').checked};
+    if(!Object.values(permissions).some(Boolean))return showGenericModal('Select at least one permission.',null);const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let code;const existing=new Set(state.accessControl.staffCodes.map(c=>c.code));do{code='GJ-'+Array.from({length:4},()=>alphabet[Math.floor(Math.random()*alphabet.length)]).join('')+'-'+Array.from({length:4},()=>alphabet[Math.floor(Math.random()*alphabet.length)]).join('')}while(existing.has(code));
+    state.accessControl.staffCodes.push({id:generateUUID(),code,label:label||'Staff',permissions,createdAt:new Date().toISOString(),revoked:false});saveState();renderStaffCodes();closeGenerateCodePane();showGenericModal(`STAFF CODE CREATED\n\n${code}\n\n${permissionSummary(permissions)}\n\nThis code stays valid until the Main Host revokes it.`,null);
+}
+function renderStaffCodes(){
+    if(!DOM.staffCodesList)return;const codes=state.accessControl.staffCodes.filter(c=>!c.revoked);if(!codes.length){DOM.staffCodesList.innerHTML='<div class="no-data" style="background:#fff;border-radius:8px;">No active staff codes.</div>';return;}
+    DOM.staffCodesList.innerHTML=codes.map(c=>`<div class="staff-code-row"><div class="staff-code-top"><div><div class="staff-code">${escapeHtml(c.code)}</div><div class="staff-code-label">${escapeHtml(c.label||'Staff')}</div></div><div style="font-size:.7rem;color:#888;">${new Date(c.createdAt).toLocaleDateString()}</div></div><div class="staff-code-perms">${escapeHtml(permissionSummary(c.permissions))}</div><div class="staff-code-actions"><button onclick="copyStaffCode('${c.code}')">COPY CODE</button><button onclick="revokeStaffCode('${c.id}')">DEMOLISH / REVOKE</button></div></div>`).join('');
+}
+function copyStaffCode(code){robustCopy(code);showGenericModal(`Code copied:\n\n${code}`,null);}
+function revokeStaffCode(id){
+    if(!isHostSession())return;const staff=state.accessControl.staffCodes.find(c=>c.id===id);if(!staff)return;showGenericModal(`Demolish this permanent code?\n\n${staff.code}\n${staff.label||'Staff'}\n\nThis will immediately revoke access on connected devices.`,()=>{staff.revoked=true;staff.revokedAt=new Date().toISOString();saveState();renderStaffCodes();closeGenericModal();p2pHostConnections.filter(c=>c.staffCode===staff.code).forEach(c=>{safeSend(c,{type:'ACCESS_REVOKED'});try{c.close();}catch(e){}});});
+}
+function logoutAccess(){
+    const wasMain=isHostSession();const wasTemp=isTemporaryHostSession();clearAccessSession();
+    if(wasMain){broadcastToStaff({type:'MAIN_HOST_LEFT',message:'Main Host disconnected. Connected staff will elect a Temporary Host.'});destroyP2P();p2pMode='none';}
+    else if(wasTemp){releaseTemporaryHost();}
+    else if(p2pHostConn){try{p2pHostConn.close();}catch(e){}p2pHostConn=null;}
+    closeAccessCenter();navigateTo('home');
+}
+function applyItemAccessUI(){
+    const addAllowed=hasPermission('addItems'),manageAllowed=hasPermission('manageItems');
+    if(DOM.tabAdd)DOM.tabAdd.style.display=addAllowed?'':'none';if(DOM.tabManage)DOM.tabManage.style.display=manageAllowed?'':'none';if(DOM.sectionAddItem)DOM.sectionAddItem.style.display=addAllowed?'':'none';if(DOM.sectionManageItems)DOM.sectionManageItems.style.display=manageAllowed?'':'none';if(!addAllowed&&manageAllowed)switchAddManageTab('manage');if(addAllowed&&!manageAllowed)switchAddManageTab('add');
+}
+function applyAccessUI(){
+    const session=getAccessSession();if(!DOM.homeAccessMeta)return;const ordersBtn=document.querySelector('.btn-orders'),addBtn=document.querySelector('.btn-add'),recordsBtn=document.querySelector('.btn-records'),endDayBtn=document.querySelector('.btn-end-day');
+    if(!session)DOM.homeAccessMeta.innerHTML=getAccessControl().mainHostDeviceId?'<span class="access-session-pill">Not signed in • use Staff Code or Main Host PIN</span>':'<span class="access-session-pill">First device can create Main Host • others join with Staff Code</span>';
+    else if(session.role==='host')DOM.homeAccessMeta.innerHTML='<span class="access-session-pill">🔑 MAIN HOST MODE</span>';
+    else if(session.temporaryHost)DOM.homeAccessMeta.innerHTML=`<span class="access-session-pill">🟠 TEMP HOST • ${escapeHtml(session.label||'STAFF')}</span>`;
+    else DOM.homeAccessMeta.innerHTML=`<span class="access-session-pill">👤 ${escapeHtml(session.label||'STAFF')} • ${escapeHtml(session.code)}</span>`;
+    const applyButton=(btn,allowed,title)=>{if(!btn)return;btn.disabled=!allowed;btn.style.opacity=allowed?'':'0.45';btn.style.filter=allowed?'':'grayscale(1)';btn.title=allowed?'':title;};
+    applyButton(ordersBtn,hasPermission('orders'),'Orders not allowed for this staff code');applyButton(addBtn,hasAnyPermission('addItems','manageItems'),'Item management not allowed for this staff code');applyButton(recordsBtn,isHostSession(),'Records are Main Host-only');applyButton(endDayBtn,hasPermission('endDay'),'End Day not allowed for this staff code');applyItemAccessUI();updateTemporaryHostUI();
+}
+function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function saveStateLocalOnly(){
+    ensureOrderSyncIds(state.orderHistory);
+    const localPersist={orderHistory:state.orderHistory,currentOrderId:state.currentOrderId,currentItems:state.currentItems,currentStatus:state.currentStatus,currentOrderType:state.currentOrderType,currentPaymentMode:state.currentPaymentMode,menu:state.menu,accessControl:state.accessControl};
+    localStorage.setItem('pos_storage',JSON.stringify(localPersist));
+}
+function p2pSyncAfterLocalSave(){
+    if(p2pApplyingRemote)return;
+    bumpLocalRevision();
+    if(isLiveHost()){broadcastSharedState();return;}
+    const session=getAccessSession();
+    if(session?.role==='staff'&&p2pHostConn){safeSend(p2pHostConn,{type:'STAFF_STATE_UPDATE',revision:currentRevision(),state:{menu:state.menu||[],orderHistory:state.orderHistory||[]}});}
+}
+function initP2P(){
+    p2pStateRevision=currentRevision();
+    ensureTemporaryHostUI();
+    applyAccessUI();
+}
+/* --- END HOST / STAFF ACCESS CONTROL + ROTATING HOST P2P LIVE SYNC --- */
+
+function init() {
+  cacheDOM(); // Initialize DOM Cache first
+  getAccessControl();
+  if(!loadState()) {
+    state.menu = JSON.parse(JSON.stringify(DEFAULT_MENU));
+    ensureMenuIds(); // Add IDs to default menu
+    triggerNewOrder();
+  } else {
+    if (!state.menu || state.menu.length === 0) {
+        state.menu = JSON.parse(JSON.stringify(DEFAULT_MENU));
+    }
+    ensureMenuIds(); // Add IDs to loaded menu (migration)
+    const order = state.orderHistory.find(o => o.id === state.currentOrderId);
+    if(order) {
+        DOM.custNameInput.value = order.customerName || "";
+        DOM.custMobileInput.value = order.customerMobile || "";
+        DOM.custAdvanceInput.value = order.advance || "";
+    }
+    DOM.typeBtns.forEach(btn => btn.classList.remove('active'));
+    if(state.currentOrderType === 'DINE-IN') DOM.typeDine.classList.add('active');
+    if(state.currentOrderType === 'PARCEL') DOM.typeParcel.classList.add('active');
+    if(state.currentOrderType === 'DELIVERY') DOM.typeDelivery.classList.add('active');
+    
+    render();
+    renderHistory();
+  }
+  renderMenu();
+  
+  // Safety save
+  window.addEventListener('beforeunload', () => { saveState(); });
+}
+
+/* --- LOGIC --- */
+function calculateItemTotal(item) { return item.price * item.qty; }
+function calculateOrderTotals(items) {
+  return items.reduce((acc, item) => {
+    acc.totalAmt += calculateItemTotal(item);
+    acc.totalQty += item.qty;
+    return acc;
+  }, { totalAmt: 0, totalQty: 0 });
+}
+
+/* --- VALIDATION LOGIC --- */
+function validateOrder() {
+    if (state.currentItems.length === 0) return { valid: false, msg: "Order is empty." };
+
+    for (let item of state.currentItems) {
+        if (item.qty <= 0) return { valid: false, msg: `Invalid quantity for item: ${item.name}` };
+        if (item.price < 0) return { valid: false, msg: `Invalid price for item: ${item.name}` };
+    }
+
+    const mobileVal = DOM.custMobileInput.value.trim();
+    if (mobileVal.length > 0 && mobileVal.length !== 10) {
+        return { valid: false, msg: "Mobile number must be exactly 10 digits." };
+    }
+
+    const { totalAmt } = calculateOrderTotals(state.currentItems);
+    const advanceVal = parseFloat(DOM.custAdvanceInput.value) || 0;
+    
+    if (advanceVal < 0) return { valid: false, msg: "Advance payment cannot be negative." };
+    if (advanceVal > totalAmt) return { valid: false, msg: `Advance (₹${advanceVal}) cannot exceed Total (₹${totalAmt.toFixed(2)}).` };
+
+    return { valid: true, msg: "" };
+}
+
+/* --- ADD/EDIT/DELETE ITEM LOGIC --- */
+function switchAddManageTab(mode) {
+    if (mode === 'add' && !hasPermission('addItems')) return;
+    if (mode === 'manage' && !hasPermission('manageItems')) return;
+
+    DOM.subNavBtns.forEach(b => b.classList.remove('active'));
+    if(mode === 'add') {
+        DOM.tabAdd.classList.add('active');
+        DOM.sectionAddItem.style.display = 'block';
+        DOM.sectionManageItems.style.display = 'none';
+    } else {
+        DOM.tabManage.classList.add('active');
+        DOM.sectionAddItem.style.display = 'none';
+        DOM.sectionManageItems.style.display = 'block';
+        renderManageItemsList();
+    }
+}
+
+function renderAddItemCategoryOptions() {
+    const list = DOM.categoryList;
+    list.innerHTML = "";
+    state.menu.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.category;
+        list.appendChild(option);
+    });
+}
+
+function renderManageItemsList() {
+    const container = DOM.manageItemsList;
+    container.innerHTML = "";
+    state.menu.forEach((cat, catIndex) => {
+        const catDiv = document.createElement('div');
+        catDiv.className = 'manage-category';
+        
+        const title = document.createElement('div');
+        title.className = 'manage-cat-title';
+        title.innerText = cat.category;
+        catDiv.appendChild(title);
+        
+        cat.items.forEach((item, itemIndex) => {
+            const card = document.createElement('div');
+            card.className = 'manage-item-card';
+            card.innerHTML = `
+                <div class="manage-item-info">
+                    <div class="manage-item-name">${item.name}</div>
+                    <div class="manage-item-meta">₹${item.price} / ${item.unit}</div>
+                </div>
+                <div class="manage-actions">
+                    <button class="manage-btn btn-edit-item" onclick="startEditItem(${catIndex}, ${itemIndex})">✏️</button>
+                    <button class="manage-btn btn-delete-item" onclick="deleteItem(${catIndex}, ${itemIndex})">🗑️</button>
+                </div>
+            `;
+            catDiv.appendChild(card);
+        });
+        container.appendChild(catDiv);
+    });
+}
+
+function saveItemAction() {
+    if (!hasPermission('addItems')) { showGenericModal("Your staff code does not have Add Item permission.", null); return; }
+    const name = DOM.newItemName.value.trim();
+    const category = DOM.newItemCategory.value.trim();
+    const price = parseFloat(DOM.newItemPrice.value);
+    const unit = DOM.newItemUnit.value.trim();
+
+    if(!name || !category || isNaN(price) || !unit) {
+        showGenericModal("Please fill all details correctly.", null);
+        return;
+    }
+
+    if (state.editingItemCoords) {
+        const { catIndex, itemIndex } = state.editingItemCoords;
+        const oldCat = state.menu[catIndex];
+        const existingId = oldCat.items[itemIndex].id || generateUUID();
+
+        if (oldCat.category.toUpperCase() === category.toUpperCase()) {
+            oldCat.items[itemIndex] = { id: existingId, name, price, unit };
+        } else {
+            oldCat.items.splice(itemIndex, 1);
+            if(oldCat.items.length === 0) state.menu.splice(catIndex, 1);
+            addItemToCategory(name, price, unit, category, existingId);
+        }
+    } 
+    else {
+        addItemToCategory(name, price, unit, category);
+    }
+
+    saveState();
+    renderMenu();
+    cancelEditMode();
+    showGenericModal("Item saved successfully!", () => {
+        closeGenericModal();
+        renderManageItemsList();
+    });
+}
+
+function addItemToCategory(name, price, unit, category, id = null) {
+    const newItem = { id: id || generateUUID(), name, price, unit };
+    let catObj = state.menu.find(c => c.category.toUpperCase() === category.toUpperCase());
+    if (catObj) {
+        catObj.items.push(newItem);
+    } else {
+        state.menu.push({ category: category, items: [newItem] });
+    }
+}
+
+function startEditItem(catIndex, itemIndex) {
+    if (!hasPermission('manageItems')) { showGenericModal("Your staff code does not have Manage Items permission.", null); return; }
+    const cat = state.menu[catIndex];
+    const item = cat.items[itemIndex];
+    
+    DOM.newItemName.value = item.name;
+    DOM.newItemCategory.value = cat.category;
+    DOM.newItemPrice.value = item.price;
+    DOM.newItemUnit.value = item.unit;
+    
+    state.editingItemCoords = { catIndex, itemIndex };
+    DOM.btnSaveItem.innerText = "UPDATE ITEM";
+    DOM.btnSaveItem.style.background = "#5c3615";
+    DOM.btnCancelEdit.style.display = "block";
+    
+    switchAddManageTab('add');
+}
+
+function cancelEditMode() {
+    state.editingItemCoords = null;
+    DOM.newItemName.value = "";
+    DOM.newItemCategory.value = "";
+    DOM.newItemPrice.value = "";
+    DOM.newItemUnit.value = "";
+    
+    DOM.btnSaveItem.innerText = "+ ADD NEW ITEM";
+    DOM.btnSaveItem.style.background = "#2a9d8f";
+    DOM.btnCancelEdit.style.display = "none";
+}
+
+function deleteItem(catIndex, itemIndex) {
+    if (!hasPermission('manageItems')) { showGenericModal("Your staff code does not have Manage Items permission.", null); return; }
+    showGenericModal("Are you sure you want to delete this item?", () => {
+        const cat = state.menu[catIndex];
+        cat.items.splice(itemIndex, 1);
+        if(cat.items.length === 0) {
+            state.menu.splice(catIndex, 1);
+        }
+        saveState();
+        renderMenu();
+        renderManageItemsList();
+        closeGenericModal();
+    });
+}
+
+/* --- MENU EXPORT/IMPORT LOGIC --- */
+function exportMenuData() {
+    if (!hasPermission('manageItems')) { showGenericModal("Your staff code does not have Manage Items permission.", null); return; }
+    const fileName = `Menu_Export_${new Date().toISOString().split('T')[0]}.json`;
+    const exportObj = { 
+        meta: { version: "1.0", type: "MENU", app: "Gathiya Junction POS" }, 
+        menu: state.menu 
+    };
+    const blob = new Blob([JSON.stringify(exportObj, null, 2)], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = fileName;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+function triggerMenuImport() {
+    if (!hasPermission('manageItems')) { showGenericModal("Your staff code does not have Manage Items permission.", null); return; }
+    DOM.importMenuFile.click();
+}
+
+function handleMenuImport(input) {
+    if (!hasPermission('manageItems')) { showGenericModal("Your staff code does not have Manage Items permission.", null); return; }
+    const file = input.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const json = JSON.parse(e.target.result);
+            if(json.menu && Array.isArray(json.menu)) {
+                showGenericModal(`Found menu with ${json.menu.length} categories.\nReplace current menu?`, () => {
+                    state.menu = json.menu;
+                    ensureMenuIds();
+                    saveState();
+                    renderMenu();
+                    renderManageItemsList();
+                    closeGenericModal();
+                });
+            } else {
+                showGenericModal("Invalid Menu JSON format.", null);
+            }
+        } catch(err) { showGenericModal("Error parsing file.", null); }
+    };
+    reader.readAsText(file);
+    input.value = '';
+}
+
+/* --- UI HELPERS --- */
+function renderMenu() {
+  const container = DOM.menuContainer;
+  container.innerHTML = "";
+  state.menu.forEach(cat => {
+    const section = document.createElement("div");
+    const title = document.createElement("div");
+    title.className = "category-title";
+    title.innerText = cat.category;
+    section.appendChild(title);
+    const grid = document.createElement("div");
+    grid.className = "menu-grid";
+    cat.items.forEach(item => {
+      const card = document.createElement("div");
+      card.className = "menu-item";
+      card.setAttribute("data-search", (item.name + " " + item.price + " " + (item.unit || "") + " " + cat.category).toLowerCase());
+      card.onclick = () => {
+        card.style.backgroundColor = "#e0f2f1";
+        setTimeout(() => card.style.backgroundColor = "white", 150);
+        addItemFromMenu(item);
+      };
+      card.innerHTML = `<div class="item-name">${item.name}</div><div class="item-meta"><span class="item-unit">${item.unit}</span><span class="item-price">₹${item.price}</span></div>`;
+      grid.appendChild(card);
+    });
+    section.appendChild(grid);
+    container.appendChild(section);
+  });
+}
+
+function filterMenu() {
+  const query = DOM.menuSearch.value.toLowerCase();
+  DOM.menuContainer.querySelectorAll(".menu-item").forEach(item => {
+    const text = item.getAttribute("data-search");
+    item.style.display = text.includes(query) ? "flex" : "none";
+  });
+}
+
+function openMenu() {
+  DOM.overlay.classList.add("active");
+  DOM.menuModal.classList.add("active");
+  DOM.menuSearch.value = "";
+  DOM.menuContainer.querySelectorAll(".menu-item").forEach(i => i.style.display = "flex");
+}
+
+function setOrderType(type) {
+    if(state.currentStatus === 'completed') return; 
+    state.currentOrderType = type;
+    DOM.typeBtns.forEach(btn => btn.classList.remove('active'));
+    if(type === 'DINE-IN') DOM.typeDine.classList.add('active');
+    if(type === 'PARCEL') DOM.typeParcel.classList.add('active');
+    if(type === 'DELIVERY') DOM.typeDelivery.classList.add('active');
+    saveOrder(true);
+}
+
+function setPaymentMode(mode) {
+    state.currentPaymentMode = mode;
+    DOM.payModeBtns.forEach(btn => btn.classList.remove('active'));
+    if(mode === 'CASH') DOM.btnCash.classList.add('active');
+    if(mode === 'UPI') DOM.btnUpi.classList.add('active');
+    
+    if (activeBill) {
+        activeBill.order.paymentMode = mode;
+        renderBillUI();
+    }
+    saveState();
+}
+
+/* --- STATE MUTATION FUNCTIONS (Centralized) --- */
+function addOrderItem(item) {
+    let existingItem = null;
+    if (item.id) {
+        existingItem = state.currentItems.find(i => i.itemId === item.id);
+    }
+    if (!existingItem) {
+        existingItem = state.currentItems.find(i => i.name === item.name);
+        if (existingItem && !existingItem.itemId && item.id) {
+            existingItem.itemId = item.id;
+        }
+    }
+
+    if (existingItem) {
+        existingItem.qty++;
+    } else {
+        state.currentItems.push({
+            itemId: item.id,
+            name: item.name,
+            price: item.price,
+            unit: item.unit,
+            qty: 1
+        });
+    }
+}
+
+function removeOrderItem(index) {
+    state.currentItems.splice(index, 1);
+}
+
+function updateOrderItemQty(index, qty) {
+    state.currentItems[index].qty = qty;
+}
+
+function updateOrderItemPrice(index, price) {
+    state.currentItems[index].price = price;
+}
+
+function clearCurrentOrderItems() {
+    state.currentItems = [];
+}
+
+function setCurrentOrderItems(items) {
+    state.currentItems = JSON.parse(JSON.stringify(items));
+}
+
+/* --- UI HANDLERS --- */
+function addItemFromMenu(item) {
+    addOrderItem(item);
+    render();
+    saveOrder(true);
+}
+
+function removeItem(index) {
+    if (state.currentStatus === 'completed') return;
+    removeOrderItem(index);
+    render();
+    saveOrder(true);
+}
+
+function updateQty(index, val) {
+    if (state.currentStatus === 'completed') return;
+    let newQty = parseInt(val);
+    if (isNaN(newQty) || newQty < 1) newQty = 1;
+    updateOrderItemQty(index, newQty);
+    saveOrder(true);
+    render();
+}
+
+function updatePrice(index, val) {
+    if (state.currentStatus === 'completed') return;
+    let newPrice = parseFloat(val);
+    if (isNaN(newPrice) || newPrice < 0) newPrice = 0;
+    updateOrderItemPrice(index, newPrice);
+    saveOrder(true);
+    render();
+}
+
+function updateLineTotal(index, val) {
+    if (state.currentStatus === 'completed') return;
+    let newTotal = parseFloat(val);
+    if (isNaN(newTotal) || newTotal < 0) newTotal = 0;
+    
+    const item = state.currentItems[index];
+    if (item.qty > 0) {
+        const newPrice = newTotal / item.qty;
+        updateOrderItemPrice(index, newPrice);
+        saveOrder(true);
+    }
+    render();
+}
+
+/**
+ * Renders the order header: ID and Status.
+ */
+function renderOrderHeader() {
+  DOM.orderIdDisplay.textContent = "#" + state.currentOrderId;
+  
+  if (state.currentStatus === 'completed') {
+    DOM.statusBadge.textContent = "PAID"; 
+    DOM.statusBadge.style.background = "#2a9d8f"; 
+    DOM.statusBadge.style.color = "white";
+  } else {
+    DOM.statusBadge.textContent = "ACTIVE"; 
+    DOM.statusBadge.style.background = "#ffb703"; 
+    DOM.statusBadge.style.color = "black";
+  }
+}
+
+/**
+ * Updates the state of form inputs based on order status.
+ */
+function renderFormState() {
+  const isLocked = state.currentStatus === 'completed';
+  DOM.custNameInput.disabled = isLocked;
+  DOM.custMobileInput.disabled = isLocked;
+  DOM.custAdvanceInput.disabled = isLocked;
+  DOM.typeBtns.forEach(b => b.style.pointerEvents = isLocked ? 'none' : 'all');
+}
+
+/**
+ * Updates action buttons (Add, Pay, Edit) based on order status.
+ */
+function renderActionButtons() {
+  const isCompleted = state.currentStatus === 'completed';
+  DOM.addItemBtn.style.display = isCompleted ? "none" : "flex";
+  DOM.btnComplete.textContent = isCompleted ? "Reprint" : "PAY & PRINT";
+  DOM.btnEditOrder.style.display = isCompleted ? "block" : "none";
+}
+
+/**
+ * Renders the rows of items in the current order table.
+ */
+function renderOrderTable() {
+  const body = DOM.orderBody;
+  body.innerHTML = "";
+
+  // Use activeBill.items (derived) to prevent UI recalculation
+  activeBill.items.forEach((item, i) => {
+    // Note: item.total is already calculated in prepareBillData
+    const disabledAttr = state.currentStatus === 'completed' ? 'disabled' : '';
+    const removeBtnHtml = state.currentStatus === 'completed' ? '' : `<button class="remove-btn" onclick="removeItem(${i})">×</button>`;
+
+    const unitHtml = `<div style="font-size: 0.75rem; color: #666; margin-top: 2px;">${item.unit}</div>`;
+
+    const displayPrice = Number(item.price).toFixed(2);
+    const displayTotal = Number(item.total).toFixed(2);
+
+    body.innerHTML += `<tr>
+        <td style="text-align: left; padding-left: 10px; vertical-align: middle;">
+            <div style="font-weight:500; line-height: 1.2;">${item.name}</div>
+            ${unitHtml}
+        </td>
+        <td>
+           <input type="number" class="price-input" 
+                  value="${parseFloat(displayPrice)}" 
+                  onchange="updatePrice(${i}, this.value)"
+                  onclick="this.select()" 
+                  ${disabledAttr}>
+        </td>
+        <td>
+           <input type="number" min="1" max="999" class="qty-input" 
+                  value="${item.qty}" 
+                  onchange="updateQty(${i}, this.value)" 
+                  onkeypress="return event.charCode >= 48 && event.charCode <= 57" 
+                  ${disabledAttr}>
+        </td>
+        <td style="font-weight:bold;">
+            <input type="number" class="total-input" 
+                  value="${parseFloat(displayTotal)}" 
+                  onchange="updateLineTotal(${i}, this.value)" 
+                  onclick="this.select()"
+                  ${disabledAttr}>
+        </td>
+        <td>${removeBtnHtml}</td>
+      </tr>`;
+  });
+}
+
+/**
+ * Renders the order total.
+ */
+function renderTotals() {
+  // Use derived subtotal from activeBill
+  DOM.grandTotal.textContent = activeBill.financials.subtotal.toFixed(2);
+}
+
+/**
+ * Main render function that orchestrates sub-rendering tasks.
+ */
+function render() {
+  // Source of Truth: Generate the bill object once per render cycle
+  activeBill = prepareBillData();
+
+  renderOrderHeader();
+  renderFormState();
+  renderActionButtons();
+  renderOrderTable();
+  renderTotals();
+}
+
+function attemptDeleteOrder() {
+    const msg = state.currentStatus === 'completed' ? "Are you sure you want to delete this COMPLETED order?" : "Delete this active order?";
+    showGenericModal(msg, () => performDeleteOrder());
+}
+
+function performDeleteOrder() {
+    if (!hasPermission('orders')) { showGenericModal("Your staff code does not have Orders permission.", null); return; }
+    state.orderHistory = state.orderHistory.filter(o => o.id !== state.currentOrderId);
+    if (state.orderHistory.length > 0) {
+        const lastOrder = state.orderHistory[state.orderHistory.length - 1];
+        loadOrder(lastOrder.id);
+    } else {
+        executeNewOrderReset(); // Replaced manual reset logic
+    }
+    saveState();
+    renderHistory();
+    closeGenericModal();
+}
+
+function unlockOrder() {
+    showGenericModal("Edit this completed order?\n(Status will revert to ACTIVE)", () => {
+        state.currentStatus = 'active';
+        saveOrder(true);
+        render(); 
+        closeGenericModal();
+    });
+}/* --- OPTIMIZED HISTORY RENDER (DIFFING) --- */
+function renderHistory() {
+    const list = DOM.recentOrdersList;
+    
+    // FILTER: Only show orders from TODAY
+    const todayStr = new Date().toDateString();
+    const historyData = state.orderHistory.filter(o => {
+        const d = new Date(o.timestamp);
+        return d.toDateString() === todayStr;
+    }).slice().reverse();
+
+    if(historyData.length === 0) {
+        list.innerHTML = '<div style="text-align:center; padding:20px; opacity:0.6;">No orders today</div>';
+        return;
+    }
+
+    // Clear placeholder if present
+    if(list.firstElementChild && !list.firstElementChild.id.startsWith('history-item')) {
+        list.innerHTML = '';
+    }
+
+    const renderedIds = new Set();
+    
+    historyData.forEach((order, index) => {
+        const rowId = `history-item-${order.id}`;
+        renderedIds.add(rowId);
+        let row = document.getElementById(rowId);
+        
+        const isActive = order.id === state.currentOrderId;
+        const statusColor = order.status === 'completed' ? '#2a9d8f' : '#ffb703';
+        const timeStr = new Date(order.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+        const contentHTML = `
+            <div style="display:flex; justify-content:space-between; width:100%;">
+                <div>
+                    <div style="font-weight:bold; font-size:1.1rem;">#${order.id} <span style="font-size:0.8rem; font-weight:normal; opacity:0.8;">(${timeStr})</span></div>
+                    <div style="font-size:0.85rem; opacity:0.8;">${order.customerName || 'Walking Client'}</div>
+                    <div style="font-size:0.75rem; opacity:0.6;">${order.itemCount} items</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-weight:bold; font-size:1.1rem;">₹${Number(order.total).toFixed(0)}</div>
+                    <div style="font-size:0.7rem; color:${statusColor}; font-weight:bold; text-transform:uppercase;">${order.status}</div>
+                </div>
+            </div>
+        `;
+
+        if (!row) {
+            row = document.createElement('div');
+            row.id = rowId;
+            row.className = 'order-history-item';
+            row.onclick = () => { loadOrder(order.id); closeAll(); };
+            row.innerHTML = contentHTML;
+            const refNode = list.children[index];
+            list.insertBefore(row, refNode || null);
+        } else {
+            const refNode = list.children[index];
+            if (row !== refNode) { list.insertBefore(row, refNode || null); }
+            if (row.innerHTML !== contentHTML) { row.innerHTML = contentHTML; }
+        }
+
+        if (isActive) {
+            if (!row.classList.contains('active-item')) row.classList.add('active-item');
+        } else {
+            if (row.classList.contains('active-item')) row.classList.remove('active-item');
+        }
+    });
+
+    Array.from(list.children).forEach(child => {
+        if (!renderedIds.has(child.id)) { child.remove(); }
+    });
+}
+
+/* --- END DAY LOGIC --- */
+function triggerEndOfDay() {
+    if (!hasPermission('endDay')) { showGenericModal("Your staff code does not have access to End Day.", null); return; }
+    const todayStr = new Date().toDateString();
+    
+    // Calculate Today's Stats
+    const todaysOrders = state.orderHistory.filter(o => {
+        return o.status === 'completed' && new Date(o.timestamp).toDateString() === todayStr;
+    });
+
+    const totalRevenue = todaysOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    const totalCount = todaysOrders.length;
+    let cashTotal = 0;
+    let upiTotal = 0;
+
+    todaysOrders.forEach(o => {
+        if((o.paymentMode || 'CASH') === 'UPI') upiTotal += o.total;
+        else cashTotal += o.total;
+    });
+
+    const msg = `=== DAY END SUMMARY ===\n\n` +
+                `Date: ${new Date().toLocaleDateString()}\n` +
+                `Total Orders: ${totalCount}\n` +
+                `Total Revenue: ₹${totalRevenue.toFixed(2)}\n\n` +
+                `Cash: ₹${cashTotal.toFixed(2)}\n` +
+                `UPI: ₹${upiTotal.toFixed(2)}\n\n` +
+                `Active screen will be refreshed.\nOld data is safe in Records.`;
+
+    showGenericModal(msg, () => {
+        markBusinessDayClosed();
+        executeNewOrderReset();
+        renderHistory();
+        saveState();
+        if (isLiveHost()) broadcastSharedState();
+        closeGenericModal();
+    });
+}
+
+function loadOrder(id) {
+  const order = state.orderHistory.find(o => o.id === id);
+  if (order) {
+    setCurrentOrderItems(order.items);
+    state.currentOrderId = order.id;
+    state.currentStatus = order.status;
+    setOrderType(order.orderType || 'DINE-IN');
+    DOM.custNameInput.value = order.customerName || "";
+    DOM.custMobileInput.value = order.customerMobile || "";
+    DOM.custAdvanceInput.value = order.advance || "";
+    render();
+    saveState();
+  }
+}
+
+function saveOrder(isSilent = true) {
+  const existingIndex = state.orderHistory.findIndex(o => o.id === state.currentOrderId);
+  const { totalAmt, totalQty } = calculateOrderTotals(state.currentItems);
+  
+  let mobileVal = "";
+  if (DOM.custMobileInput) {
+      mobileVal = DOM.custMobileInput.value;
+      let sanitizedMobile = mobileVal.replace(/\D/g, '');
+      if (sanitizedMobile.length > 10) { sanitizedMobile = sanitizedMobile.substring(0, 10); }
+      if (mobileVal !== sanitizedMobile) { DOM.custMobileInput.value = sanitizedMobile; mobileVal = sanitizedMobile; }
+  }
+  
+  let advanceVal = parseFloat(DOM.custAdvanceInput.value) || 0;
+  if (advanceVal < 0) { advanceVal = 0; DOM.custAdvanceInput.value = ""; }
+
+  const existingOrder = existingIndex >= 0 ? state.orderHistory[existingIndex] : null;
+  const orderData = {
+    id: state.currentOrderId,
+    syncId: existingOrder?.syncId || `${getDeviceId()}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,9)}`,
+    customerName: DOM.custNameInput.value,
+    customerMobile: mobileVal,
+    advance: advanceVal,
+    items: JSON.parse(JSON.stringify(state.currentItems)),
+    itemCount: totalQty,
+    status: state.currentStatus,
+    total: totalAmt,
+    orderType: state.currentOrderType,
+    paymentMode: state.currentPaymentMode,
+    timestamp: new Date()
+  };
+  if (existingIndex >= 0) { state.orderHistory[existingIndex] = orderData; } else { state.orderHistory.push(orderData); }
+  if(!isSilent) renderHistory();
+  saveState();
+}
+
+function completeOrder() {
+    console.log("Complete button clicked");  // Debug
+
+    const check = validateOrder();
+    console.log("Validation result:", check);
+
+    if (!check.valid) {
+        console.log("Validation failed:", check.msg);
+        showGenericModal(check.msg, null);
+        return;
+    }
+
+    console.log("Saving order and showing bill modal");
+    saveOrder(true);
+    showBillModal();
+}
+
+
+
+
+function triggerNewOrder() {
+  if (state.currentStatus === 'active' && state.currentItems.length === 0) return;
+
+  // New logic: Check if current active order has items
+  if (state.currentStatus !== 'completed' && state.currentItems.length > 0) {
+      showGenericModal("Order is active. Save and start new?", () => {
+          saveOrder(true); // Save current incomplete order to history
+          executeNewOrderReset();
+          closeGenericModal();
+      });
+      return;
+  }
+
+  // If completed or empty, proceed immediately
+  executeNewOrderReset();
+}
+
+function executeNewOrderReset() {
+  let nextId = 1;
+  if(state.orderHistory.length > 0) {
+    const existingIds = new Set(state.orderHistory.map(o => o.id));
+    const maxId = Math.max(...existingIds);
+    let candidate = maxId + 1;
+    if (candidate > 100) candidate = 1;
+    while (existingIds.has(candidate)) candidate++;
+    nextId = candidate;
+  }
+  state.currentOrderId = nextId;
+  clearCurrentOrderItems();
+  state.currentStatus = 'active';
+  DOM.custNameInput.value = "";
+  DOM.custMobileInput.value = "";
+  DOM.custAdvanceInput.value = "";
+  setOrderType('DINE-IN');
+  render();
+  renderHistory();
+  closeAll();
+  saveState();
+}
+
+/* --- RECORDS LOGIC --- */
+function openRecordsView() {
+    if(!DOM.recordDateInput.value) {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        DOM.recordDateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+    initFilterDropdowns();
+    renderDailyView();
+}
+
+document.addEventListener('keydown', function(e) {
+    if (DOM.accessModal && DOM.accessModal.classList.contains('active') && e.key === 'Enter') {
+        const target = e.target;
+        if (target && (target.id === 'accessCodeInput' || target.id === 'hostPinSetupConfirm')) {
+            if (target.id === 'accessCodeInput') submitAccessLogin();
+            else createHostPin();
+        }
+    }
+});
+
+document.addEventListener('click', function(e) {
+    if(!e.target.closest('.multi-select')) {
+        DOM.multiSelects.forEach(el => el.classList.remove('open'));
+    }
+});
+
+function toggleDropdown(id, event) {
+    if(event) { event.stopPropagation(); event.preventDefault(); }
+    DOM.multiSelects.forEach(el => { if(el.querySelector('.options-container').id !== id) el.classList.remove('open'); });
+    const container = document.getElementById(id);
+    if(container) { container.parentElement.classList.toggle('open'); }
+}
+
+function getItemCategory(itemName) {
+    for (const cat of state.menu) { if (cat.items.some(i => i.name === itemName)) return cat.category; }
+    return 'Uncategorized';
+}
+
+function initFilterDropdowns() {
+    const payContainer = DOM.payOptions;
+    if(payContainer && payContainer.children.length === 0) {
+        ['CASH', 'UPI'].forEach(opt => {
+            const label = document.createElement('label');
+            label.className = 'opt-label';
+            label.innerHTML = `<input type="checkbox" value="${opt}" onchange="renderDailyView()"> ${opt}`;
+            payContainer.appendChild(label);
+        });
+    }
+    const typeContainer = DOM.typeOptions;
+    if(typeContainer && typeContainer.children.length === 0) {
+        ['DINE-IN', 'PARCEL', 'DELIVERY'].forEach(opt => {
+            const label = document.createElement('label');
+            label.className = 'opt-label';
+            label.innerHTML = `<input type="checkbox" value="${opt}" onchange="renderDailyView()"> ${opt}`;
+            typeContainer.appendChild(label);
+        });
+    }
+    const itemContainer = DOM.itemOptions;
+    itemContainer.innerHTML = "";
+    state.menu.forEach(cat => {
+        const header = document.createElement('div');
+        header.className = 'opt-header';
+        header.innerText = cat.category;
+        itemContainer.appendChild(header);
+        const catLabel = document.createElement('label');
+        catLabel.className = 'opt-label';
+        catLabel.style.fontWeight = 'bold';
+        catLabel.innerHTML = `<input type="checkbox" value="CAT:${cat.category}" onchange="renderDailyView()"> All ${cat.category}`;
+        itemContainer.appendChild(catLabel);
+        cat.items.forEach(item => {
+            const label = document.createElement('label');
+            label.className = 'opt-label';
+            label.style.paddingLeft = '20px'; 
+            label.innerHTML = `<input type="checkbox" value="${item.name}" onchange="renderDailyView()"> ${item.name}`;
+            itemContainer.appendChild(label);
+        });
+    });
+}
+
+function renderDailyView() {
+    const dateVal = DOM.recordDateInput.value;
+    if(!dateVal) return;
+    
+    const payChecks = DOM.payOptions.querySelectorAll('input:checked');
+    const selectedPays = Array.from(payChecks).map(c => c.value);
+    const typeChecks = DOM.typeOptions.querySelectorAll('input:checked');
+    const selectedTypes = Array.from(typeChecks).map(c => c.value);
+    const itemChecks = DOM.itemOptions.querySelectorAll('input:checked');
+    const selectedItems = Array.from(itemChecks).map(c => c.value);
+    
+    DOM.payLabel.innerText = selectedPays.length > 0 ? `Payment: ${selectedPays.length}` : 'Payment: All';
+    DOM.typeLabel.innerText = selectedTypes.length > 0 ? `Type: ${selectedTypes.length}` : 'Type: All';
+    DOM.itemLabel.innerText = selectedItems.length > 0 ? `Items: ${selectedItems.length}` : 'Items: All';
+
+    let dayRecords = state.orderHistory.filter(o => {
+        if(o.status !== 'completed') return false;
+        const d = new Date(o.timestamp);
+        const yyyy = d.getFullYear(); const mm = String(d.getMonth() + 1).padStart(2, '0'); const dd = String(d.getDate()).padStart(2, '0');
+        if (`${yyyy}-${mm}-${dd}` !== dateVal) return false;
+        if (selectedPays.length > 0 && !selectedPays.includes(o.paymentMode || 'CASH')) return false;
+        if (selectedTypes.length > 0 && !selectedTypes.includes(o.orderType || 'DINE-IN')) return false;
+        if (selectedItems.length > 0) {
+            const hasMatch = o.items.some(i => {
+                const isItemMatch = selectedItems.includes(i.name);
+                const isCatMatch = selectedItems.includes(`CAT:${getItemCategory(i.name)}`);
+                return isItemMatch || isCatMatch;
+            });
+            if (!hasMatch) return false;
+        }
+        return true;
+    });
+
+    let totalRev = 0;
+    let specificRev = 0;
+    let specificQty = 0;
+    const isSpecific = selectedItems.length > 0;
+
+    dayRecords.forEach(o => {
+        totalRev += (o.total || 0);
+        if (isSpecific) {
+            o.items.forEach(i => {
+                const isItemMatch = selectedItems.includes(i.name);
+                const isCatMatch = selectedItems.includes(`CAT:${getItemCategory(i.name)}`);
+                if (isItemMatch || isCatMatch) {
+                    specificQty += i.qty;
+                    specificRev += (i.price * i.qty);
+                }
+            });
+        }
+    });
+
+    let statsHTML = `
+        <div class="stat-card"><div class="stat-val">${dayRecords.length}</div><div class="stat-lbl">Matched Orders</div></div>
+        <div class="stat-card"><div class="stat-val">₹${totalRev.toFixed(0)}</div><div class="stat-lbl">Matched Total</div></div>
+    `;
+
+    if (isSpecific) {
+        statsHTML += `
+            <div class="stat-card stat-highlight"><div class="stat-val">${specificQty}</div><div class="stat-lbl">Specific Qty</div></div>
+            <div class="stat-card stat-highlight"><div class="stat-val">₹${specificRev.toFixed(0)}</div><div class="stat-lbl">Specific Amt</div></div>
+        `;
+    } else {
+        let cashRev = 0, upiRev = 0;
+        dayRecords.forEach(o => {
+            if((o.paymentMode || 'CASH') === 'UPI') upiRev += o.total; else cashRev += o.total;
+        });
+        statsHTML += `
+            <div class="stat-card"><div class="stat-val">₹${cashRev.toFixed(0)}</div><div class="stat-lbl">Cash Total</div></div>
+            <div class="stat-card"><div class="stat-val">₹${upiRev.toFixed(0)}</div><div class="stat-lbl">UPI Total</div></div>
+        `;
+    }
+
+    DOM.statsGrid.innerHTML = statsHTML;
+    const list = DOM.recordsList;
+    list.innerHTML = "";
+    if(dayRecords.length === 0) { list.innerHTML = '<div class="no-data">No records found.</div>'; return; }
+    dayRecords.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    dayRecords.forEach(o => {
+        const d = new Date(o.timestamp);
+        const timeStr = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        let typeClass = 'rc-dine';
+        let typeName = 'DINE';
+        if(o.orderType === 'PARCEL') { typeClass = 'rc-parcel'; typeName = 'PARCEL'; }
+        if(o.orderType === 'DELIVERY') { typeClass = 'rc-deliv'; typeName = 'DELIV'; }
+        const pMode = o.paymentMode || 'CASH';
+        list.innerHTML += `
+            <div class="record-card ${typeClass}">
+                <div class="rc-meta">
+                    <div class="rc-token">#${o.id}</div>
+                    <div class="rc-time">${timeStr}</div>
+                    <div class="rc-pill">${typeName} • ${pMode}</div>
+                </div>
+                <div class="rc-right">
+                    <div class="rc-price">₹${o.total.toFixed(0)}</div>
+                    <div class="rc-items">${o.itemCount} Items</div>
+                </div>
+            </div>
+        `;
+    });
+}
+
+/* --- REFACTORED BILL LOGIC --- */
+
+/**
+ * Prepares the single 'bill' object from application state.
+ */
+function prepareBillData() {
+    const now = new Date();
+    const order = state.orderHistory.find(o => o.id === state.currentOrderId) || {};
+    const { totalAmt, totalQty } = calculateOrderTotals(state.currentItems);
+    
+    const advance = parseFloat(DOM.custAdvanceInput.value) || 0;
+    const chkApply = DOM.chkApplyAdvance;
+    const isAdvanceApplied = advance > 0 && (chkApply ? chkApply.checked : true);
+
+    const billObj = {
+        meta: {
+            date: now.toLocaleDateString('en-GB'),
+            time: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: true})
+        },
+        customer: {
+            name: DOM.custNameInput.value || "Walking Client",
+            mobile: DOM.custMobileInput.value || "9876543210"
+        },
+        order: {
+            id: state.currentOrderId,
+            type: state.currentOrderType,
+            paymentMode: state.currentPaymentMode
+        },
+        items: state.currentItems.map(item => ({
+            name: item.name,
+            unit: item.unit || '-',
+            qty: item.qty,
+            price: item.price,
+            total: calculateItemTotal(item)
+        })),
+        financials: {
+            subtotal: totalAmt,
+            totalQty: totalQty,
+            advance: advance,
+            isAdvanceApplied: isAdvanceApplied,
+            grandTotal: isAdvanceApplied ? Math.max(0, totalAmt - advance) : totalAmt
+        }
+    };
+    
+    return billObj;
+}/* --- RECEIPT TEXT GENERATOR (MATCHES ON-SCREEN UI) --- */
+function generateReceiptText() {
+    // Helper to format numbers cleanly and prevent WhatsApp "blue link" bugs
+    const fmt = (num) => Number.isInteger(num) ? num.toString() : num.toFixed(2);
+
+    let itemsText = "";
+    activeBill.items.forEach(item => {
+        // Replicates the screenshot's clean 2-line item format:
+        // *Special Chai*      *₹40*
+        // 2 Full x ₹20
+        itemsText += `*${item.name}*   -   *₹${fmt(item.total)}*\n${item.qty} ${item.unit} x ₹${fmt(item.price)}\n\n`;
+    });
+
+    let advanceText = "";
+    if (activeBill.financials.isAdvanceApplied && activeBill.financials.advance > 0) {
+        advanceText = `Advance Paid: -₹${fmt(activeBill.financials.advance)}\n`;
+    }
+
+    let custName = activeBill.customer.name && activeBill.customer.name.trim() !== "" ? activeBill.customer.name : "-";
+    let custMobile = activeBill.customer.mobile || "-";
+
+    // Matches the exact flow and highlighted text of the screenshot UI
+    return `*GATHIYA JUNCTION*
+Order #${activeBill.order.id}
+${activeBill.order.type} • ${activeBill.order.paymentMode}
+----------------------------------
+CUSTOMER: ${custName}
+MOBILE: ${custMobile}
+
+DATE: ${activeBill.meta.date}
+TIME: ${activeBill.meta.time}
+
+${itemsText.trim()}
+----------------------------------
+Subtotal (${activeBill.financials.totalQty} items): ₹${fmt(activeBill.financials.subtotal)}
+${advanceText}
+*Total Payable: ₹${fmt(activeBill.financials.grandTotal)}*`;
+}
+
+/* --- RENDER MODERN HTML PREVIEW IN MODAL --- */
+function renderBillUI() {
+    if (!activeBill) return;
+    const previewBox = document.getElementById('receiptPreview');
+    if (!previewBox) return;
+
+    // 1. Build Items List HTML
+    let itemsHtml = "";
+    activeBill.items.forEach(item => {
+        itemsHtml += `
+            <div class="mr-item-row">
+                <div class="mr-item-left">
+                    <div class="mr-item-name">${item.name}</div>
+                    <div class="mr-item-qty">${item.qty} ${item.unit} x ₹${item.price.toFixed(2)}</div>
+                </div>
+                <div class="mr-item-right">₹${item.total.toFixed(2)}</div>
+            </div>
+        `;
+    });
+
+    // 2. Build Advance Row HTML
+    let advanceHtml = "";
+    if (activeBill.financials.isAdvanceApplied && activeBill.financials.advance > 0) {
+        advanceHtml = `
+            <div class="mr-total-row mr-advance">
+                <span>Advance Paid</span>
+                <span>- ₹${activeBill.financials.advance.toFixed(2)}</span>
+            </div>
+        `;
+    }
+
+    // 3. Inject Beautiful HTML Template
+    previewBox.innerHTML = `
+        <div class="mr-header">
+            <h3 class="mr-title">GATHIYA JUNCTION</h3>
+            <div class="mr-subtitle">Order #${activeBill.order.id}</div>
+            <div class="mr-badge">${activeBill.order.type} • ${activeBill.order.paymentMode}</div>
+        </div>
+        
+        <div class="mr-details">
+            <div class="mr-detail-item"><span>Customer</span><strong>${activeBill.customer.name || '-'}</strong></div>
+            <div class="mr-detail-item" style="text-align:right;"><span>Mobile</span><strong>${activeBill.customer.mobile || '-'}</strong></div>
+            <div class="mr-detail-item"><span>Date</span><strong>${activeBill.meta.date}</strong></div>
+            <div class="mr-detail-item" style="text-align:right;"><span>Time</span><strong>${activeBill.meta.time}</strong></div>
+        </div>
+        
+        <div class="mr-items">
+            ${itemsHtml}
+        </div>
+        
+        <div class="mr-totals">
+            <div class="mr-total-row">
+                <span>Subtotal (${activeBill.financials.totalQty} items)</span>
+                <span>₹${activeBill.financials.subtotal.toFixed(2)}</span>
+            </div>
+            ${advanceHtml}
+            <div class="mr-grand-total">
+                <span>Total Payable</span>
+                <span>₹${activeBill.financials.grandTotal.toFixed(2)}</span>
+            </div>
+        </div>
+    `;
+}
+
+
+/* --- SEND SMART WHATSAPP TEXT --- */
+function sendSmartWhatsAppReceipt() {
+    if (!activeBill) activeBill = prepareBillData();
+
+    // 1. Extract digits and add country code
+    let number = activeBill.customer.mobile || "";
+    number = number.replace(/\D/g, ''); 
+    if (number.length === 10) {
+        number = "91" + number; 
+    }
+
+    if (!number || number.length < 10) {
+        alert("Please enter a valid 10-digit mobile number.");
+        return;
+    }
+
+    // 2. Mark completed & update UI
+    if(state.currentStatus !== 'completed') {
+        state.currentStatus = 'completed';
+        saveOrder(true);
+        render(); 
+        renderHistory();
+    }
+
+    // 3. Generate text and open WhatsApp
+    const receiptText = generateReceiptText();
+    const encodedMessage = encodeURIComponent(receiptText);
+    const waUrl = `https://wa.me/${number}?text=${encodedMessage}`;
+    
+    // Open WhatsApp in new tab
+    window.open(waUrl, '_blank');
+}
+
+
+function showBillModal() {
+    activeBill = prepareBillData();
+    
+    // Toggle Setup
+    const toggleContainer = DOM.advanceToggleContainer;
+    const chkApply = DOM.chkApplyAdvance;
+    if (activeBill.financials.advance > 0) {
+        toggleContainer.style.display = "flex";
+        if (chkApply) chkApply.checked = true;
+    } else {
+        toggleContainer.style.display = "none";
+    }
+
+    renderBillUI();
+    DOM.overlay.classList.add("active");
+    DOM.billModal.classList.add("active");
+}
+
+function updateBillTotals() {
+    activeBill = prepareBillData();
+    renderBillUI();
+}
+
+/* --- OVERLAY HELPERS --- */
+let onConfirmAction = null;
+function showGenericModal(msg, confirmFn) {
+    DOM.genericMsg.innerText = msg;
+    onConfirmAction = confirmFn;
+
+    DOM.genericConfirmBtn.style.display = 'inline-block';
+    if (onConfirmAction) {
+        DOM.genericConfirmBtn.onclick = function() { 
+            onConfirmAction();
+            closeGenericModal();
+        };
+    } else {
+        DOM.genericConfirmBtn.onclick = function() {
+            closeGenericModal();
+        };
+    }
+
+    DOM.overlay.classList.add("active");
+    DOM.genericModal.classList.add("active");
+}
+
+function closeGenericModal() {
+    DOM.genericModal.classList.remove("active");
+    if (!DOM.billModal.classList.contains("active")) {
+        DOM.overlay.classList.remove("active");
+    }
+    onConfirmAction = null;
+}
+function openSidebar() {
+  renderHistory();
+  DOM.overlay.classList.add('active');
+  DOM.leftSidebar.classList.add('active');
+}
+function closeAll() {
+  DOM.overlay.classList.remove('active');
+  DOM.leftSidebar.classList.remove('active');
+  DOM.menuModal.classList.remove('active');
+  DOM.billModal.classList.remove('active');
+  if(DOM.genericModal) DOM.genericModal.classList.remove('active');
+}
+/*Image to canvasBase64 - Optimized for High Quality PDF*/
+function imgToCanvasBase64(img, width, height) {
+    return new Promise(resolve => {
+        const iw = width || img.naturalWidth || img.width || 100;
+        const ih = height || img.naturalHeight || img.height || 100;
+
+        // Dynamic scaling: Target ~2000px for sharpness
+        const targetSize = 2000;
+        let scaleFactor = targetSize / Math.max(iw, ih);
+        
+        // Strict clamps
+        if (scaleFactor < 3) scaleFactor = 3;
+        if (scaleFactor > 20) scaleFactor = 20;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.ceil(iw * scaleFactor);
+        canvas.height = Math.ceil(ih * scaleFactor);
+        
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/png', 1.0));
+    });
+}
+
+// --- Helper: Generate a Star Image on the fly ---
+function getStarBase64() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 100; canvas.height = 100;
+  const ctx = canvas.getContext('2d');
+  
+  ctx.fillStyle = '#000000'; // Black color
+  ctx.beginPath();
+  
+  // Mathematical logic to draw a perfect 5-pointed star
+  const cx = 50, cy = 50, outerRadius = 45, innerRadius = 20;
+  for (let i = 0; i < 5; i++) {
+    const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+    ctx.lineTo(cx + outerRadius * Math.cos(angle), cy + outerRadius * Math.sin(angle));
+    const innerAngle = angle + Math.PI / 5;
+    ctx.lineTo(cx + innerRadius * Math.cos(innerAngle), cy + innerRadius * Math.sin(innerAngle));
+  }
+  ctx.closePath();
+  ctx.fill();
+  
+  return canvas.toDataURL('image/png');
+}
+
+/* --- COPY HELPER (Paste anywhere in script) --- */
+function robustCopy(text) {
+    if (!text) return;
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed"; 
+    textArea.style.left = "-9999px"; 
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(textArea);
+}
+
+// ---------- PERSISTENCE ----------
+function saveState() {
+  const localPersist={
+    orderHistory:state.orderHistory,
+    currentOrderId:state.currentOrderId,
+    currentItems:state.currentItems,
+    currentStatus:state.currentStatus,
+    currentOrderType:state.currentOrderType,
+    currentPaymentMode:state.currentPaymentMode,
+    menu:state.menu,
+    accessControl:state.accessControl
+  };
+  localStorage.setItem('pos_storage',JSON.stringify(localPersist));
+  p2pSyncAfterLocalSave();
+}
+function loadState() {
+  try{
+    const data=localStorage.getItem('pos_storage');
+    if(!data)return false;
+    const s=JSON.parse(data);
+    if(!Array.isArray(s.orderHistory))s.orderHistory=[];
+    if(!Array.isArray(s.currentItems))s.currentItems=[];
+    ensureOrderSyncIds(s.orderHistory);
+    state.orderHistory=s.orderHistory;
+    state.currentOrderId=parseInt(s.currentOrderId)||1;
+    state.currentItems=s.currentItems;
+    state.currentStatus=s.currentStatus||'active';
+    state.currentOrderType=s.currentOrderType||'DINE-IN';
+    state.currentPaymentMode=s.currentPaymentMode||'CASH';
+    state.menu=s.menu;
+    state.accessControl=s.accessControl&&typeof s.accessControl==='object'?s.accessControl:defaultAccessControl();
+    if(!Array.isArray(state.accessControl.staffCodes))state.accessControl.staffCodes=[];
+    return true;
+  }catch(e){console.error('State restore failed, resetting:',e);return false;}
+}
+
+init();
+initP2P();
+</script>
+
+</body>
+</html>
